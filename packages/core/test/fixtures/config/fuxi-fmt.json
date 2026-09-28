@@ -1,0 +1,4 @@
+{
+  // configured for a project that prefers asterisks
+  "list": { "unorderedMarker": "asterisks" }
+}

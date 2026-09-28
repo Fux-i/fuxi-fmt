@@ -27,6 +27,15 @@ export { renumberOrderedLists } from './lists.ts';
 export { normalizeFences } from './fences.ts';
 export { normalizeMarkers, normalizeUnorderedMarker } from './markers.ts';
 export { checkSemantics } from './guard.ts';
+export {
+  CONFIG_FILENAME,
+  findConfigFile,
+  loadOptionsFor,
+  mergeOptions,
+  parseConfig,
+  readConfigFile,
+} from './config.ts';
+export type { LoadedConfig } from './config.ts';
 export type { Violation } from './guard.ts';
 export { applyTypography } from './typography.ts';
 export { isBlockRegionKind, protectedMask, scanRegions, splitSourceLines } from './scan.ts';
