@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+.npm-cache/
+.pnpm-store/
+
+# build output
+dist/
+out/
+*.vsix
+*.tsbuildinfo
+
+# test / coverage
+coverage/
+
+# scratch
+.probe/
+.bench/fixture.md
+.bench/rustbench/target/
+.cargo/
+
+# editors / os
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# logs
+*.log
+npm-debug.log*

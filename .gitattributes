@@ -1,0 +1,8 @@
+* text=auto eol=lf
+
+*.md text eol=lf
+*.ts text eol=lf
+*.json text eol=lf
+
+# keep test fixtures byte-exact
+packages/core/test/fixtures/** -text

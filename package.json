@@ -1,0 +1,24 @@
+{
+  "name": "fuxi-fmt",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A Markdown formatter for Chinese technical writing",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "node --test \"packages/*/src/**/*.test.ts\"",
+    "test:watch": "node --test --watch \"packages/*/src/**/*.test.ts\"",
+    "typecheck": "tsc -b packages/core",
+    "ci": "npm run typecheck && npm test"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}
