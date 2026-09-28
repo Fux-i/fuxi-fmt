@@ -12,6 +12,8 @@ export interface TypographyOptions {
   readonly cjkSpacing: boolean;
 }
 
+export type EndOfLine = 'lf' | 'crlf' | 'auto';
+export type IndentWidth = 2 | 4 | 'tab';
 export type OrderedStyle = 'increment' | 'lazy-one';
 export type OrderedDelimiter = 'preserve' | '.' | ')';
 
@@ -23,12 +25,15 @@ export interface ListOptions {
    */
   readonly orderedStyle: OrderedStyle;
   readonly orderedDelimiter: OrderedDelimiter;
+  /** Width used when expanding hard tabs; 'tab' leaves them alone (BLK-11). */
+  readonly indentWidth: IndentWidth;
 }
 
 export interface FormatOptions {
   readonly blankLines: BlankLinesOptions;
   readonly typography: TypographyOptions;
   readonly list: ListOptions;
+  readonly endOfLine: EndOfLine;
 }
 
 export interface BlankLinesInput {
@@ -43,18 +48,21 @@ export interface TypographyInput {
 export interface ListInput {
   readonly orderedStyle?: OrderedStyle;
   readonly orderedDelimiter?: OrderedDelimiter;
+  readonly indentWidth?: IndentWidth;
 }
 
 export interface FormatOptionsInput {
   readonly blankLines?: BlankLinesInput;
   readonly typography?: TypographyInput;
   readonly list?: ListInput;
+  readonly endOfLine?: EndOfLine;
 }
 
 export const defaultOptions: FormatOptions = {
   blankLines: { aroundBlocks: 'exact', maxConsecutive: 1 },
   typography: { cjkSpacing: true },
-  list: { orderedStyle: 'increment', orderedDelimiter: 'preserve' },
+  list: { orderedStyle: 'increment', orderedDelimiter: 'preserve', indentWidth: 2 },
+  endOfLine: 'lf',
 };
 
 export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
@@ -71,6 +79,8 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
     list: {
       orderedStyle: input?.list?.orderedStyle ?? defaultOptions.list.orderedStyle,
       orderedDelimiter: input?.list?.orderedDelimiter ?? defaultOptions.list.orderedDelimiter,
+      indentWidth: input?.list?.indentWidth ?? defaultOptions.list.indentWidth,
     },
+    endOfLine: input?.endOfLine ?? defaultOptions.endOfLine,
   };
 }

@@ -16,7 +16,7 @@
  */
 
 import type { TypographyOptions } from './options.ts';
-import { scanRegions, splitSourceLines, type RegionKind } from './scan.ts';
+import { isBlockRegionKind, scanRegions, splitSourceLines } from './scan.ts';
 
 type CharClass = 'cjk' | 'latin' | 'fullpunct' | 'other' | 'space';
 
@@ -37,10 +37,6 @@ const FULL_PUNCT = new Set([
   '\uff08', '\uff09', '\u3010', '\u3011', '\u300c', '\u300d', '\u300a', '\u300b',
   '\u201c', '\u201d', '\u2018', '\u2019',
 ]);
-
-function isBlockKind(kind: RegionKind): boolean {
-  return kind === 'frontMatter' || kind === 'fencedCode' || kind === 'indentedCode' || kind === 'htmlBlock';
-}
 
 function classOf(ch: string): CharClass {
   if (CJK.test(ch)) return 'cjk';
@@ -128,7 +124,7 @@ export function applyTypography(text: string, options: TypographyOptions): strin
   const mask = new Uint8Array(text.length);
   const blockMask = new Uint8Array(text.length);
   for (const region of regions) {
-    const block = isBlockKind(region.kind);
+    const block = isBlockRegionKind(region.kind);
     for (let i = region.start; i < region.end; i++) {
       mask[i] = 1;
       if (block) blockMask[i] = 1;

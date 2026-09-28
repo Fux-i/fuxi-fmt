@@ -76,6 +76,20 @@ function isBlank(text: string): boolean {
   return text.trim().length === 0;
 }
 
+/** Column width of the leading whitespace, expanding tabs to four-column stops. */
+function indentColumns(text: string, chars: number): number {
+  let column = 0;
+  for (let i = 0; i < chars; i++) {
+    column = text.charCodeAt(i) === TAB ? column + (4 - (column % 4)) : column + 1;
+  }
+  return column;
+}
+
+/** Region kinds that occupy whole lines and are never touched (SAFE-01, SAFE-04, FM-01). */
+export function isBlockRegionKind(kind: RegionKind): boolean {
+  return kind === 'frontMatter' || kind === 'fencedCode' || kind === 'indentedCode' || kind === 'htmlBlock';
+}
+
 const LIST_ITEM = /^\s*(?:[-*+]|\d{1,9}[.)])\s/;
 
 function runLength(source: string, index: number, code: number): number {
@@ -127,9 +141,10 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
     const line = lines[i];
     if (line === undefined) continue;
     const indentLen = leadingIndent(line.text);
+    const indentCols = indentColumns(line.text, indentLen);
     const rest = line.text.slice(indentLen);
 
-    if (indentLen <= 3 && rest.length > 0) {
+    if (indentCols <= 3 && rest.length > 0) {
       const code = rest.charCodeAt(0);
 
       if (code === BACKTICK || code === TILDE) {
@@ -182,7 +197,7 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
       }
     }
 
-    if (indentLen >= 4) {
+    if (indentCols >= 4) {
       const prevBlank = i === 0 || isBlank(lines[i - 1]?.text ?? '');
       if (i === 0 || (prevBlank && !isWithinList(lines, i))) {
         let end = line.end;
@@ -190,7 +205,8 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
         for (let j = i + 1; j < lines.length; j++) {
           const cand = lines[j];
           if (cand === undefined) continue;
-          if (isBlank(cand.text) || leadingIndent(cand.text) < 4) break;
+          const candidateIndent = leadingIndent(cand.text);
+          if (isBlank(cand.text) || indentColumns(cand.text, candidateIndent) < 4) break;
           end = cand.end;
           last = j;
         }
@@ -209,7 +225,8 @@ function isWithinList(lines: Line[], index: number): boolean {
   for (let j = index - 1; j >= 0; j--) {
     const text = lines[j]?.text ?? '';
     if (isBlank(text)) continue;
-    if (leadingIndent(text) >= 4) return true;
+    const chars = leadingIndent(text);
+    if (indentColumns(text, chars) >= 4) return true;
     return LIST_ITEM.test(text);
   }
   return false;

@@ -1,10 +1,11 @@
 import { segment, type AtomicRange, type BlockKind } from './blocks.ts';
+import { checkSemantics } from './guard.ts';
+import { applyEndOfLine, normalizeInput, trimTrailingWhitespace, type Eol } from './hygiene.ts';
+import { renumberOrderedLists } from './lists.ts';
 import { normalizeMarkers } from './markers.ts';
 import { resolveOptions, type FormatOptions, type FormatOptionsInput } from './options.ts';
 import { scanRegions, splitSourceLines, type Region, type SourceLine } from './scan.ts';
 import { applyTypography } from './typography.ts';
-import { renumberOrderedLists } from './lists.ts';
-import { checkSemantics } from './guard.ts';
 
 export interface Diagnostic {
   readonly ruleId: string;
@@ -66,19 +67,28 @@ function atomicRanges(lines: readonly SourceLine[], regions: readonly Region[]):
 
 export function format(source: string, input?: FormatOptionsInput): FormatResult {
   const options = resolveOptions(input);
-  const lines = splitSourceLines(source);
-  const ranges = atomicRanges(lines, scanRegions(source));
+
+  // BLK-11: the byte order mark and the line ending belong to the file, not the
+  // document, so they are settled before anything else looks at the text.
+  const normalized = normalizeInput(source);
+  const base = normalized.text;
+
+  const lines = splitSourceLines(base);
+  const ranges = atomicRanges(lines, scanRegions(base));
 
   const protectedLine = new Array<boolean>(lines.length).fill(false);
   for (const range of ranges) {
     for (let i = range.start; i < range.end; i++) protectedLine[i] = true;
   }
 
-  const normalized = lines.map((line, index) =>
-    protectedLine[index] === true ? line.text : normalizeMarkers(line.text),
-  );
+  const tabWidth = options.list.indentWidth === 'tab' ? 0 : options.list.indentWidth;
+  const normalizedTexts = lines.map((line, index) => {
+    if (protectedLine[index] === true) return line.text;
+    const expanded = tabWidth === 0 ? line.text : line.text.split('\t').join(' '.repeat(tabWidth));
+    return normalizeMarkers(expanded);
+  });
 
-  const texts = renumberOrderedLists(normalized, protectedLine, options.list);
+  const texts = renumberOrderedLists(normalizedTexts, protectedLine, options.list);
   const blocks = segment(texts, ranges);
 
   const parts: string[] = [];
@@ -93,11 +103,11 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   }
 
   const structural = parts.length === 0 ? '' : parts.join('\n') + '\n';
-  const candidate = applyTypography(structural, options.typography);
+  const candidate = trimTrailingWhitespace(applyTypography(structural, options.typography));
 
   // GRT-01: never hand back a document that parses differently. If the guard
   // trips we return the input untouched and say why (GRT-04).
-  const violations = checkSemantics(source, candidate);
+  const violations = checkSemantics(base, candidate);
   if (violations.length > 0) {
     return {
       output: source,
@@ -110,5 +120,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     };
   }
 
-  return { output: candidate, changed: candidate !== source, diagnostics: [] };
+  const eol: Eol = options.endOfLine === 'auto' ? normalized.eol : options.endOfLine;
+  const output = applyEndOfLine(candidate, eol);
+  return { output, changed: output !== source, diagnostics: [] };
 }
