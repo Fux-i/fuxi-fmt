@@ -7,7 +7,10 @@ export type {
   BlankLinesOptions,
   FormatOptions,
   FormatOptionsInput,
+  TypographyInput,
+  TypographyOptions,
 } from './options.ts';
+export { applyTypography } from './typography.ts';
 export { scanRegions } from './scan.ts';
 export type { Region, RegionKind } from './scan.ts';
 export { classifyContent, classifyLine, segment } from './blocks.ts';

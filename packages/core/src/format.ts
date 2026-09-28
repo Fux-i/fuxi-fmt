@@ -2,6 +2,7 @@ import { segment, type AtomicRange, type BlockKind } from './blocks.ts';
 import { normalizeMarkers } from './markers.ts';
 import { resolveOptions, type FormatOptions, type FormatOptionsInput } from './options.ts';
 import { scanRegions, splitSourceLines, type Region, type SourceLine } from './scan.ts';
+import { applyTypography } from './typography.ts';
 
 export interface Diagnostic {
   readonly ruleId: string;
@@ -88,6 +89,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     for (let j = block.start; j < block.end; j++) parts.push(texts[j] ?? '');
   }
 
-  const output = parts.length === 0 ? '' : parts.join('\n') + '\n';
+  const structural = parts.length === 0 ? '' : parts.join('\n') + '\n';
+  const output = applyTypography(structural, options.typography);
   return { output, changed: output !== source, diagnostics: [] };
 }
