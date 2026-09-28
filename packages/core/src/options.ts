@@ -20,6 +20,8 @@ export interface TypographyOptions {
   readonly halfwidthAlphanumerics: boolean;
   /** U+3000 becomes a normal space (TYPO-06). */
   readonly ideographicSpace: boolean;
+  /** Space a mid-text '#' from CJK; off by default (TYPO-09). */
+  readonly hashtag: boolean;
 }
 
 export type EndOfLine = 'lf' | 'crlf' | 'auto';
@@ -74,6 +76,7 @@ export interface TypographyInput {
   readonly punctuationAllowlist?: readonly string[];
   readonly halfwidthAlphanumerics?: boolean;
   readonly ideographicSpace?: boolean;
+  readonly hashtag?: boolean;
 }
 
 export interface ListInput {
@@ -99,6 +102,7 @@ export const defaultOptions: FormatOptions = {
     punctuationAllowlist: [',', '.', ':', '!', '?'],
     halfwidthAlphanumerics: true,
     ideographicSpace: true,
+    hashtag: false,
   },
   list: {
     orderedStyle: 'increment',
@@ -129,6 +133,7 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
         defaultOptions.typography.halfwidthAlphanumerics,
       ideographicSpace:
         input?.typography?.ideographicSpace ?? defaultOptions.typography.ideographicSpace,
+      hashtag: input?.typography?.hashtag ?? defaultOptions.typography.hashtag,
     },
     list: {
       orderedStyle: input?.list?.orderedStyle ?? defaultOptions.list.orderedStyle,

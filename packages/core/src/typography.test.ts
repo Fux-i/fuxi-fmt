@@ -68,6 +68,12 @@ describe('TYPO-09 hashtags are not spaced', () => {
   test('leaves a CJK hashtag intact', () => {
     assert.equal(out('中文#标签\n'), '中文#标签\n');
   });
+  test('spaces it only when the opt-in is set', () => {
+    assert.equal(
+      format('中文#标签\n', { typography: { hashtag: true } }).output,
+      '中文 # 标签\n',
+    );
+  });
 });
 
 describe('inline atoms behave as Latin words with untouched contents', () => {

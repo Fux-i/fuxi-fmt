@@ -26,8 +26,12 @@ interface Unit {
   readonly cls: CharClass;
 }
 
-function classOf(ch: string): CharClass {
+function classOf(ch: string, hashtag: boolean): CharClass {
   if (isCjk(ch)) return 'cjk';
+  // TYPO-09: a mid-text '#' is a hashtag or an anchor and is never spaced by
+  // default, because '中文#标签' becoming '中文 # 标签' breaks the tag wherever
+  // it is published. Opting in is a deliberate choice, not an oversight.
+  if (ch === '#' && hashtag) return 'latin';
   if (isSpacingChar(ch)) return 'latin';
   if (isFullPunct(ch)) return 'fullpunct';
   return 'other';
@@ -49,7 +53,7 @@ function separator(prev: Unit, cur: Unit, pending: string): string {
   return pending;
 }
 
-function tokenize(text: string, from: number, to: number, mask: Uint8Array): Unit[] {
+function tokenize(text: string, from: number, to: number, mask: Uint8Array, hashtag: boolean): Unit[] {
   const units: Unit[] = [];
   let i = from;
   while (i < to) {
@@ -69,13 +73,20 @@ function tokenize(text: string, from: number, to: number, mask: Uint8Array): Uni
       i = j;
       continue;
     }
-    units.push({ text: ch, cls: classOf(ch) });
+    units.push({ text: ch, cls: classOf(ch, hashtag) });
     i++;
   }
   return units;
 }
 
-function formatLine(text: string, from: number, to: number, mask: Uint8Array, blockMask: Uint8Array): string {
+function formatLine(
+  text: string,
+  from: number,
+  to: number,
+  mask: Uint8Array,
+  blockMask: Uint8Array,
+  hashtag: boolean,
+): string {
   if (from >= to) return '';
   let allBlock = true;
   for (let i = from; i < to; i++) {
@@ -86,7 +97,7 @@ function formatLine(text: string, from: number, to: number, mask: Uint8Array, bl
   }
   if (allBlock) return text.slice(from, to);
 
-  const units = tokenize(text, from, to, mask);
+  const units = tokenize(text, from, to, mask, hashtag);
   let out = '';
   let prev: Unit | null = null;
   let pending = '';
@@ -126,7 +137,7 @@ export function applyTypography(text: string, options: TypographyOptions): strin
     if (line === undefined) continue;
     const next = lines[li + 1];
     const newline = text.slice(line.end, next === undefined ? text.length : next.start);
-    out += formatLine(text, line.start, line.end, mask, blockMask) + newline;
+    out += formatLine(text, line.start, line.end, mask, blockMask, options.hashtag) + newline;
   }
   return out;
 }

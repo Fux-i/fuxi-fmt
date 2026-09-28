@@ -230,6 +230,7 @@ function readSections(raw: Raw): FormatOptionsInput {
       punctuationAllowlist?: readonly string[];
       halfwidthAlphanumerics?: boolean;
       ideographicSpace?: boolean;
+      hashtag?: boolean;
     } = {};
     if (from.cjkSpacing !== undefined) to.cjkSpacing = bool(from.cjkSpacing, 'typography.cjkSpacing');
     if (from.punctuationStyle !== undefined) {
@@ -248,6 +249,9 @@ function readSections(raw: Raw): FormatOptionsInput {
     }
     if (from.ideographicSpace !== undefined) {
       to.ideographicSpace = bool(from.ideographicSpace, 'typography.ideographicSpace');
+    }
+    if (from.hashtag !== undefined) {
+      to.hashtag = bool(from.hashtag, 'typography.hashtag');
     }
     out.typography = to;
   }
