@@ -30,6 +30,8 @@ const HALF_TO_FULL = new Map<string, string>([
   [':', '\uff1a'],
   ['!', '\uff01'],
   ['?', '\uff1f'],
+  // Excluded from the default allowlist on purpose; see TYPO-05.
+  [';', '\uff1b'],
 ]);
 
 const IDEOGRAPHIC_SPACE = 0x3000;
@@ -113,7 +115,13 @@ export function normalizeParens(text: string, options: TypographyOptions): strin
 export function normalizePunctuation(text: string, options: TypographyOptions): string {
   if (options.punctuationStyle === 'off') return text;
 
-  const allowed = new Set(options.punctuationAllowlist);
+  // The semicolon is dangerous enough that AutoCorrect excludes it with the
+  // annotation "danger": in prose it separates list items, and a wrong
+  // full-width semicolon is hard to spot. It is off unless asked for.
+  const effective = options.semicolon
+    ? [...options.punctuationAllowlist, ';']
+    : options.punctuationAllowlist;
+  const allowed = new Set(effective);
   const toFull = new Map<string, string>();
   const toHalf = new Map<string, string>();
   for (const [half, full] of HALF_TO_FULL) {

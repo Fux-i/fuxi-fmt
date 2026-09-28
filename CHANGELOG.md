@@ -11,6 +11,23 @@ with release candidates suffixed `-rcN`.
 
 Nothing yet.
 
+## [0.12.0] - 2026-09-28
+
+### Added
+
+- **`typography.semicolon`** (TYPO-05), off by default. AutoCorrect excludes the
+  semicolon from its conversion set deliberately, annotating the decision
+  "danger": in prose it separates list items and a wrong full-width semicolon is
+  hard to spot. The escape hatch is now available for authors who want it.
+
+### Notes
+
+- The documentation test added in 0.11.0 covers this change. Removing
+  `typography.semicolon` from the specification's "not implemented at all" list
+  was not optional: had it been missed, the check would have failed, because the
+  option is now present in the defaults. That is the check doing its job on the
+  first change to touch it.
+
 ## [0.11.0] - 2026-09-28
 
 ### Added

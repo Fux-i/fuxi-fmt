@@ -25,6 +25,8 @@ export interface TypographyOptions {
   readonly hashtag: boolean;
   /** Parenthesis width, by the script of the contents (TYPO-08). */
   readonly parenStyle: ParenStyle;
+  /** Also convert ';' beside CJK; off by default (TYPO-05). */
+  readonly semicolon: boolean;
 }
 
 export type EndOfLine = 'lf' | 'crlf' | 'auto';
@@ -81,6 +83,7 @@ export interface TypographyInput {
   readonly ideographicSpace?: boolean;
   readonly hashtag?: boolean;
   readonly parenStyle?: ParenStyle;
+  readonly semicolon?: boolean;
 }
 
 export interface ListInput {
@@ -108,6 +111,7 @@ export const defaultOptions: FormatOptions = {
     ideographicSpace: true,
     hashtag: false,
     parenStyle: 'mixed',
+    semicolon: false,
   },
   list: {
     orderedStyle: 'increment',
@@ -140,6 +144,7 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
         input?.typography?.ideographicSpace ?? defaultOptions.typography.ideographicSpace,
       hashtag: input?.typography?.hashtag ?? defaultOptions.typography.hashtag,
       parenStyle: input?.typography?.parenStyle ?? defaultOptions.typography.parenStyle,
+      semicolon: input?.typography?.semicolon ?? defaultOptions.typography.semicolon,
     },
     list: {
       orderedStyle: input?.list?.orderedStyle ?? defaultOptions.list.orderedStyle,

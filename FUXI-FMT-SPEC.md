@@ -381,7 +381,7 @@ ignore:
   line: fuxi-fmt-ignore
 ```
 
-**Implementation status.** **Not implemented at all:** `typography.cjkClasses`, `typography.semicolon`.
+**Implementation status.** **Not implemented at all:** `typography.cjkClasses`.
 **Partially implemented:** `list.indentWidth`, which today only controls how
 hard tabs are expanded and does not reindent lists. Everything else in this
 block is implemented.

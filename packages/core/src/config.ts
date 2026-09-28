@@ -232,6 +232,7 @@ function readSections(raw: Raw): FormatOptionsInput {
       ideographicSpace?: boolean;
       hashtag?: boolean;
       parenStyle?: 'mixed' | 'fullwidth' | 'halfwidth' | 'preserve';
+      semicolon?: boolean;
     } = {};
     if (from.cjkSpacing !== undefined) to.cjkSpacing = bool(from.cjkSpacing, 'typography.cjkSpacing');
     if (from.punctuationStyle !== undefined) {
@@ -261,6 +262,9 @@ function readSections(raw: Raw): FormatOptionsInput {
         'halfwidth',
         'preserve',
       ]);
+    }
+    if (from.semicolon !== undefined) {
+      to.semicolon = bool(from.semicolon, 'typography.semicolon');
     }
     out.typography = to;
   }
