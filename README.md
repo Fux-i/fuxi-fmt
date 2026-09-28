@@ -108,6 +108,27 @@ The VS Code extension and CLI will be thin adapters over `@fuxi-fmt/core`.
 - **The core knows nothing about VS Code.** Adapters translate; they do not decide.
 - **Test first.** Rules are written as failing tests before they are implemented.
 
+## Remaining work
+
+Kept here rather than in a session because it has to survive a fresh clone. The specification
+is the authority; this is the shortest accurate summary of the gap.
+
+| Item | State |
+|---|---|
+| **BLK-08 list reindentation** | Decision recorded in spec section 7 item 1 (option b: a list containing a protected block is excluded). **Not implemented.** `list.indentWidth` today only controls hard-tab expansion. This is the last unimplemented structural rule. |
+| **`typography.cjkClasses`** | Not implemented. Would make the CJK character class configurable, so kana, Hangul and Bopomofo could opt in. |
+| **`typography.semicolon`** | Not implemented. Converts `;` to `；` beside CJK; excluded from the default allowlist because AutoCorrect excludes it deliberately, annotating the decision "danger". |
+| **Config presets** | Not implemented. `fuxi-fmt.json` names a `preset` in the specification; the key is currently ignored. |
+| **Extension host** | The bundle runs against a stubbed `vscode` module in tests. It has never been loaded by a real editor. |
+| **Real documents** | Everything is verified against generated fixtures, a synthetic article, and this repository's own Markdown. The formatter has never seen a real Chinese technical article. |
+
+Two things are worth doing before adding any of the above:
+
+1. **Run it on a real article.** If the spacing, punctuation or parenthesis rules disagree with
+   how you actually write, the remaining feature list is the wrong thing to work on.
+2. **Load the extension in a real VS Code.** The stub proves the code path runs; only the editor
+   proves the manifest, activation events and trust declaration are right.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
