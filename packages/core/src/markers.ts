@@ -57,8 +57,12 @@ export function normalizeMarkers(text: string): string {
     const rest = quote[3] ?? '';
     const count = (markers.match(/>/g) ?? []).length;
     if (count === 1) return indent + '> ' + rest;
-    const spaced = markers.replace(/>/g, '').length > 0;
-    return indent + (spaced ? '> '.repeat(count) : '>'.repeat(count) + ' ') + rest;
+    // Adjacent markers ('>>') stay adjacent; only whitespace *between* markers
+    // means the author wrote the spaced form ('> >'). Trailing whitespace after
+    // the last marker is the content gap, not a separator, and treating it as
+    // one made this rule non-idempotent: '>> nested' became '> > nested'.
+    const adjacent = /^>+[ \t]*$/.test(markers);
+    return indent + (adjacent ? '>'.repeat(count) + ' ' : '> '.repeat(count)) + rest;
   }
 
   return text;

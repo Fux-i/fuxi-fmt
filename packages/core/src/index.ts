@@ -39,6 +39,7 @@ export type { LoadedConfig } from './config.ts';
 export type { Violation } from './guard.ts';
 export { applyTypography } from './typography.ts';
 export { isBlockRegionKind, protectedMask, scanRegions, splitSourceLines } from './scan.ts';
+export type { SourceLine } from './scan.ts';
 export { isAlphanumeric, isCjk, isFullPunct, isSpacingChar } from './chars.ts';
 export { normalizeFullwidthAlphanumerics, normalizePunctuation } from './widths.ts';
 export type { Region, RegionKind } from './scan.ts';

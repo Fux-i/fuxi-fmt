@@ -57,6 +57,13 @@ describe('BLK-09 blockquote marker spacing', () => {
   test('handles adjacent nested markers', () => {
     assert.equal(out('>>nested\n'), '>> nested\n');
   });
+  test('is idempotent for nested markers', () => {
+    const once = out('>>nested\n');
+    assert.equal(out(once), once);
+  });
+  test('keeps author-spaced nested markers spaced', () => {
+    assert.equal(out('> > text\n'), '> > text\n');
+  });
 });
 
 describe('BLK-01 and BLK-02 blank lines around blocks', () => {

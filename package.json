@@ -14,7 +14,7 @@
   "scripts": {
     "test": "node --test \"packages/*/src/**/*.test.ts\"",
     "test:watch": "node --test --watch \"packages/*/src/**/*.test.ts\"",
-    "typecheck": "tsc -p packages/core && tsc -p packages/cli",
+    "typecheck": "tsc -p packages/core && tsc -p packages/cli && tsc -p packages/vscode",
     "fuxi-fmt": "node packages/cli/src/main.ts",
     "ci": "npm run typecheck && npm test"
   },

@@ -11,27 +11,39 @@ with release candidates suffixed `-rcN`.
 
 Nothing yet.
 
-## [0.6.0] - 2026-09-28
-
-The project runs. `fuxi-fmt --check` is now usable in CI and as a pre-commit hook,
-which is the point at which GRT-05 (byte parity between contexts) stops being
-untestable.
+## [0.7.0] - 2026-09-28
 
 ### Added
 
-- **Command line interface** in `packages/cli`. `--check`, `--diff`, `--write`,
-  `--help`, or no option to print the formatted document to stdout.
-- Exit codes: 0 clean, 1 would change, 2 error. Errors are reported, never
-  thrown at the user.
-- Configuration is resolved per file through `loadOptionsFor`, so a monorepo
-  with several `fuxi-fmt.json` files behaves sensibly.
+- **Minimal edit computation** (GRT-06) in `packages/vscode`. The core returns a
+  whole document; the adapter reduces it to the smallest differing character
+  range, so a format-on-save does not force the editor to re-diff, re-tokenise
+  and re-analyse the entire file.
+- `editsInRange`, so a selection receives only the edits inside it.
+- The extension package manifest, declaring `onLanguage:markdown` activation,
+  `untrustedWorkspaces: supported` — which is honest, because the formatter
+  executes nothing from the workspace — and the `fuxiFmt.enable` setting.
+
+### Fixed
+
+- **Blockquote normalisation was not idempotent.** `>>nested` became
+  `>> nested`, and formatting that again produced `> > nested`, because the
+  check for author-spaced markers counted the trailing space after the last
+  marker as a separator. Adjacent markers now stay adjacent. Found by the
+  adapter's round-trip test; the core's own test only formatted that input once.
 
 ### Notes
 
-- `run` takes its file system through an injected `Io` interface, so the check,
-  diff and write paths are tested without spawning a process or touching a disk.
-- The CLI lives in its own workspace package and imports the core relatively, so
-  the core keeps its guarantee of never knowing about any consumer.
+- The extension cannot be installed yet: there is no activation entry and no
+  bundling step. The manifest records the intended shape rather than a finished
+  artefact.
+
+## [0.6.0] - 2026-09-28
+
+### Added
+
+- **Command line interface**: `--check`, `--diff`, `--write`, `--help`, with
+  exit codes 0 / 1 / 2.
 
 ## [0.5.0] - 2026-09-28
 
@@ -72,7 +84,8 @@ First milestone.
 - **Block segmentation** with a blank-line policy (BLK-01, BLK-02, BLK-03).
 - **Marker spacing** (BLK-04, BLK-05, BLK-09).
 
-[Unreleased]: https://example.invalid/fuxi-fmt/compare/v0.6.0...HEAD
+[Unreleased]: https://example.invalid/fuxi-fmt/compare/v0.7.0...HEAD
+[0.7.0]: https://example.invalid/fuxi-fmt/compare/v0.6.0...v0.7.0
 [0.6.0]: https://example.invalid/fuxi-fmt/compare/v0.5.0...v0.6.0
 [0.5.0]: https://example.invalid/fuxi-fmt/compare/v0.4.0...v0.5.0
 [0.4.0]: https://example.invalid/fuxi-fmt/compare/v0.3.0...v0.4.0
