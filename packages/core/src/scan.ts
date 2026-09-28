@@ -279,6 +279,19 @@ function scanInlineCode(source: string, mask: Uint8Array, regions: Region[]): vo
     let j = i + open;
     let closeAt = -1;
     while (j < source.length) {
+      if (source.charCodeAt(j) === LF) {
+        // A code span may cross a line break but never a blank line. Without
+        // this, an unmatched backtick finds a partner paragraphs away and
+        // invents a "span" spanning half the document, which then blocks every
+        // rule that runs inside it.
+        let k = j + 1;
+        while (k < source.length) {
+          const c = source.charCodeAt(k);
+          if (c === SPACE || c === TAB || c === CR) k++;
+          else break;
+        }
+        if (k >= source.length || source.charCodeAt(k) === LF) break;
+      }
       if (source.charCodeAt(j) !== BACKTICK) {
         j++;
         continue;
