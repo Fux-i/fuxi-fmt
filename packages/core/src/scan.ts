@@ -285,3 +285,14 @@ function scanMath(source: string, mask: Uint8Array, regions: Region[]): void {
     regions.push({ kind: 'inlineMath', start, end });
   }
 }
+
+export interface SourceLine {
+  readonly start: number;
+  readonly end: number;
+  readonly text: string;
+}
+
+/** Line offsets, for callers that need to map regions back onto lines. */
+export function splitSourceLines(source: string): SourceLine[] {
+  return splitLines(source);
+}
