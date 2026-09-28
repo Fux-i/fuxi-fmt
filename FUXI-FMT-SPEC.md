@@ -387,6 +387,10 @@ implemented, as is `list.indentWidth` in its reindentation sense: today the
 width is only used when expanding hard tabs. Everything else in this block is
 implemented.
 
+Configuration is read from the nearest `fuxi-fmt.json` above the file being
+formatted, which may contain comments and trailing commas. Presets (CFG-01) and
+the VS Code settings override layer are specified but not implemented.
+
 ---
 
 ## 7. Open items

@@ -11,36 +11,42 @@ with release candidates suffixed `-rcN`.
 
 Nothing yet.
 
-## [0.4.0] - 2026-09-28
+## [0.5.0] - 2026-09-28
 
-The structural rule set is complete apart from list reindentation. What remains
-before the core is usable is configuration loading and the adapters.
+The core is configurable and driveable. What remains is an entry point.
 
 ### Added
 
-- **Unordered marker normalisation** (BLK-07):
-  `list.unorderedMarker: dashes | asterisks | preserve`. Thematic breaks and
-  emphasis are excluded by consulting the block classifier rather than by
-  pattern matching, so `* * *` and `*emphasis*` are never mistaken for lists.
-- **Code fence delimiter normalisation** (BLK-10):
-  `codeBlock.fenceChar: backticks | tildes | preserve` and
-  `codeBlock.normalizeLength`. Only the fence character and its length move;
-  indentation, the spacing before the info string and the info string itself
-  stay byte-for-byte.
+- **Configuration loading** (CFG-01). `fuxi-fmt.json` is discovered by walking
+  upwards from the file being formatted; the nearest one wins. Comments and
+  trailing commas are accepted, parsed by a state machine rather than a regex so
+  that a string containing `//` is left alone.
+- `parseConfig`, `mergeOptions`, `readConfigFile`, `loadOptionsFor` and
+  `CONFIG_FILENAME` are exported from the package root.
+- Config fixtures under `test/fixtures/config/`.
+
+### Notes
+
+- Unknown keys are ignored so a config written for a later version still loads.
+  A known key with an unknown value throws, because silently ignoring a typo
+  hides it for the life of the project.
+- An integration test asserts that a loaded config actually changes formatter
+  output, rather than only that it parses.
+
+## [0.4.0] - 2026-09-28
+
+### Added
+
+- **Unordered marker normalisation** (BLK-07). Thematic breaks and emphasis are
+  excluded by consulting the block classifier, not by pattern matching.
+- **Code fence delimiter normalisation** (BLK-10). Only the character and length
+  move; indentation, spacing and the info string stay byte-for-byte.
 
 ### Changed
 
-- The semantic guard now identifies a fence region by its info string and body
-  rather than by the entire region text, because changing the delimiter is the
-  one sanctioned edit inside a protected region. A rewritten info string is
-  still rejected.
-
-### Fixed
-
-- A test asserted that an entire fence delimiter line was frozen. The
-  specification only ever promised that the character and length may change;
-  the test now pins the info string and indentation with the character held
-  fixed, which is what SAFE-02 actually claims.
+- The semantic guard identifies a fence by its info string and body rather than
+  by the whole region, because changing the delimiter is the one sanctioned edit
+  inside a protected region.
 
 ## [0.3.0] - 2026-09-28
 
@@ -51,20 +57,13 @@ before the core is usable is configuration loading and the adapters.
 - **Character width** (TYPO-06). Full-width alphanumerics and U+3000.
 - **File hygiene** (BLK-11). BOM, line endings, hard tabs, trailing whitespace.
 
-### Fixed
-
-- The scanner measures indentation in columns, expanding tabs to four-column
-  stops as CommonMark does.
-
 ## [0.2.0] - 2026-09-28
 
 ### Added
 
-- **CJK typography** (TYPO-01, TYPO-02, TYPO-03, TYPO-07, TYPO-09). One space at
-  a CJK boundary and nowhere else.
+- **CJK typography** (TYPO-01, TYPO-02, TYPO-03, TYPO-07, TYPO-09).
 - **Ordered list renumbering** (BLK-06) at every nesting level.
-- **Semantic-preservation guard** (GRT-01, GRT-04). On failure the input is
-  returned untouched rather than corrupted.
+- **Semantic-preservation guard** (GRT-01, GRT-04).
 
 ## [0.1.0] - 2026-09-28
 
@@ -75,9 +74,9 @@ First milestone.
 - **Protected-region scanner** (SAFE-01 – SAFE-06, FM-01).
 - **Block segmentation** with a blank-line policy (BLK-01, BLK-02, BLK-03).
 - **Marker spacing** (BLK-04, BLK-05, BLK-09).
-- Test infrastructure on Node's built-in runner, no test dependencies.
 
-[Unreleased]: https://example.invalid/fuxi-fmt/compare/v0.4.0...HEAD
+[Unreleased]: https://example.invalid/fuxi-fmt/compare/v0.5.0...HEAD
+[0.5.0]: https://example.invalid/fuxi-fmt/compare/v0.4.0...v0.5.0
 [0.4.0]: https://example.invalid/fuxi-fmt/compare/v0.3.0...v0.4.0
 [0.3.0]: https://example.invalid/fuxi-fmt/compare/v0.2.0...v0.3.0
 [0.2.0]: https://example.invalid/fuxi-fmt/compare/v0.1.0...v0.2.0
