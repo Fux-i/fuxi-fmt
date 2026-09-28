@@ -11,46 +11,57 @@ with release candidates suffixed `-rcN`.
 
 Nothing yet.
 
-## [0.3.0] - 2026-09-28
+## [0.4.0] - 2026-09-28
 
-The per-line rule set is complete. What remains before the core is usable is
-configuration loading and the adapters.
+The structural rule set is complete apart from list reindentation. What remains
+before the core is usable is configuration loading and the adapters.
 
 ### Added
 
-- **Punctuation width** (TYPO-05), in all three directions:
-  `punctuationStyle: fullwidth | halfwidth | mixed | off`, with a configurable
-  allowlist. Adjacency decides, so `1,000`, `2.5` and `e.g.` are untouched
-  without an exclusion list.
-- **Character width** (TYPO-06). Full-width alphanumerics become half-width and
-  U+3000 becomes a normal space, both individually switchable.
-- **File hygiene** (BLK-11). Byte order mark, CRLF and lone CR, hard tabs, and
-  trailing whitespace. `endOfLine: lf | crlf | auto` and
-  `list.indentWidth: 2 | 4 | tab`.
-- `protectedMask` and the shared character classification in `chars.ts`.
+- **Unordered marker normalisation** (BLK-07):
+  `list.unorderedMarker: dashes | asterisks | preserve`. Thematic breaks and
+  emphasis are excluded by consulting the block classifier rather than by
+  pattern matching, so `* * *` and `*emphasis*` are never mistaken for lists.
+- **Code fence delimiter normalisation** (BLK-10):
+  `codeBlock.fenceChar: backticks | tildes | preserve` and
+  `codeBlock.normalizeLength`. Only the fence character and its length move;
+  indentation, the spacing before the info string and the info string itself
+  stay byte-for-byte.
+
+### Changed
+
+- The semantic guard now identifies a fence region by its info string and body
+  rather than by the entire region text, because changing the delimiter is the
+  one sanctioned edit inside a protected region. A rewritten info string is
+  still rejected.
 
 ### Fixed
 
-- The scanner now measures indentation in columns, expanding tabs to four-column
-  stops as CommonMark does. A document beginning with a tab is an indented code
-  block, not a list; counting tabs as one character got that wrong.
+- A test asserted that an entire fence delimiter line was frozen. The
+  specification only ever promised that the character and length may change;
+  the test now pins the info string and indentation with the character held
+  fixed, which is what SAFE-02 actually claims.
 
-### Notes
+## [0.3.0] - 2026-09-28
 
-- Trailing whitespace is preserved when a line ends in two or more spaces
-  followed by a non-blank line, because that is a Markdown hard break.
-- `typography.parenStyle`, `cjkClasses`, `hashtag` and `semicolon` are
-  specified but not implemented; the specification now says so explicitly.
+### Added
+
+- **Punctuation width** (TYPO-05), all three directions, decided by immediate
+  adjacency, so `1,000`, `2.5` and `e.g.` need no exclusion list.
+- **Character width** (TYPO-06). Full-width alphanumerics and U+3000.
+- **File hygiene** (BLK-11). BOM, line endings, hard tabs, trailing whitespace.
+
+### Fixed
+
+- The scanner measures indentation in columns, expanding tabs to four-column
+  stops as CommonMark does.
 
 ## [0.2.0] - 2026-09-28
 
 ### Added
 
-- **CJK typography** (TYPO-01, TYPO-02, TYPO-03, TYPO-07, TYPO-09). One space is
-  inserted at a CJK to non-CJK boundary and nowhere else, which resolves the
-  cases the reference implementations disagree about without a per-unit
-  exception list: `第 1 章`, `50% 中文`, `15%` and `10GB` all fall out of the
-  same rule.
+- **CJK typography** (TYPO-01, TYPO-02, TYPO-03, TYPO-07, TYPO-09). One space at
+  a CJK boundary and nowhere else.
 - **Ordered list renumbering** (BLK-06) at every nesting level.
 - **Semantic-preservation guard** (GRT-01, GRT-04). On failure the input is
   returned untouched rather than corrupted.
@@ -61,16 +72,13 @@ First milestone.
 
 ### Added
 
-- **Protected-region scanner** (SAFE-01 – SAFE-06, FM-01). Front matter, fenced
-  and indented code, HTML blocks and comments, inline code and math spans, URLs
-  and link destinations, wikilinks, and MDX/shortcode markup are identified
-  before any rule runs and copied byte-for-byte.
+- **Protected-region scanner** (SAFE-01 – SAFE-06, FM-01).
 - **Block segmentation** with a blank-line policy (BLK-01, BLK-02, BLK-03).
-  List tightness is preserved by construction.
 - **Marker spacing** (BLK-04, BLK-05, BLK-09).
 - Test infrastructure on Node's built-in runner, no test dependencies.
 
-[Unreleased]: https://example.invalid/fuxi-fmt/compare/v0.3.0...HEAD
+[Unreleased]: https://example.invalid/fuxi-fmt/compare/v0.4.0...HEAD
+[0.4.0]: https://example.invalid/fuxi-fmt/compare/v0.3.0...v0.4.0
 [0.3.0]: https://example.invalid/fuxi-fmt/compare/v0.2.0...v0.3.0
 [0.2.0]: https://example.invalid/fuxi-fmt/compare/v0.1.0...v0.2.0
 [0.1.0]: https://example.invalid/fuxi-fmt/releases/tag/v0.1.0

@@ -383,7 +383,8 @@ ignore:
 
 **Implementation status.** `typography.parenStyle`, `typography.cjkClasses`,
 `typography.hashtag` and `typography.semicolon` are specified but not yet
-implemented; they have no effect today. Everything else in this block is
+implemented, as is `list.indentWidth` in its reindentation sense: today the
+width is only used when expanding hard tabs. Everything else in this block is
 implemented.
 
 ---
