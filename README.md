@@ -20,8 +20,15 @@ file hygiene, and project configuration. 173 tests.
 Implemented: SAFE-01–SAFE-06, FM-01, BLK-01–BLK-07, BLK-09–BLK-11,
 TYPO-01–TYPO-03, TYPO-05–TYPO-07, TYPO-09, GRT-01–GRT-04, CFG-01 (config file).
 
-Not yet: an entry point. There is no CLI and no VS Code extension, so the engine can only
-be driven from Node for now. Also outstanding: list reindentation (BLK-08) and the
+There is now a command line interface:
+
+```sh
+node packages/cli/src/main.ts --check docs/   # exit 1 if anything would change
+node packages/cli/src/main.ts --diff  docs/   # show the lines that would change
+node packages/cli/src/main.ts --write docs/   # rewrite in place
+```
+
+A VS Code extension is still to come. Also outstanding: list reindentation (BLK-08) and the
 `parenStyle`, `cjkClasses`, `hashtag` and `semicolon` typography options.
 
 The normative behavioural contract is [FUXI-FMT-SPEC.md](FUXI-FMT-SPEC.md) — read that

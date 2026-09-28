@@ -1,0 +1,14 @@
+{
+  "name": "@fuxi-fmt/cli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Command line interface for fuxi-fmt",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "fuxi-fmt": "./src/main.ts"
+  },
+  "scripts": {
+    "test": "node --test \"src/**/*.test.ts\""
+  }
+}
