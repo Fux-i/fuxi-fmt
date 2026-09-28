@@ -12,9 +12,23 @@ export interface TypographyOptions {
   readonly cjkSpacing: boolean;
 }
 
+export type OrderedStyle = 'increment' | 'lazy-one';
+export type OrderedDelimiter = 'preserve' | '.' | ')';
+
+export interface ListOptions {
+  /**
+   * 'increment' renumbers from the declared start but preserves a list the
+   * author wrote with lazy all-ones markers, matching Prettier and dprint.
+   * 'lazy-one' forces every item to 1.
+   */
+  readonly orderedStyle: OrderedStyle;
+  readonly orderedDelimiter: OrderedDelimiter;
+}
+
 export interface FormatOptions {
   readonly blankLines: BlankLinesOptions;
   readonly typography: TypographyOptions;
+  readonly list: ListOptions;
 }
 
 export interface BlankLinesInput {
@@ -26,14 +40,21 @@ export interface TypographyInput {
   readonly cjkSpacing?: boolean;
 }
 
+export interface ListInput {
+  readonly orderedStyle?: OrderedStyle;
+  readonly orderedDelimiter?: OrderedDelimiter;
+}
+
 export interface FormatOptionsInput {
   readonly blankLines?: BlankLinesInput;
   readonly typography?: TypographyInput;
+  readonly list?: ListInput;
 }
 
 export const defaultOptions: FormatOptions = {
   blankLines: { aroundBlocks: 'exact', maxConsecutive: 1 },
   typography: { cjkSpacing: true },
+  list: { orderedStyle: 'increment', orderedDelimiter: 'preserve' },
 };
 
 export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
@@ -46,6 +67,10 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
     },
     typography: {
       cjkSpacing: input?.typography?.cjkSpacing ?? defaultOptions.typography.cjkSpacing,
+    },
+    list: {
+      orderedStyle: input?.list?.orderedStyle ?? defaultOptions.list.orderedStyle,
+      orderedDelimiter: input?.list?.orderedDelimiter ?? defaultOptions.list.orderedDelimiter,
     },
   };
 }

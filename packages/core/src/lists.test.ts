@@ -1,0 +1,44 @@
+import { test, describe } from 'node:test';
+import assert from 'node:assert/strict';
+import { format } from './format.ts';
+import type { FormatOptionsInput } from './options.ts';
+
+const out = (src: string, options?: FormatOptionsInput) => format(src, options).output;
+
+describe('BLK-06 ordered list renumbering', () => {
+  test('renumbers a broken sequence', () => {
+    assert.equal(out('1. a\n5. b\n9. c\n'), '1. a\n2. b\n3. c\n');
+  });
+  test('honours a declared start', () => {
+    assert.equal(out('3. a\n4. b\n'), '3. a\n4. b\n');
+    assert.equal(out('3. a\n9. b\n'), '3. a\n4. b\n');
+  });
+  test('preserves the lazy all-ones style', () => {
+    assert.equal(out('1. a\n1. b\n1. c\n'), '1. a\n1. b\n1. c\n');
+  });
+  test('renumbers at every nesting level', () => {
+    assert.equal(out('1. a\n   1. x\n   5. y\n2. b\n'), '1. a\n   1. x\n   2. y\n2. b\n');
+  });
+  test('keeps numbering across a loose list', () => {
+    assert.equal(out('1. a\n\n7. b\n'), '1. a\n\n2. b\n');
+  });
+  test('starts a new list after a paragraph', () => {
+    assert.equal(out('1. a\n\ntext\n\n5. b\n'), '1. a\n\ntext\n\n5. b\n');
+  });
+  test('lazy-one style forces every marker to one', () => {
+    assert.equal(out('1. a\n2. b\n', { list: { orderedStyle: 'lazy-one' } }), '1. a\n1. b\n');
+  });
+  test('delimiter can be normalised', () => {
+    assert.equal(out('1) a\n2) b\n', { list: { orderedDelimiter: '.' } }), '1. a\n2. b\n');
+  });
+  test('delimiter is preserved by default', () => {
+    assert.equal(out('1) a\n2) b\n'), '1) a\n2) b\n');
+  });
+  test('never renumbers inside a code fence', () => {
+    const src = '```\n1. a\n9. b\n```\n';
+    assert.equal(out(src), src);
+  });
+  test('does not disturb unordered lists', () => {
+    assert.equal(out('- a\n- b\n'), '- a\n- b\n');
+  });
+});

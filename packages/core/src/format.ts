@@ -3,6 +3,7 @@ import { normalizeMarkers } from './markers.ts';
 import { resolveOptions, type FormatOptions, type FormatOptionsInput } from './options.ts';
 import { scanRegions, splitSourceLines, type Region, type SourceLine } from './scan.ts';
 import { applyTypography } from './typography.ts';
+import { renumberOrderedLists } from './lists.ts';
 
 export interface Diagnostic {
   readonly ruleId: string;
@@ -72,10 +73,11 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     for (let i = range.start; i < range.end; i++) protectedLine[i] = true;
   }
 
-  const texts = lines.map((line, index) =>
+  const normalized = lines.map((line, index) =>
     protectedLine[index] === true ? line.text : normalizeMarkers(line.text),
   );
 
+  const texts = renumberOrderedLists(normalized, protectedLine, options.list);
   const blocks = segment(texts, ranges);
 
   const parts: string[] = [];

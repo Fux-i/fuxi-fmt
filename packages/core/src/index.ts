@@ -7,9 +7,14 @@ export type {
   BlankLinesOptions,
   FormatOptions,
   FormatOptionsInput,
+  ListInput,
+  ListOptions,
+  OrderedDelimiter,
+  OrderedStyle,
   TypographyInput,
   TypographyOptions,
 } from './options.ts';
+export { renumberOrderedLists } from './lists.ts';
 export { applyTypography } from './typography.ts';
 export { scanRegions } from './scan.ts';
 export type { Region, RegionKind } from './scan.ts';
