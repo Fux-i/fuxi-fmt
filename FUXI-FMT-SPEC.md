@@ -90,6 +90,8 @@ Exactly one space after `-`, `*`, `+`, `N.`, `N)` and after a task-list checkbox
 
 Exactly one space after the opening `#` run. Collapses multiple spaces; inserts a missing one.
 
+- A `#` run followed immediately by a digit is treated as an issue reference (`#123 修复了`) and is left alone. Promoting it would silently turn a paragraph into a heading, which is a rendering change rather than a spacing fix.
+
 **BLK-06 — Ordered list renumbering** · always on
 
 - Renumber at every nesting level.
