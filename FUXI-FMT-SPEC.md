@@ -154,7 +154,7 @@ Character classes (configurable):
 - **Non-CJK:** Latin letters, digits, and a whitelisted symbol set.
 - **Excluded by default, configurable:** Hiragana, Katakana, Hangul, Bopomofo, Enclosed CJK.
 
-Whitelisted symbols (spaced only when directly touching CJK): `+ - = / & * | < >`.
+Whitelisted symbols (spaced only when directly touching CJK): `+ - = < > % ° ℃ ℉`. Slash, pipe and asterisk are excluded: the reference implementations keep `/` tight, and `|` and `*` are Markdown syntax in tables and emphasis.
 
 **TYPO-02 — Boundary whitespace collapse** · default on
 
@@ -368,7 +368,7 @@ typography:
   ideographicSpace: true
   hashtag: false                  # opt-in, see TYPO-09
   cjkClasses: [han]               # han | kana | hangul | bopomofo | enclosed
-  symbolWhitelist: ["+", "-", "=", "/", "&", "*", "|", "<", ">"]
+  symbolWhitelist: ["+", "-", "=", "<", ">", "%", "°", "℃", "℉"]
 
 frontMatter:
   enabled: true                   # detection only; content is always verbatim
