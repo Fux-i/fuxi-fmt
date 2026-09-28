@@ -360,7 +360,7 @@ codeBlock:
 typography:
   cjkSpacing: true
   collapseBoundarySpaces: true
-  punctuationStyle: fullwidth     # fullwidth | halfwidth | mixed
+  punctuationStyle: fullwidth     # fullwidth | halfwidth | mixed | off
   punctuationAllowlist: [",", ".", ":", "!", "?"]
   semicolon: false                # opt-in, see TYPO-05
   parenStyle: mixed               # mixed | fullwidth | halfwidth
@@ -380,6 +380,11 @@ ignore:
   end: fuxi-fmt-ignore-end
   line: fuxi-fmt-ignore
 ```
+
+**Implementation status.** `typography.parenStyle`, `typography.cjkClasses`,
+`typography.hashtag` and `typography.semicolon` are specified but not yet
+implemented; they have no effect today. Everything else in this block is
+implemented.
 
 ---
 

@@ -11,11 +11,38 @@ with release candidates suffixed `-rcN`.
 
 Nothing yet.
 
-## [0.2.0] - 2026-09-28
+## [0.3.0] - 2026-09-28
 
-The formatter is now useful on real Chinese technical writing: it normalises
-block structure, renumbers lists, spaces CJK correctly, and refuses to hand
-back anything it cannot prove is semantically unchanged.
+The per-line rule set is complete. What remains before the core is usable is
+configuration loading and the adapters.
+
+### Added
+
+- **Punctuation width** (TYPO-05), in all three directions:
+  `punctuationStyle: fullwidth | halfwidth | mixed | off`, with a configurable
+  allowlist. Adjacency decides, so `1,000`, `2.5` and `e.g.` are untouched
+  without an exclusion list.
+- **Character width** (TYPO-06). Full-width alphanumerics become half-width and
+  U+3000 becomes a normal space, both individually switchable.
+- **File hygiene** (BLK-11). Byte order mark, CRLF and lone CR, hard tabs, and
+  trailing whitespace. `endOfLine: lf | crlf | auto` and
+  `list.indentWidth: 2 | 4 | tab`.
+- `protectedMask` and the shared character classification in `chars.ts`.
+
+### Fixed
+
+- The scanner now measures indentation in columns, expanding tabs to four-column
+  stops as CommonMark does. A document beginning with a tab is an indented code
+  block, not a list; counting tabs as one character got that wrong.
+
+### Notes
+
+- Trailing whitespace is preserved when a line ends in two or more spaces
+  followed by a non-blank line, because that is a Markdown hard break.
+- `typography.parenStyle`, `cjkClasses`, `hashtag` and `semicolon` are
+  specified but not implemented; the specification now says so explicitly.
+
+## [0.2.0] - 2026-09-28
 
 ### Added
 
@@ -23,26 +50,10 @@ back anything it cannot prove is semantically unchanged.
   inserted at a CJK to non-CJK boundary and nowhere else, which resolves the
   cases the reference implementations disagree about without a per-unit
   exception list: `第 1 章`, `50% 中文`, `15%` and `10GB` all fall out of the
-  same rule. Compound names such as `GPT-4o`, `state-of-the-art` and
-  `60公里/小时` survive intact with no exclusion list either.
-- **Ordered list renumbering** (BLK-06) at every nesting level, honouring a
-  declared start and preserving the author's lazy all-ones style.
-- **Semantic-preservation guard** (GRT-01, GRT-04). Protected regions must be
-  byte-identical and line kinds unchanged, with one documented exception for
-  the BLK-05 heading promotion. On failure the input is returned untouched.
-- `typography.cjkSpacing`, `list.orderedStyle` and `list.orderedDelimiter`
-  options.
-
-### Changed
-
-- The punctuation symbol whitelist drops `/`, `|` and `*`: the reference
-  implementations keep `/` tight, and `|` and `*` are Markdown syntax in tables
-  and emphasis.
-
-### Fixed
-
-- Whitespace collapsing is confined to the CJK boundary and no longer risks
-  affecting runs of Latin or CJK-only text.
+  same rule.
+- **Ordered list renumbering** (BLK-06) at every nesting level.
+- **Semantic-preservation guard** (GRT-01, GRT-04). On failure the input is
+  returned untouched rather than corrupted.
 
 ## [0.1.0] - 2026-09-28
 
@@ -55,17 +66,11 @@ First milestone.
   and link destinations, wikilinks, and MDX/shortcode markup are identified
   before any rule runs and copied byte-for-byte.
 - **Block segmentation** with a blank-line policy (BLK-01, BLK-02, BLK-03).
-  List tightness is preserved by construction, because a separator is only ever
-  inserted between blocks.
-- **Marker spacing** for headings, list items, task checkboxes and blockquotes
-  (BLK-04, BLK-05, BLK-09).
+  List tightness is preserved by construction.
+- **Marker spacing** (BLK-04, BLK-05, BLK-09).
 - Test infrastructure on Node's built-in runner, no test dependencies.
 
-### Notes
-
-- BLK-05 does not promote `#123` to a heading; that is an issue reference, not a
-  spacing mistake.
-
-[Unreleased]: https://example.invalid/fuxi-fmt/compare/v0.2.0...HEAD
+[Unreleased]: https://example.invalid/fuxi-fmt/compare/v0.3.0...HEAD
+[0.3.0]: https://example.invalid/fuxi-fmt/compare/v0.2.0...v0.3.0
 [0.2.0]: https://example.invalid/fuxi-fmt/compare/v0.1.0...v0.2.0
 [0.1.0]: https://example.invalid/fuxi-fmt/releases/tag/v0.1.0
