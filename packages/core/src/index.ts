@@ -13,13 +13,19 @@ export type {
   OrderedStyle,
   EndOfLine,
   IndentWidth,
+  CodeBlockInput,
+  CodeBlockOptions,
+  FenceChar,
   PunctuationStyle,
+  UnorderedMarker,
   TypographyInput,
   TypographyOptions,
 } from './options.ts';
 export { applyEndOfLine, normalizeInput, trimTrailingWhitespace } from './hygiene.ts';
 export type { Eol, NormalizedInput } from './hygiene.ts';
 export { renumberOrderedLists } from './lists.ts';
+export { normalizeFences } from './fences.ts';
+export { normalizeMarkers, normalizeUnorderedMarker } from './markers.ts';
 export { checkSemantics } from './guard.ts';
 export type { Violation } from './guard.ts';
 export { applyTypography } from './typography.ts';

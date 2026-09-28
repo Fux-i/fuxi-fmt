@@ -17,7 +17,7 @@
  */
 
 import { classifyContent } from './blocks.ts';
-import { scanRegions } from './scan.ts';
+import { scanRegions, type Region } from './scan.ts';
 
 export interface Violation {
   readonly ruleId: string;
@@ -34,6 +34,18 @@ function isHeadingPromotion(before: string, after: string): boolean {
   const hashes = match[2] ?? '';
   const rest = match[3] ?? '';
   return after === indent + hashes + ' ' + rest;
+}
+
+/**
+ * A region's identity. For a fence, the delimiter run is excluded because
+ * BLK-10 may legitimately change its character and length; the info string and
+ * the body are compared exactly.
+ */
+function regionSignature(text: string, region: Region): string {
+  const raw = text.slice(region.start, region.end);
+  if (region.kind !== 'fencedCode') return region.kind + ':' + raw;
+  const body = raw.replace(/^[ \t]*[`~]{3,}/, '').replace(/[`~]{3,}[ \t]*$/, '');
+  return region.kind + ':' + body + '\u0000' + (region.info ?? '');
 }
 
 function nonBlankLines(text: string): string[] {
@@ -60,17 +72,13 @@ export function checkSemantics(before: string, after: string): Violation[] {
       const a = beforeRegions[i];
       const b = afterRegions[i];
       if (a === undefined || b === undefined) continue;
-      const textA = before.slice(a.start, a.end);
-      const textB = after.slice(b.start, b.end);
-      if (a.kind !== b.kind || textA !== textB) {
+      const signatureA = regionSignature(before, a);
+      const signatureB = regionSignature(after, b);
+      if (signatureA !== signatureB) {
         violations.push({
           ruleId: 'SAFE-01',
           message:
-            a.kind +
-            ' region changed: ' +
-            JSON.stringify(textA) +
-            ' -> ' +
-            JSON.stringify(textB),
+            a.kind + ' region changed: ' + JSON.stringify(signatureA) + ' -> ' + JSON.stringify(signatureB),
         });
       }
     }

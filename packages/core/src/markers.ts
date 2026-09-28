@@ -5,10 +5,27 @@
  * BLK-09 (blockquote markers).
  */
 
+import { classifyContent } from './blocks.ts';
+import type { UnorderedMarker } from './options.ts';
+
+const UNORDERED = /^(\s*)([-*+])([ \t]+)([\s\S]*)$/;
 const HEADING = /^(\s{0,3})(#{1,6})(?!#)([ \t]*)([\s\S]*)$/;
 const LIST = /^(\s*)([-*+]|\d{1,9}[.)])([ \t]+)([\s\S]*)$/;
 const TASK = /^\[([ xX])\]([ \t]+)([\s\S]*)$/;
 const QUOTE = /^(\s*)((?:>+[ \t]*)+)([\s\S]*)$/;
+
+/**
+ * BLK-07. Thematic breaks and emphasis are excluded by asking the block
+ * classifier first: '* * *' is a break and '*emphasis*' is not a list at all.
+ */
+export function normalizeUnorderedMarker(text: string, marker: UnorderedMarker): string {
+  if (marker === 'preserve') return text;
+  if (classifyContent(text) !== 'list') return text;
+  const match = UNORDERED.exec(text);
+  if (match === null) return text;
+  const want = marker === 'dashes' ? '-' : '*';
+  return (match[1] ?? '') + want + (match[3] ?? ' ') + (match[4] ?? '');
+}
 
 export function normalizeMarkers(text: string): string {
   const heading = HEADING.exec(text);

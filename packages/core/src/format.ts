@@ -2,7 +2,8 @@ import { segment, type AtomicRange, type BlockKind } from './blocks.ts';
 import { checkSemantics } from './guard.ts';
 import { applyEndOfLine, normalizeInput, trimTrailingWhitespace, type Eol } from './hygiene.ts';
 import { renumberOrderedLists } from './lists.ts';
-import { normalizeMarkers } from './markers.ts';
+import { normalizeFences } from './fences.ts';
+import { normalizeMarkers, normalizeUnorderedMarker } from './markers.ts';
 import { resolveOptions, type FormatOptions, type FormatOptionsInput } from './options.ts';
 import { scanRegions, splitSourceLines, type Region, type SourceLine } from './scan.ts';
 import { applyTypography } from './typography.ts';
@@ -86,10 +87,11 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   const normalizedTexts = lines.map((line, index) => {
     if (protectedLine[index] === true) return line.text;
     const expanded = tabWidth === 0 ? line.text : line.text.split('\t').join(' '.repeat(tabWidth));
-    return normalizeMarkers(expanded);
+    return normalizeUnorderedMarker(normalizeMarkers(expanded), options.list.unorderedMarker);
   });
 
-  const texts = renumberOrderedLists(normalizedTexts, protectedLine, options.list);
+  const renumbered = renumberOrderedLists(normalizedTexts, protectedLine, options.list);
+  const texts = normalizeFences(renumbered, ranges, options.codeBlock);
   const blocks = segment(texts, ranges);
 
   const parts: string[] = [];

@@ -92,8 +92,11 @@ describe('protected regions are never touched', () => {
     assert.equal(out('---\ntitle: 标题\n-  x\n---\n\n#标题\n'), '---\ntitle: 标题\n-  x\n---\n\n# 标题\n');
   });
   test('SAFE-02 a fence info string with Pandoc attributes is untouched', () => {
-    const src = '~~~ c {3, 4}\nx\n~~~\n';
-    assert.equal(out(src), src);
+    // With the fence character pinned, nothing about the delimiter line may
+    // move: indentation, the spacing before the info string, and the info
+    // string itself are all byte-verbatim (SAFE-02).
+    const src = '  ~~~ c {3, 4}\n  x\n  ~~~\n';
+    assert.equal(out(src, { codeBlock: { fenceChar: 'preserve' } }), src);
   });
 });
 
