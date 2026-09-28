@@ -14,7 +14,7 @@
   "scripts": {
     "test": "node --test \"packages/*/src/**/*.test.ts\"",
     "test:watch": "node --test --watch \"packages/*/src/**/*.test.ts\"",
-    "typecheck": "tsc -b packages/core",
+    "typecheck": "tsc -p packages/core",
     "ci": "npm run typecheck && npm test"
   },
   "devDependencies": {

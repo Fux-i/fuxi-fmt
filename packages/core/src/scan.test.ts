@@ -1,0 +1,144 @@
+import { test, describe } from 'node:test';
+import assert from 'node:assert/strict';
+import { scanRegions } from './scan.ts';
+
+/** Assert on the matched source text so tests do not depend on raw offsets. */
+function slices(src: string) {
+  return scanRegions(src).map((r) => [r.kind, src.slice(r.start, r.end)] as const);
+}
+
+describe('scan: front matter (FM-01)', () => {
+  test('detects a YAML front matter block and excludes the trailing newline', () => {
+    const src = '---\ntitle: x\ntags:\n  - a\n---\n\nbody\n';
+    assert.deepEqual(slices(src), [['frontMatter', '---\ntitle: x\ntags:\n  - a\n---']]);
+  });
+
+  test('does not treat a thematic break as front matter', () => {
+    const src = 'first\n\n---\n\nsecond\n';
+    assert.deepEqual(slices(src), []);
+  });
+
+  test('does not treat front matter as such unless it starts on line 1', () => {
+    const src = 'intro\n\n---\ntitle: x\n---\n';
+    assert.deepEqual(slices(src), []);
+  });
+});
+
+describe('scan: fenced code (SAFE-01, SAFE-02)', () => {
+  test('detects a fence and reports its info string verbatim', () => {
+    const src = 'before\n\n```js\nconst a = 1;\n```\n\nafter\n';
+    const regions = scanRegions(src);
+    assert.deepEqual(regions.map((r) => [r.kind, src.slice(r.start, r.end)]), [
+      ['fencedCode', '```js\nconst a = 1;\n```'],
+    ]);
+    assert.equal(regions[0]?.info, 'js');
+    assert.equal(regions[0]?.indent, '');
+  });
+
+  test('preserves a tilde fence with Pandoc attributes byte-for-byte', () => {
+    const src = '~~~ c {3, 4}\nx\n~~~\n';
+    const regions = scanRegions(src);
+    assert.equal(regions[0]?.kind, 'fencedCode');
+    assert.equal(regions[0]?.info, 'c {3, 4}');
+    assert.equal(src.slice(regions[0]!.start, regions[0]!.end), '~~~ c {3, 4}\nx\n~~~');
+  });
+
+  test('records leading indentation without consuming it into the body', () => {
+    const src = '- item\n\n  ```js\n  const a = 1;\n  ```\n';
+    const regions = scanRegions(src);
+    assert.equal(regions[0]?.kind, 'fencedCode');
+    assert.equal(regions[0]?.indent, '  ');
+  });
+
+  test('a longer closing fence does not end a shorter opening fence early', () => {
+    const src = '````md\n```\ninner\n````\n';
+    const regions = scanRegions(src);
+    assert.equal(src.slice(regions[0]!.start, regions[0]!.end), '````md\n```\ninner\n````');
+  });
+
+  test('an unterminated fence runs to end of input', () => {
+    const src = 'text\n\n```js\nnever closed\n';
+    assert.equal(slices(src)[0]?.[1], '```js\nnever closed\n');
+  });
+});
+
+describe('scan: indented code (SAFE-01)', () => {
+  test('detects a 4-space indented code block following a blank line', () => {
+    const src = 'para\n\n    indented code\n    more code\n\nafter\n';
+    assert.deepEqual(slices(src), [['indentedCode', '    indented code\n    more code']]);
+  });
+
+  test('does not treat a wrapped list continuation as indented code', () => {
+    const src = '- item\n\n  continuation of the item\n';
+    assert.deepEqual(slices(src), []);
+  });
+});
+
+describe('scan: inline protected spans (SAFE-03)', () => {
+  test('detects an inline code span', () => {
+    const src = '中文 `code` 中文\n';
+    assert.deepEqual(slices(src), [['inlineCode', '`code`']]);
+  });
+
+  test('detects a multi-backtick inline span', () => {
+    const src = 'a ``code with ` tick`` b\n';
+    assert.deepEqual(slices(src), [['inlineCode', '``code with ` tick``']]);
+  });
+
+  test('detects inline math', () => {
+    const src = '值 $x^2$ 与 $y$\n';
+    assert.deepEqual(slices(src), [['inlineMath', '$x^2$'], ['inlineMath', '$y$']]);
+  });
+
+  test('detects an escaped backtick as literal text, not a span', () => {
+    const src = 'a \\` not code\\` b\n';
+    assert.deepEqual(slices(src), []);
+  });
+});
+
+describe('scan: verbatim link and markup destinations (SAFE-04, SAFE-05, SAFE-06)', () => {
+  test('detects a bare URL and excludes trailing punctuation', () => {
+    const src = '见 https://example.com/a_b?q=1，然后\n';
+    assert.deepEqual(slices(src), [['url', 'https://example.com/a_b?q=1']]);
+  });
+
+  test('detects an inline link destination but not its text', () => {
+    const src = '[中文](https://example.com/路径) 后\n';
+    assert.deepEqual(slices(src), [['url', 'https://example.com/路径']]);
+  });
+
+  test('detects an HTML comment', () => {
+    const src = 'a <!-- 全角，标点 --> b\n';
+    assert.deepEqual(slices(src), [['htmlComment', '<!-- 全角，标点 -->']]);
+  });
+
+  test('detects an HTML block', () => {
+    const src = 'x\n\n<div class="a">\n  <span>中文</span>\n</div>\n\ny\n';
+    assert.deepEqual(slices(src), [['htmlBlock', '<div class="a">\n  <span>中文</span>\n</div>']]);
+  });
+
+  test('detects a wikilink', () => {
+    const src = '见 [[笔记 A|别名]] 和 [[B]]\n';
+    assert.deepEqual(slices(src), [['wikilink', '[[笔记 A|别名]]'], ['wikilink', '[[B]]']]);
+  });
+
+  test('detects MDX/JSX shortcode markup', () => {
+    const src = '文本 <Badge text="中文" /> 结尾\n';
+    assert.deepEqual(slices(src), [['mdx', '<Badge text="中文" />']]);
+  });
+
+  test('detects a `{{ }}` shortcode', () => {
+    const src = '见 {{< figure src="a.png" >}} 处\n';
+    assert.deepEqual(slices(src), [['mdx', '{{< figure src="a.png" >}}']]);
+  });
+});
+
+describe('scan: region contract', () => {
+  test('regions are sorted by start offset and never overlap', () => {
+    const src = '---\nt: 1\n---\n\n`code` 与文字\n\n```js\nx\n```\n\n<div>y</div>\n';
+    const regions = scanRegions(src);
+    for (let i = 1; i < regions.length; i++) {
+      assert.ok(regions[i]!.start >= regions[i - 1]!.end, 'regions overlap or are unsorted');
+    }
+  });
+});
