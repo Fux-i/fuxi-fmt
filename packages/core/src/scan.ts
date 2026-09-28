@@ -85,6 +85,15 @@ function indentColumns(text: string, chars: number): number {
   return column;
 }
 
+/** Mask of every protected character, block-level and inline (SAFE-01 – SAFE-06). */
+export function protectedMask(text: string): Uint8Array {
+  const mask = new Uint8Array(text.length);
+  for (const region of scanRegions(text)) {
+    for (let i = region.start; i < region.end; i++) mask[i] = 1;
+  }
+  return mask;
+}
+
 /** Region kinds that occupy whole lines and are never touched (SAFE-01, SAFE-04, FM-01). */
 export function isBlockRegionKind(kind: RegionKind): boolean {
   return kind === 'frontMatter' || kind === 'fencedCode' || kind === 'indentedCode' || kind === 'htmlBlock';

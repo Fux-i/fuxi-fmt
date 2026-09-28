@@ -13,6 +13,7 @@ export type {
   OrderedStyle,
   EndOfLine,
   IndentWidth,
+  PunctuationStyle,
   TypographyInput,
   TypographyOptions,
 } from './options.ts';
@@ -22,7 +23,9 @@ export { renumberOrderedLists } from './lists.ts';
 export { checkSemantics } from './guard.ts';
 export type { Violation } from './guard.ts';
 export { applyTypography } from './typography.ts';
-export { isBlockRegionKind, scanRegions, splitSourceLines } from './scan.ts';
+export { isBlockRegionKind, protectedMask, scanRegions, splitSourceLines } from './scan.ts';
+export { isAlphanumeric, isCjk, isFullPunct, isSpacingChar } from './chars.ts';
+export { normalizeFullwidthAlphanumerics, normalizePunctuation } from './widths.ts';
 export type { Region, RegionKind } from './scan.ts';
 export { classifyContent, classifyLine, segment } from './blocks.ts';
 export type { Block, BlockKind, ContentKind, LineKind } from './blocks.ts';

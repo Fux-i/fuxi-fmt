@@ -7,9 +7,19 @@ export interface BlankLinesOptions {
   readonly maxConsecutive: number | null;
 }
 
+export type PunctuationStyle = 'fullwidth' | 'halfwidth' | 'mixed' | 'off';
+
 export interface TypographyOptions {
   /** Insert one space at every CJK to non-CJK boundary (TYPO-01). */
   readonly cjkSpacing: boolean;
+  /** Direction of punctuation width normalisation (TYPO-05). */
+  readonly punctuationStyle: PunctuationStyle;
+  /** Half-width marks eligible for conversion (TYPO-05). */
+  readonly punctuationAllowlist: readonly string[];
+  /** Full-width alphanumerics become half-width (TYPO-06). */
+  readonly halfwidthAlphanumerics: boolean;
+  /** U+3000 becomes a normal space (TYPO-06). */
+  readonly ideographicSpace: boolean;
 }
 
 export type EndOfLine = 'lf' | 'crlf' | 'auto';
@@ -43,6 +53,10 @@ export interface BlankLinesInput {
 
 export interface TypographyInput {
   readonly cjkSpacing?: boolean;
+  readonly punctuationStyle?: PunctuationStyle;
+  readonly punctuationAllowlist?: readonly string[];
+  readonly halfwidthAlphanumerics?: boolean;
+  readonly ideographicSpace?: boolean;
 }
 
 export interface ListInput {
@@ -60,7 +74,13 @@ export interface FormatOptionsInput {
 
 export const defaultOptions: FormatOptions = {
   blankLines: { aroundBlocks: 'exact', maxConsecutive: 1 },
-  typography: { cjkSpacing: true },
+  typography: {
+    cjkSpacing: true,
+    punctuationStyle: 'fullwidth',
+    punctuationAllowlist: [',', '.', ':', '!', '?'],
+    halfwidthAlphanumerics: true,
+    ideographicSpace: true,
+  },
   list: { orderedStyle: 'increment', orderedDelimiter: 'preserve', indentWidth: 2 },
   endOfLine: 'lf',
 };
@@ -75,6 +95,15 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
     },
     typography: {
       cjkSpacing: input?.typography?.cjkSpacing ?? defaultOptions.typography.cjkSpacing,
+      punctuationStyle:
+        input?.typography?.punctuationStyle ?? defaultOptions.typography.punctuationStyle,
+      punctuationAllowlist:
+        input?.typography?.punctuationAllowlist ?? defaultOptions.typography.punctuationAllowlist,
+      halfwidthAlphanumerics:
+        input?.typography?.halfwidthAlphanumerics ??
+        defaultOptions.typography.halfwidthAlphanumerics,
+      ideographicSpace:
+        input?.typography?.ideographicSpace ?? defaultOptions.typography.ideographicSpace,
     },
     list: {
       orderedStyle: input?.list?.orderedStyle ?? defaultOptions.list.orderedStyle,

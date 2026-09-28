@@ -6,6 +6,7 @@ import { normalizeMarkers } from './markers.ts';
 import { resolveOptions, type FormatOptions, type FormatOptionsInput } from './options.ts';
 import { scanRegions, splitSourceLines, type Region, type SourceLine } from './scan.ts';
 import { applyTypography } from './typography.ts';
+import { normalizeFullwidthAlphanumerics, normalizePunctuation } from './widths.ts';
 
 export interface Diagnostic {
   readonly ruleId: string;
@@ -103,7 +104,11 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   }
 
   const structural = parts.length === 0 ? '' : parts.join('\n') + '\n';
-  const candidate = trimTrailingWhitespace(applyTypography(structural, options.typography));
+  // Width first, so that spacing sees ordinary digits; punctuation before
+  // spacing, so that TYPO-07 can remove the gaps a conversion leaves behind.
+  const widths = normalizeFullwidthAlphanumerics(structural, options.typography);
+  const punctuation = normalizePunctuation(widths, options.typography);
+  const candidate = trimTrailingWhitespace(applyTypography(punctuation, options.typography));
 
   // GRT-01: never hand back a document that parses differently. If the guard
   // trips we return the input untouched and say why (GRT-04).

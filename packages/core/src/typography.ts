@@ -15,6 +15,7 @@
  * TYPO-03 (compound names), TYPO-07 (full-width punctuation), TYPO-09 (hashtags).
  */
 
+import { isCjk, isFullPunct, isSpacingChar } from './chars.ts';
 import type { TypographyOptions } from './options.ts';
 import { isBlockRegionKind, scanRegions, splitSourceLines } from './scan.ts';
 
@@ -25,23 +26,10 @@ interface Unit {
   readonly cls: CharClass;
 }
 
-const CJK = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/;
-const LATIN = /[A-Za-z0-9]/;
-
-/** Characters that attach to an adjacent Latin or CJK run (TYPO-04, TYPO-10). */
-const SPACING_SYMBOLS = new Set(['+', '-', '=', '<', '>', '%', '\u00b0', '\u2103', '\u2109']);
-
-/** Full-width punctuation is a boundary, never a spacing target (TYPO-07). */
-const FULL_PUNCT = new Set([
-  '\uff0c', '\u3002', '\uff01', '\uff1f', '\uff1b', '\uff1a', '\u3001',
-  '\uff08', '\uff09', '\u3010', '\u3011', '\u300c', '\u300d', '\u300a', '\u300b',
-  '\u201c', '\u201d', '\u2018', '\u2019',
-]);
-
 function classOf(ch: string): CharClass {
-  if (CJK.test(ch)) return 'cjk';
-  if (LATIN.test(ch) || SPACING_SYMBOLS.has(ch)) return 'latin';
-  if (FULL_PUNCT.has(ch)) return 'fullpunct';
+  if (isCjk(ch)) return 'cjk';
+  if (isSpacingChar(ch)) return 'latin';
+  if (isFullPunct(ch)) return 'fullpunct';
   return 'other';
 }
 
