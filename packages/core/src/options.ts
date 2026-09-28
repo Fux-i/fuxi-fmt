@@ -8,6 +8,7 @@ export interface BlankLinesOptions {
 }
 
 export type PunctuationStyle = 'fullwidth' | 'halfwidth' | 'mixed' | 'off';
+export type ParenStyle = 'mixed' | 'fullwidth' | 'halfwidth' | 'preserve';
 
 export interface TypographyOptions {
   /** Insert one space at every CJK to non-CJK boundary (TYPO-01). */
@@ -22,6 +23,8 @@ export interface TypographyOptions {
   readonly ideographicSpace: boolean;
   /** Space a mid-text '#' from CJK; off by default (TYPO-09). */
   readonly hashtag: boolean;
+  /** Parenthesis width, by the script of the contents (TYPO-08). */
+  readonly parenStyle: ParenStyle;
 }
 
 export type EndOfLine = 'lf' | 'crlf' | 'auto';
@@ -77,6 +80,7 @@ export interface TypographyInput {
   readonly halfwidthAlphanumerics?: boolean;
   readonly ideographicSpace?: boolean;
   readonly hashtag?: boolean;
+  readonly parenStyle?: ParenStyle;
 }
 
 export interface ListInput {
@@ -103,6 +107,7 @@ export const defaultOptions: FormatOptions = {
     halfwidthAlphanumerics: true,
     ideographicSpace: true,
     hashtag: false,
+    parenStyle: 'mixed',
   },
   list: {
     orderedStyle: 'increment',
@@ -134,6 +139,7 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
       ideographicSpace:
         input?.typography?.ideographicSpace ?? defaultOptions.typography.ideographicSpace,
       hashtag: input?.typography?.hashtag ?? defaultOptions.typography.hashtag,
+      parenStyle: input?.typography?.parenStyle ?? defaultOptions.typography.parenStyle,
     },
     list: {
       orderedStyle: input?.list?.orderedStyle ?? defaultOptions.list.orderedStyle,

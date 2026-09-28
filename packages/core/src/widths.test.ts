@@ -5,6 +5,31 @@ import type { FormatOptionsInput } from './options.ts';
 
 const out = (src: string, options?: FormatOptionsInput) => format(src, options).output;
 
+describe('TYPO-08 parenthesis width follows the script of the contents', () => {
+  test('half-width when the contents are Latin', () => {
+    assert.equal(out('中文（NMRI）后续\n'), '中文(NMRI)后续\n');
+  });
+  test('full-width when the contents contain Han', () => {
+    assert.equal(out('中文(中文内容)后续\n'), '中文（中文内容）后续\n');
+  });
+  test('digits alone count as non-CJK', () => {
+    assert.equal(out('见（1）与（二）\n'), '见(1)与（二）\n');
+  });
+  test('preserve leaves both alone', () => {
+    assert.equal(
+      out('中文（NMRI）\n', { typography: { parenStyle: 'preserve' } }),
+      '中文（NMRI）\n',
+    );
+  });
+  test('a nested pair is skipped rather than guessed', () => {
+    assert.equal(out('中文（a(b)c）\n'), '中文（a(b)c）\n');
+  });
+  test('never touches a fence', () => {
+    const src = '```\n中文（NMRI）\n```\n';
+    assert.equal(out(src), src);
+  });
+});
+
 describe('TYPO-06 full-width alphanumerics become half-width', () => {
   test('converts full-width digits and then spaces them from Han', () => {
     assert.equal(out('中文１２３\n'), '中文 123\n');

@@ -11,6 +11,40 @@ with release candidates suffixed `-rcN`.
 
 Nothing yet.
 
+## [0.11.0] - 2026-09-28
+
+### Added
+
+- **Parenthesis width** (TYPO-08): `typography.parenStyle: mixed | fullwidth |
+  halfwidth | preserve`, defaulting to `mixed` — full-width `（）` around Han,
+  half-width `()` around Latin or digits. Deliberately conservative: a pair
+  spanning a line break, touching a protected region, or containing another
+  opener is left exactly as written rather than guessed at, because a wrong
+  parenthesis is worse than a wide one.
+
+### Fixed
+
+- The specification still listed `typography.hashtag` as unimplemented, three
+  releases after it shipped.
+
+## [0.10.0] - 2026-09-28
+
+### Added
+
+- **Opt-in hashtag spacing** (TYPO-09): `typography.hashtag`, off by default
+  because `中文#标签` becoming `中文 # 标签` breaks the tag wherever it is
+  published.
+
+## [0.9.0] - 2026-09-28
+
+### Fixed
+
+- **Inline code spans were paired across blank lines.** A single unmatched
+  backtick in prose found a partner paragraphs later and invented a span
+  covering half the file, after which the semantic guard refused to format the
+  document at all. CommonMark forbids a code span from containing a blank line.
+  Found by formatting this repository's own documentation.
+
 ## [0.8.0] - 2026-09-28
 
 ### Added

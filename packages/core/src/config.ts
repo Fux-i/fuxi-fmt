@@ -231,6 +231,7 @@ function readSections(raw: Raw): FormatOptionsInput {
       halfwidthAlphanumerics?: boolean;
       ideographicSpace?: boolean;
       hashtag?: boolean;
+      parenStyle?: 'mixed' | 'fullwidth' | 'halfwidth' | 'preserve';
     } = {};
     if (from.cjkSpacing !== undefined) to.cjkSpacing = bool(from.cjkSpacing, 'typography.cjkSpacing');
     if (from.punctuationStyle !== undefined) {
@@ -252,6 +253,14 @@ function readSections(raw: Raw): FormatOptionsInput {
     }
     if (from.hashtag !== undefined) {
       to.hashtag = bool(from.hashtag, 'typography.hashtag');
+    }
+    if (from.parenStyle !== undefined) {
+      to.parenStyle = oneOf(from.parenStyle, 'typography.parenStyle', [
+        'mixed',
+        'fullwidth',
+        'halfwidth',
+        'preserve',
+      ]);
     }
     out.typography = to;
   }

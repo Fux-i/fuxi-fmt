@@ -11,6 +11,16 @@
  */
 
 import { isAlphanumeric, isCjk } from './chars.ts';
+
+const OPENERS = new Set(['(', '\uff08']);
+const CLOSERS = new Set([')', '\uff09']);
+
+function containsCjk(text: string): boolean {
+  for (let i = 0; i < text.length; i++) {
+    if (isCjk(text.charAt(i))) return true;
+  }
+  return false;
+}
 import type { TypographyOptions } from './options.ts';
 import { protectedMask } from './scan.ts';
 
@@ -59,6 +69,44 @@ export function normalizeFullwidthAlphanumerics(text: string, options: Typograph
     out += isFullwidth ? String.fromCharCode(code - FULLWIDTH_OFFSET) : ch;
   }
   return out;
+}
+
+/**
+ * TYPO-08: the width of a parenthesis pair follows the script of its contents.
+ *
+ * Deliberately conservative. A pair that spans a line break, touches a
+ * protected region, or contains another opener is left exactly as written
+ * rather than guessed at - a wrong parenthesis is worse than a wide one.
+ */
+export function normalizeParens(text: string, options: TypographyOptions): string {
+  if (options.parenStyle === 'preserve') return text;
+  const mask = protectedMask(text);
+  const chars = text.split('');
+  for (let i = 0; i < text.length; i++) {
+    if (mask[i] === 1 || !OPENERS.has(text.charAt(i))) continue;
+    let j = i + 1;
+    let bail = false;
+    while (j < text.length) {
+      const c = text.charAt(j);
+      if (c === '\n' || mask[j] === 1 || OPENERS.has(c)) {
+        bail = true;
+        break;
+      }
+      if (CLOSERS.has(c)) break;
+      j++;
+    }
+    if (bail || j >= text.length) continue;
+    const full =
+      options.parenStyle === 'fullwidth'
+        ? true
+        : options.parenStyle === 'halfwidth'
+          ? false
+          : containsCjk(text.slice(i + 1, j));
+    chars[i] = full ? '\uff08' : '(';
+    chars[j] = full ? '\uff09' : ')';
+    i = j;
+  }
+  return chars.join('');
 }
 
 /** TYPO-05: half-width punctuation becomes full-width beside CJK, and vice versa. */
