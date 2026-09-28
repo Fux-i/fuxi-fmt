@@ -116,7 +116,6 @@ is the authority; this is the shortest accurate summary of the gap.
 | Item | State |
 |---|---|
 | **BLK-08 list reindentation** | Decision recorded in spec section 7 item 1 (option b: a list containing a protected block is excluded). **Not implemented.** `list.indentWidth` today only controls hard-tab expansion. This is the last unimplemented structural rule. |
-| **`typography.cjkClasses`** | Not implemented. Would make the CJK character class configurable, so kana, Hangul and Bopomofo could opt in. |
 | **`typography.semicolon`** | Not implemented. Converts `;` to `；` beside CJK; excluded from the default allowlist because AutoCorrect excludes it deliberately, annotating the decision "danger". |
 | **Config presets** | Not implemented. `fuxi-fmt.json` names a `preset` in the specification; the key is currently ignored. |
 | **Extension host** | The bundle runs against a stubbed `vscode` module in tests. It has never been loaded by a real editor. |

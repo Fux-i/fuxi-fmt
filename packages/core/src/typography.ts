@@ -15,7 +15,7 @@
  * TYPO-03 (compound names), TYPO-07 (full-width punctuation), TYPO-09 (hashtags).
  */
 
-import { isCjk, isFullPunct, isSpacingChar } from './chars.ts';
+import { isCjk, isFullPunct, isSpacingChar, type CjkClass } from './chars.ts';
 import type { TypographyOptions } from './options.ts';
 import { isBlockRegionKind, scanRegions, splitSourceLines } from './scan.ts';
 
@@ -26,8 +26,8 @@ interface Unit {
   readonly cls: CharClass;
 }
 
-function classOf(ch: string, hashtag: boolean): CharClass {
-  if (isCjk(ch)) return 'cjk';
+function classOf(ch: string, hashtag: boolean, classes: readonly CjkClass[]): CharClass {
+  if (isCjk(ch, classes)) return 'cjk';
   // TYPO-09: a mid-text '#' is a hashtag or an anchor and is never spaced by
   // default, because '中文#标签' becoming '中文 # 标签' breaks the tag wherever
   // it is published. Opting in is a deliberate choice, not an oversight.
@@ -53,7 +53,14 @@ function separator(prev: Unit, cur: Unit, pending: string): string {
   return pending;
 }
 
-function tokenize(text: string, from: number, to: number, mask: Uint8Array, hashtag: boolean): Unit[] {
+function tokenize(
+  text: string,
+  from: number,
+  to: number,
+  mask: Uint8Array,
+  hashtag: boolean,
+  classes: readonly CjkClass[],
+): Unit[] {
   const units: Unit[] = [];
   let i = from;
   while (i < to) {
@@ -73,7 +80,7 @@ function tokenize(text: string, from: number, to: number, mask: Uint8Array, hash
       i = j;
       continue;
     }
-    units.push({ text: ch, cls: classOf(ch, hashtag) });
+    units.push({ text: ch, cls: classOf(ch, hashtag, classes) });
     i++;
   }
   return units;
@@ -86,6 +93,7 @@ function formatLine(
   mask: Uint8Array,
   blockMask: Uint8Array,
   hashtag: boolean,
+  classes: readonly CjkClass[],
 ): string {
   if (from >= to) return '';
   let allBlock = true;
@@ -97,7 +105,7 @@ function formatLine(
   }
   if (allBlock) return text.slice(from, to);
 
-  const units = tokenize(text, from, to, mask, hashtag);
+  const units = tokenize(text, from, to, mask, hashtag, classes);
   let out = '';
   let prev: Unit | null = null;
   let pending = '';
@@ -137,7 +145,9 @@ export function applyTypography(text: string, options: TypographyOptions): strin
     if (line === undefined) continue;
     const next = lines[li + 1];
     const newline = text.slice(line.end, next === undefined ? text.length : next.start);
-    out += formatLine(text, line.start, line.end, mask, blockMask, options.hashtag) + newline;
+    out +=
+      formatLine(text, line.start, line.end, mask, blockMask, options.hashtag, options.cjkClasses) +
+      newline;
   }
   return out;
 }

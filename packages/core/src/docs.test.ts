@@ -27,8 +27,9 @@ describe('documentation stays true to the code', () => {
 
     const after = spec.slice(marker + '**Not implemented at all:**'.length);
     const paragraph = after.split('**Partially implemented:**')[0] ?? '';
+    // An empty list is legitimate: it means everything is implemented. What
+    // matters is that nothing named here is secretly present in the defaults.
     const claimed = [...paragraph.matchAll(/`(typography|list)\.([A-Za-z]+)`/g)];
-    assert.ok(claimed.length > 0, 'the status note names no options to check');
 
     for (const match of claimed) {
       const section = match[1] ?? '';

@@ -10,14 +10,14 @@
  * and 'e.g.' intact without any exclusion list.
  */
 
-import { isAlphanumeric, isCjk } from './chars.ts';
+import { isAlphanumeric, isCjk, type CjkClass } from './chars.ts';
 
 const OPENERS = new Set(['(', '\uff08']);
 const CLOSERS = new Set([')', '\uff09']);
 
-function containsCjk(text: string): boolean {
+function containsCjk(text: string, classes: readonly CjkClass[]): boolean {
   for (let i = 0; i < text.length; i++) {
-    if (isCjk(text.charAt(i))) return true;
+    if (isCjk(text.charAt(i), classes)) return true;
   }
   return false;
 }
@@ -103,7 +103,7 @@ export function normalizeParens(text: string, options: TypographyOptions): strin
         ? true
         : options.parenStyle === 'halfwidth'
           ? false
-          : containsCjk(text.slice(i + 1, j));
+          : containsCjk(text.slice(i + 1, j), options.cjkClasses);
     chars[i] = full ? '\uff08' : '(';
     chars[j] = full ? '\uff09' : ')';
     i = j;
@@ -130,6 +130,7 @@ export function normalizePunctuation(text: string, options: TypographyOptions): 
     toHalf.set(full, half);
   }
 
+  const classes = options.cjkClasses;
   const style = options.punctuationStyle;
   const doFull = style === 'fullwidth' || style === 'mixed';
   const doHalf = style === 'halfwidth' || style === 'mixed';
@@ -146,7 +147,7 @@ export function normalizePunctuation(text: string, options: TypographyOptions): 
     const right = i + 1 < text.length ? text.charAt(i + 1) : '';
 
     const full = toFull.get(ch);
-    if (doFull && full !== undefined && (isCjk(left) || isCjk(right))) {
+    if (doFull && full !== undefined && (isCjk(left, classes) || isCjk(right, classes))) {
       out += full;
       continue;
     }
@@ -154,8 +155,8 @@ export function normalizePunctuation(text: string, options: TypographyOptions): 
     if (
       doHalf &&
       half !== undefined &&
-      !isCjk(left) &&
-      !isCjk(right) &&
+      !isCjk(left, classes) &&
+      !isCjk(right, classes) &&
       (isAlphanumeric(left) || isAlphanumeric(right))
     ) {
       out += half;

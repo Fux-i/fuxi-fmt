@@ -11,6 +11,7 @@
  * because silently ignoring it would hide a typo for the life of the project.
  */
 
+import type { CjkClass } from './chars.ts';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import type {
@@ -233,6 +234,7 @@ function readSections(raw: Raw): FormatOptionsInput {
       hashtag?: boolean;
       parenStyle?: 'mixed' | 'fullwidth' | 'halfwidth' | 'preserve';
       semicolon?: boolean;
+      cjkClasses?: readonly CjkClass[];
     } = {};
     if (from.cjkSpacing !== undefined) to.cjkSpacing = bool(from.cjkSpacing, 'typography.cjkSpacing');
     if (from.punctuationStyle !== undefined) {
@@ -265,6 +267,16 @@ function readSections(raw: Raw): FormatOptionsInput {
     }
     if (from.semicolon !== undefined) {
       to.semicolon = bool(from.semicolon, 'typography.semicolon');
+    }
+    if (from.cjkClasses !== undefined) {
+      const names = strings(from.cjkClasses, 'typography.cjkClasses');
+      const allowed: readonly CjkClass[] = ['han', 'kana', 'hangul', 'bopomofo', 'enclosed'];
+      for (const name of names) {
+        if (!(allowed as readonly string[]).includes(name)) {
+          throw new Error('config: typography.cjkClasses has an unknown class ' + name);
+        }
+      }
+      to.cjkClasses = names as readonly CjkClass[];
     }
     out.typography = to;
   }

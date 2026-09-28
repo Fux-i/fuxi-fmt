@@ -11,6 +11,25 @@ with release candidates suffixed `-rcN`.
 
 Nothing yet.
 
+## [0.13.0] - 2026-09-28
+
+Every typography option named in the specification is now implemented. The
+"not implemented at all" list in the specification is empty for the first time.
+
+### Added
+
+- **`typography.cjkClasses`**, defaulting to Han alone. Kana, Hangul, Bopomofo
+  and enclosed CJK can be opted into. Opt-in rather than guessed at: enabling
+  kana turns `テレビabc` from untouched into `テレビ abc`, which is right for
+  Japanese and wrong for a Chinese article quoting a Japanese product name.
+
+### Notes
+
+- The documentation check failed on this change before the specification was
+  updated, exactly as intended: the option now exists in the defaults, so
+  leaving it in the "not implemented" list would have shipped a false claim.
+  Second time the check has caught a stale document.
+
 ## [0.12.0] - 2026-09-28
 
 ### Added

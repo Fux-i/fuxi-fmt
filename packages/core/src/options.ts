@@ -1,3 +1,5 @@
+import { DEFAULT_CJK_CLASSES, type CjkClass } from './chars.ts';
+
 export type AroundBlocks = 'exact' | 'atLeast';
 
 export interface BlankLinesOptions {
@@ -27,6 +29,8 @@ export interface TypographyOptions {
   readonly parenStyle: ParenStyle;
   /** Also convert ';' beside CJK; off by default (TYPO-05). */
   readonly semicolon: boolean;
+  /** Which scripts count as CJK. Defaults to Han alone. */
+  readonly cjkClasses: readonly CjkClass[];
 }
 
 export type EndOfLine = 'lf' | 'crlf' | 'auto';
@@ -84,6 +88,7 @@ export interface TypographyInput {
   readonly hashtag?: boolean;
   readonly parenStyle?: ParenStyle;
   readonly semicolon?: boolean;
+  readonly cjkClasses?: readonly CjkClass[];
 }
 
 export interface ListInput {
@@ -112,6 +117,7 @@ export const defaultOptions: FormatOptions = {
     hashtag: false,
     parenStyle: 'mixed',
     semicolon: false,
+    cjkClasses: DEFAULT_CJK_CLASSES,
   },
   list: {
     orderedStyle: 'increment',
@@ -145,6 +151,7 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
       hashtag: input?.typography?.hashtag ?? defaultOptions.typography.hashtag,
       parenStyle: input?.typography?.parenStyle ?? defaultOptions.typography.parenStyle,
       semicolon: input?.typography?.semicolon ?? defaultOptions.typography.semicolon,
+      cjkClasses: input?.typography?.cjkClasses ?? defaultOptions.typography.cjkClasses,
     },
     list: {
       orderedStyle: input?.list?.orderedStyle ?? defaultOptions.list.orderedStyle,

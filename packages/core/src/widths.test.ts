@@ -5,6 +5,27 @@ import type { FormatOptionsInput } from './options.ts';
 
 const out = (src: string, options?: FormatOptionsInput) => format(src, options).output;
 
+describe('cjkClasses selects which scripts count as CJK', () => {
+  test('Han is always available', () => {
+    assert.equal(out('中文abc\n'), '中文 abc\n');
+  });
+  test('kana is left alone by default', () => {
+    assert.equal(out('テレビabc\n'), 'テレビabc\n');
+  });
+  test('kana joins the class when opted in', () => {
+    assert.equal(
+      out('テレビabc\n', { typography: { cjkClasses: ['han', 'kana'] } }),
+      'テレビ abc\n',
+    );
+  });
+  test('enclosed characters join when opted in', () => {
+    assert.equal(
+      out('㈱abc\n', { typography: { cjkClasses: ['han', 'enclosed'] } }),
+      '㈱ abc\n',
+    );
+  });
+});
+
 describe('TYPO-08 parenthesis width follows the script of the contents', () => {
   test('half-width when the contents are Latin', () => {
     assert.equal(out('中文（NMRI）后续\n'), '中文(NMRI)后续\n');
