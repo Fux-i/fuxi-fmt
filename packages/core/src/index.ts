@@ -15,6 +15,8 @@ export type {
   TypographyOptions,
 } from './options.ts';
 export { renumberOrderedLists } from './lists.ts';
+export { checkSemantics } from './guard.ts';
+export type { Violation } from './guard.ts';
 export { applyTypography } from './typography.ts';
 export { scanRegions } from './scan.ts';
 export type { Region, RegionKind } from './scan.ts';

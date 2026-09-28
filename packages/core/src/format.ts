@@ -4,6 +4,7 @@ import { resolveOptions, type FormatOptions, type FormatOptionsInput } from './o
 import { scanRegions, splitSourceLines, type Region, type SourceLine } from './scan.ts';
 import { applyTypography } from './typography.ts';
 import { renumberOrderedLists } from './lists.ts';
+import { checkSemantics } from './guard.ts';
 
 export interface Diagnostic {
   readonly ruleId: string;
@@ -92,6 +93,22 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   }
 
   const structural = parts.length === 0 ? '' : parts.join('\n') + '\n';
-  const output = applyTypography(structural, options.typography);
-  return { output, changed: output !== source, diagnostics: [] };
+  const candidate = applyTypography(structural, options.typography);
+
+  // GRT-01: never hand back a document that parses differently. If the guard
+  // trips we return the input untouched and say why (GRT-04).
+  const violations = checkSemantics(source, candidate);
+  if (violations.length > 0) {
+    return {
+      output: source,
+      changed: false,
+      diagnostics: violations.map((violation) => ({
+        ruleId: violation.ruleId,
+        message: violation.message,
+        line: 0,
+      })),
+    };
+  }
+
+  return { output: candidate, changed: candidate !== source, diagnostics: [] };
 }
