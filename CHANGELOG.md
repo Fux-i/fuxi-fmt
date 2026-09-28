@@ -11,6 +11,26 @@ with release candidates suffixed `-rcN`.
 
 Nothing yet.
 
+## [0.8.0] - 2026-09-28
+
+### Added
+
+- **VS Code activation entry.** Registers a document formatter and a range
+  formatter for Markdown. The range provider matters: Format Selection has no
+  fallback to the document formatter, so without it `Ctrl+K Ctrl+F` silently
+  does nothing.
+- **Extension build**: `npm run build` bundles the extension and the inlined core
+  into `packages/vscode/dist/extension.cjs` with esbuild.
+- `offsetToPosition`, tested separately from the editor API.
+
+### Notes
+
+- Loading the bundle in a real extension host has **not** been verified. There
+  is no VS Code instance here. What is verified: the bundle parses
+  (`node --check`), it contains both provider registrations, and the core is
+  inlined. Treat the extension as buildable but unproven until someone installs
+  it.
+
 ## [0.7.0] - 2026-09-28
 
 ### Added

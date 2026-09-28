@@ -16,10 +16,13 @@
     "test:watch": "node --test --watch \"packages/*/src/**/*.test.ts\"",
     "typecheck": "tsc -p packages/core && tsc -p packages/cli && tsc -p packages/vscode",
     "fuxi-fmt": "node packages/cli/src/main.ts",
-    "ci": "npm run typecheck && npm test"
+    "ci": "npm run typecheck && npm test",
+    "build": "npm run build -w fuxi-fmt-vscode"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "@types/vscode": "^1.138.0",
+    "esbuild": "^0.28.2",
     "typescript": "^5.9.0"
   }
 }

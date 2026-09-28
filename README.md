@@ -28,11 +28,13 @@ node packages/cli/src/main.ts --diff  docs/   # show the lines that would change
 node packages/cli/src/main.ts --write docs/   # rewrite in place
 ```
 
-The VS Code adapter is scaffolded: the package manifest declares the activation
-events, the workspace-trust posture and the settings, and the edit layer is implemented and
-tested. There is no activation entry or bundling step yet, so the extension cannot be
-installed. Also outstanding: list reindentation (BLK-08) and the `parenStyle`,
-`cjkClasses`, `hashtag` and `semicolon` typography options.
+The VS Code extension builds: `npm run build` produces `packages/vscode/dist/extension.cjs`
+with the core inlined, and the manifest declares `onLanguage:markdown` activation,
+`untrustedWorkspaces: supported`, and the `fuxiFmt.enable` setting. Loading it in a real
+extension host has not been verified.
+
+Also outstanding: list reindentation (BLK-08) and the `parenStyle`, `cjkClasses`,
+`hashtag` and `semicolon` typography options.
 
 The normative behavioural contract is [FUXI-FMT-SPEC.md](FUXI-FMT-SPEC.md) — read that
 first. The prior-art survey is

@@ -11,7 +11,7 @@
     "vscode": "^1.85.0"
   },
   "categories": ["Formatters"],
-  "main": "./dist/extension.js",
+  "main": "./dist/extension.cjs",
   "activationEvents": ["onLanguage:markdown"],
   "capabilities": {
     "untrustedWorkspaces": {
@@ -32,6 +32,7 @@
     }
   },
   "scripts": {
-    "test": "node --test \"src/**/*.test.ts\""
+    "test": "node --test \"src/**/*.test.ts\"",
+    "build": "node build.mjs"
   }
 }
