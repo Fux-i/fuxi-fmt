@@ -105,7 +105,7 @@ Exactly one space after the opening `#` run. Collapses multiple spaces; inserts 
 
 **BLK-08 — List indentation width** · default `2`
 
-`list.indentWidth: 2 | 4 | "tab"`. Applies to nested list content and continuation lines. **Interacts with SAFE-02** — see §7 Open items.
+`list.indentWidth: 2 | 4 | "tab"`. Applies to nested list content and continuation lines. **Interacts with SAFE-02**: a list containing a protected block is excluded from reindentation, and a diagnostic is reported. See §7 open item 1. **Not yet implemented** — today the width only controls how hard tabs are expanded.
 
 **BLK-09 — Blockquote marker spacing**
 
@@ -395,7 +395,11 @@ the VS Code settings override layer are specified but not implemented.
 
 ## 7. Open items
 
-1. **Fence indentation vs list-indentation normalization (SAFE-02 x BLK-08).** SAFE-02 says a fence's indentation is byte-verbatim. BLK-08 normalizes list indentation. When a fenced block sits *inside* a list item, normalizing the list changes the indentation the fence must have, or the block escapes its parent. Options: (a) the fence follows its list context, so SAFE-02 applies only to fences not inside lists; (b) any list containing a fence is excluded from indentation normalization; (c) normalization is skipped and a diagnostic is reported. **Needs a decision.**
+1. **Fence indentation vs list-indentation normalization (SAFE-02 x BLK-08).** SAFE-02 says a fence's indentation is byte-verbatim. BLK-08 normalizes list indentation. When a fenced block sits *inside* a list item, normalizing the list changes the indentation the fence must have, or the block escapes its parent. Options: (a) the fence follows its list context, so SAFE-02 applies only to fences not inside lists; (b) any list containing a fence is excluded from indentation normalization; (c) normalization is skipped and a diagnostic is reported. **Resolved: option (b).** A list containing a protected block is excluded from
+indentation normalization, and a diagnostic is reported when that happens. Option (a) — letting
+the fence follow the list — would move code the author wrote at a fixed indentation, and moving
+code is precisely what SAFE-02 exists to prevent. Excluding the list keeps both promises.
+**Not yet implemented**: `list.indentWidth` today only controls how hard tabs are expanded.
 2. **YAML front matter format** (FM-01) is currently "protect entirely". The original goal was "format the YAML". Formatting it safely requires a YAML-significant-character audit and a parse-equality guard, because `:`, `#`, `&`, `*`, `|`, `>`, `@`, quotes and `-` are all significant at some position. Revisit after v1 if comment- and key-order-preserving YAML formatting proves worth the risk.
 3. **Punctuation allowlist contents.** Semicolon is excluded by default (TYPO-05). Whether `、` and the paired quotes are in the default allowlist is not yet settled.
 4. **`……` and `——` normalization.** Not in v1. If added, they are opt-in rules, and no existing tool converts `--` to `——`.
