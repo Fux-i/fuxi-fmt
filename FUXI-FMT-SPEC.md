@@ -381,11 +381,10 @@ ignore:
   line: fuxi-fmt-ignore
 ```
 
-**Implementation status.** `typography.cjkClasses`
-and `typography.semicolon` are specified but not yet
-implemented, as is `list.indentWidth` in its reindentation sense: today the
-width is only used when expanding hard tabs. Everything else in this block is
-implemented.
+**Implementation status.** **Not implemented at all:** `typography.cjkClasses`, `typography.semicolon`.
+**Partially implemented:** `list.indentWidth`, which today only controls how
+hard tabs are expanded and does not reindent lists. Everything else in this
+block is implemented.
 
 Configuration is read from the nearest `fuxi-fmt.json` above the file being
 formatted, which may contain comments and trailing commas. Presets (CFG-01) and
