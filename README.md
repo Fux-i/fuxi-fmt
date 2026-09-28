@@ -121,6 +121,14 @@ is the authority; this is the shortest accurate summary of the gap.
 | **Extension host** | The bundle runs against a stubbed `vscode` module in tests. It has never been loaded by a real editor. |
 | **Real documents** | Everything is verified against generated fixtures, a synthetic article, and this repository's own Markdown. The formatter has never seen a real Chinese technical article. |
 
+**BLK-08: an approach already tried and disproven.** Deriving nesting depth from a
+stack of *observed* indents does not work. For any list whose first item is already indented —
+a fragment, a continuation, a list nested under something the segmenter did not classify as a
+list — that first indent becomes depth 0 and the item is silently **dedented**, changing document
+structure. Three existing tests caught it (`  - nested` becoming `- nested`). Any correct
+implementation needs the absolute nesting baseline for a list before it reindents anything, which
+is a block-parsing question rather than a stack question. Do not re-attempt the stack version.
+
 Two things are worth doing before adding any of the above:
 
 1. **Run it on a real article.** If the spacing, punctuation or parenthesis rules disagree with
