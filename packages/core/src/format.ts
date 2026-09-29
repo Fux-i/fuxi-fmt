@@ -111,6 +111,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   // so every line-indexed range the segmenter and fence pass use stays valid.
   // Lists containing a protected block are excluded from the plan (option b).
   const listItems = scanListItems(texts);
+  const itemLines = new Set(listItems.map((item) => item.line));
   const listParents = assignParents(listItems);
   const excludedLists = new Set(
     findExcludedLists(texts, listItems, listParents, protectedLine),
@@ -131,7 +132,21 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
       const blanks = blankCount(block.blanksBefore, options);
       for (let k = 0; k < blanks; k++) parts.push('');
     }
-    for (let j = block.start; j < block.end; j++) parts.push(reindented[j] ?? texts[j] ?? '');
+    for (let j = block.start; j < block.end; j++) {
+      // BLK-03 is opt-in: a blank line between items flips a tight list to loose,
+      // so it never happens unless asked for. The j > block.start guard is what
+      // keeps this idempotent - on a second pass each item is already its own
+      // block with its own blank before it.
+      if (
+        options.blankLines.insideLists &&
+        j > block.start &&
+        itemLines.has(j) &&
+        protectedLine[j] !== true
+      ) {
+        parts.push('');
+      }
+      parts.push(reindented[j] ?? texts[j] ?? '');
+    }
   }
 
   const structural = parts.length === 0 ? '' : parts.join('\n') + '\n';

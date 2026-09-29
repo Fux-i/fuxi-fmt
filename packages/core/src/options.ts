@@ -7,6 +7,8 @@ export interface BlankLinesOptions {
   readonly aroundBlocks: AroundBlocks;
   /** Cap on consecutive blank lines; null means unbounded. */
   readonly maxConsecutive: number | null;
+  /** Blank line between list items. Flips a tight list to loose (BLK-03). */
+  readonly insideLists: boolean;
 }
 
 export type PunctuationStyle = 'fullwidth' | 'halfwidth' | 'mixed' | 'off';
@@ -98,6 +100,7 @@ export interface FormatOptions {
 export interface BlankLinesInput {
   readonly aroundBlocks?: AroundBlocks;
   readonly maxConsecutive?: number | null;
+  readonly insideLists?: boolean;
 }
 
 export interface TypographyInput {
@@ -130,7 +133,7 @@ export interface FormatOptionsInput {
 }
 
 export const defaultOptions: FormatOptions = {
-  blankLines: { aroundBlocks: 'exact', maxConsecutive: 1 },
+  blankLines: { aroundBlocks: 'exact', maxConsecutive: 1, insideLists: false },
   typography: {
     cjkSpacing: true,
     punctuationStyle: 'fullwidth',
@@ -166,6 +169,7 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
       aroundBlocks: input?.blankLines?.aroundBlocks ?? defaultOptions.blankLines.aroundBlocks,
       // null is a meaningful value here, so it must not be swallowed by ??.
       maxConsecutive: max === undefined ? defaultOptions.blankLines.maxConsecutive : max,
+      insideLists: input?.blankLines?.insideLists ?? defaultOptions.blankLines.insideLists,
     },
     typography: {
       cjkSpacing: input?.typography?.cjkSpacing ?? defaultOptions.typography.cjkSpacing,
