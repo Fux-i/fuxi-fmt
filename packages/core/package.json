@@ -1,6 +1,6 @@
 {
   "name": "@fuxi-fmt/core",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "private": true,
   "description": "Adapter-free formatting engine for fuxi-fmt",
   "license": "MIT",

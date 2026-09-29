@@ -11,6 +11,25 @@ with release candidates suffixed `-rcN`.
 
 Nothing yet.
 
+## [0.17.0] - 2026-09-28
+
+The escape hatch is now usable where it matters. A false positive is usually local, and until
+this release the only way to suppress one was to switch the formatter off for the whole file.
+
+### Added
+
+- **`ignore.start` and `ignore.end`** (CFG-03, two more of four). Lines between the
+  directives are copied verbatim: no reindentation, no renumbering, no punctuation
+  or width conversion, no CJK spacing, no trailing-whitespace trimming. An
+  unterminated range runs to the end of the document, because an ignore should
+  fail safe.
+
+### Notes
+
+- Three of the four directives now work. `ignore.line`, the next-block form, is
+  the range directive with a computed end and is declared missing in both the
+  specification and the README.
+
 ## [0.16.0] - 2026-09-28
 
 ### Added
