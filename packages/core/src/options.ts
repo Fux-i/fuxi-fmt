@@ -69,10 +69,16 @@ export interface CodeBlockInput {
 export interface IgnoreOptions {
   /** Comment body that opts a whole document out (CFG-03). */
   readonly file: string;
+  /** Comment body that opens an ignored range. */
+  readonly start: string;
+  /** Comment body that closes an ignored range. */
+  readonly end: string;
 }
 
 export interface IgnoreInput {
   readonly file?: string;
+  readonly start?: string;
+  readonly end?: string;
 }
 
 export interface FormatOptions {
@@ -138,7 +144,11 @@ export const defaultOptions: FormatOptions = {
   },
   codeBlock: { fenceChar: 'backticks', normalizeLength: true },
   endOfLine: 'lf',
-  ignore: { file: 'fuxi-fmt-ignore-file' },
+  ignore: {
+    file: 'fuxi-fmt-ignore-file',
+    start: 'fuxi-fmt-ignore-start',
+    end: 'fuxi-fmt-ignore-end',
+  },
 };
 
 export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
@@ -177,6 +187,10 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
         input?.codeBlock?.normalizeLength ?? defaultOptions.codeBlock.normalizeLength,
     },
     endOfLine: input?.endOfLine ?? defaultOptions.endOfLine,
-    ignore: { file: input?.ignore?.file ?? defaultOptions.ignore.file },
+    ignore: {
+      file: input?.ignore?.file ?? defaultOptions.ignore.file,
+      start: input?.ignore?.start ?? defaultOptions.ignore.start,
+      end: input?.ignore?.end ?? defaultOptions.ignore.end,
+    },
   };
 }

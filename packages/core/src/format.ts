@@ -1,5 +1,6 @@
 import { segment, type AtomicRange, type BlockKind } from './blocks.ts';
 import { checkSemantics } from './guard.ts';
+import { hasIgnoreFile, ignoreLines, ignoreRanges, type CharRange } from './ignores.ts';
 import { applyEndOfLine, normalizeInput, trimTrailingWhitespace, type Eol } from './hygiene.ts';
 import { renumberOrderedLists } from './lists.ts';
 import { normalizeFences } from './fences.ts';
@@ -67,23 +68,6 @@ function atomicRanges(lines: readonly SourceLine[], regions: readonly Region[]):
   return ranges;
 }
 
-/**
- * CFG-03. The directive must be the whole body of an HTML comment, so a
- * document that merely mentions it in prose or in a fenced example is
- * unaffected. Matching on a substring would make the specification, which
- * documents the directive, opt itself out.
- */
-function hasIgnoreFile(source: string, name: string): boolean {
-  let index = source.indexOf('<!--');
-  while (index !== -1) {
-    const end = source.indexOf('-->', index + 4);
-    if (end === -1) return false;
-    if (source.slice(index + 4, end).trim() === name) return true;
-    index = source.indexOf('<!--', end);
-  }
-  return false;
-}
-
 export function format(source: string, input?: FormatOptionsInput): FormatResult {
   const options = resolveOptions(input);
 
@@ -105,6 +89,11 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   const protectedLine = new Array<boolean>(lines.length).fill(false);
   for (const range of ranges) {
     for (let i = range.start; i < range.end; i++) protectedLine[i] = true;
+  }
+  // CFG-03: an ignored range is copied verbatim, like a protected region.
+  const ignoredLines = ignoreLines(base, options.ignore);
+  for (let i = 0; i < protectedLine.length; i++) {
+    if (ignoredLines[i] === true) protectedLine[i] = true;
   }
 
   const tabWidth = options.list.indentWidth === 'tab' ? 0 : options.list.indentWidth;
@@ -132,10 +121,24 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   const structural = parts.length === 0 ? '' : parts.join('\n') + '\n';
   // Width first, so that spacing sees ordinary digits; punctuation before
   // spacing, so that TYPO-07 can remove the gaps a conversion leaves behind.
-  const widths = normalizeFullwidthAlphanumerics(structural, options.typography);
-  const punctuation = normalizePunctuation(widths, options.typography);
-  const parens = normalizeParens(punctuation, options.typography);
-  const candidate = trimTrailingWhitespace(applyTypography(parens, options.typography));
+  // Every pass recomputes the ranges from its own input: each can change a
+  // length before the next runs, while the ignored regions stay verbatim.
+  const withIgnores = (
+    text: string,
+    pass: (input: string, extra: readonly CharRange[]) => string,
+  ): string => pass(text, ignoreRanges(text, options.ignore));
+
+  const widths = withIgnores(structural, (t, extra) =>
+    normalizeFullwidthAlphanumerics(t, options.typography, extra),
+  );
+  const punctuation = withIgnores(widths, (t, extra) =>
+    normalizePunctuation(t, options.typography, extra),
+  );
+  const parens = withIgnores(punctuation, (t, extra) =>
+    normalizeParens(t, options.typography, extra),
+  );
+  const spaced = applyTypography(parens, options.typography, ignoreRanges(parens, options.ignore));
+  const candidate = trimTrailingWhitespace(spaced, ignoreRanges(spaced, options.ignore));
 
   // GRT-01: never hand back a document that parses differently. If the guard
   // trips we return the input untouched and say why (GRT-04).

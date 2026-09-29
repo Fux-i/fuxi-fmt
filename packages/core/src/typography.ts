@@ -16,6 +16,7 @@
  */
 
 import { isCjk, isFullPunct, isSpacingChar, type CjkClass } from './chars.ts';
+import type { CharRange } from './ignores.ts';
 import type { TypographyOptions } from './options.ts';
 import { isBlockRegionKind, scanRegions, splitSourceLines } from './scan.ts';
 
@@ -124,12 +125,22 @@ function formatLine(
   return out;
 }
 
-export function applyTypography(text: string, options: TypographyOptions): string {
+export function applyTypography(
+  text: string,
+  options: TypographyOptions,
+  extra: readonly CharRange[] = [],
+): string {
   if (!options.cjkSpacing) return text;
 
   const regions = scanRegions(text);
   const mask = new Uint8Array(text.length);
   const blockMask = new Uint8Array(text.length);
+  for (const range of extra) {
+    for (let i = range.start; i < range.end; i++) {
+      mask[i] = 1;
+      blockMask[i] = 1;
+    }
+  }
   for (const region of regions) {
     const block = isBlockRegionKind(region.kind);
     for (let i = region.start; i < region.end; i++) {

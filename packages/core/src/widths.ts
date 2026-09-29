@@ -11,6 +11,7 @@
  */
 
 import { isAlphanumeric, isCjk, type CjkClass } from './chars.ts';
+import type { CharRange } from './ignores.ts';
 
 const OPENERS = new Set(['(', '\uff08']);
 const CLOSERS = new Set([')', '\uff09']);
@@ -45,9 +46,13 @@ const FULLWIDTH_LOWER_END = 0xff5a;
 const FULLWIDTH_OFFSET = 0xfee0;
 
 /** TYPO-06: full-width alphanumerics and the ideographic space become half-width. */
-export function normalizeFullwidthAlphanumerics(text: string, options: TypographyOptions): string {
+export function normalizeFullwidthAlphanumerics(
+  text: string,
+  options: TypographyOptions,
+  extra: readonly CharRange[] = [],
+): string {
   if (!options.halfwidthAlphanumerics && !options.ideographicSpace) return text;
-  const mask = protectedMask(text);
+  const mask = protectedMask(text, extra);
   let out = '';
   for (let i = 0; i < text.length; i++) {
     const ch = text.charAt(i);
@@ -80,9 +85,13 @@ export function normalizeFullwidthAlphanumerics(text: string, options: Typograph
  * protected region, or contains another opener is left exactly as written
  * rather than guessed at - a wrong parenthesis is worse than a wide one.
  */
-export function normalizeParens(text: string, options: TypographyOptions): string {
+export function normalizeParens(
+  text: string,
+  options: TypographyOptions,
+  extra: readonly CharRange[] = [],
+): string {
   if (options.parenStyle === 'preserve') return text;
-  const mask = protectedMask(text);
+  const mask = protectedMask(text, extra);
   const chars = text.split('');
   for (let i = 0; i < text.length; i++) {
     if (mask[i] === 1 || !OPENERS.has(text.charAt(i))) continue;
@@ -112,7 +121,11 @@ export function normalizeParens(text: string, options: TypographyOptions): strin
 }
 
 /** TYPO-05: half-width punctuation becomes full-width beside CJK, and vice versa. */
-export function normalizePunctuation(text: string, options: TypographyOptions): string {
+export function normalizePunctuation(
+  text: string,
+  options: TypographyOptions,
+  extra: readonly CharRange[] = [],
+): string {
   if (options.punctuationStyle === 'off') return text;
 
   // The semicolon is dangerous enough that AutoCorrect excludes it with the
@@ -134,7 +147,7 @@ export function normalizePunctuation(text: string, options: TypographyOptions): 
   const style = options.punctuationStyle;
   const doFull = style === 'fullwidth' || style === 'mixed';
   const doHalf = style === 'halfwidth' || style === 'mixed';
-  const mask = protectedMask(text);
+  const mask = protectedMask(text, extra);
 
   let out = '';
   for (let i = 0; i < text.length; i++) {

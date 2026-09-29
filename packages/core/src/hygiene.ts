@@ -6,6 +6,7 @@
  * space inside a fence or front matter is content, not hygiene.
  */
 
+import type { CharRange } from './ignores.ts';
 import { isBlockRegionKind, scanRegions, splitSourceLines } from './scan.ts';
 
 export type Eol = 'lf' | 'crlf';
@@ -33,8 +34,11 @@ export function applyEndOfLine(text: string, eol: Eol): string {
 }
 
 /** Mask of characters inside a whole-line protected region. */
-function blockMask(text: string): Uint8Array {
+function blockMask(text: string, extra: readonly CharRange[] = []): Uint8Array {
   const mask = new Uint8Array(text.length);
+  for (const range of extra) {
+    for (let i = range.start; i < range.end; i++) mask[i] = 1;
+  }
   for (const region of scanRegions(text)) {
     if (!isBlockRegionKind(region.kind)) continue;
     for (let i = region.start; i < region.end; i++) mask[i] = 1;
@@ -48,8 +52,8 @@ function blockMask(text: string): Uint8Array {
  * A line ending in two or more spaces followed by a non-blank line is a
  * Markdown hard break, so it is left exactly as written.
  */
-export function trimTrailingWhitespace(text: string): string {
-  const mask = blockMask(text);
+export function trimTrailingWhitespace(text: string, extra: readonly CharRange[] = []): string {
+  const mask = blockMask(text, extra);
   const lines = splitSourceLines(text);
   let out = '';
   for (let i = 0; i < lines.length; i++) {
