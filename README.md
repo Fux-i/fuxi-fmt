@@ -13,8 +13,11 @@ fuxi-fmt is one engine with one configuration surface that owns both halves.
 
 ## Status
 
-**Alpha.** 254 tests. Every behavioural rule in the specification is implemented
-except list reindentation, and every option it names.
+**Alpha.** Every behavioural rule in the specification is implemented except list
+reindentation, and every option it names.
+
+There is deliberately no test count here. It read 173, then 254, then 315 — accurate each time it
+was written, wrong within a few releases, and not something a reader can act on. Run `npm test`.
 
 Implemented: SAFE-01–SAFE-06, FM-01, BLK-01–BLK-07, BLK-09–BLK-11,
 TYPO-01–TYPO-09, GRT-01–GRT-04, GRT-06, CFG-01, CFG-04, the CLI and the VS Code
