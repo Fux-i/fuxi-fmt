@@ -41,12 +41,28 @@ code --install-extension Fux-i.fuxi-fmt-vscode
 
 ## Configure
 
-A `fuxi-fmt.json` at the workspace root configures the project. Editor settings override it, so a
-personal preference does not require editing a committed file:
+Every option is a setting. Open Settings and search for `fuxiFmt` — `fuxiFmt.typography.cjkSpacing`,
+`fuxiFmt.list.unorderedMarker`, `fuxiFmt.blankLines.aroundBlocks` and the rest. Each shows its
+default, its allowed values and the rule it implements, so the panel is the reference.
+
+They resolve in this order, **last wins**:
+
+| # | Layer | Where it lives |
+|---|---|---|
+| 1 | Contributed defaults | the extension; nothing to set |
+| 2 | Individual `fuxiFmt.*` settings | your editor — per workspace folder, per `[markdown]` |
+| 3 | `fuxi-fmt.json` | the committed file at the workspace root |
+| 4 | `fuxiFmt.config` | your editor, as an explicit override |
+
+**Layer 3 beats layer 2 on purpose.** The CLI can never see your editor settings, so if they won,
+the editor and `fuxi-fmt --check` in CI would disagree about the same document — files that pass on
+save and fail in the pipeline. Use `fuxiFmt.config` (layer 4) when you do mean to override the
+project on purpose.
 
 ```json
 {
   "fuxiFmt.enable": true,
+  "fuxiFmt.typography.semicolon": true,
   "fuxiFmt.config": { "blankLines": { "aroundBlocks": "atLeast" } }
 }
 ```

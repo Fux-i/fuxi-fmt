@@ -144,6 +144,31 @@ environment excludes it, so a fresh clone will not contain it.
 - **The core knows nothing about VS Code.** Adapters translate; they do not decide.
 - **Test first.** Rules are written as failing tests before they are implemented.
 
+## Settings in VS Code
+
+Every option is a VS Code setting — `fuxiFmt.typography.cjkSpacing`, `fuxiFmt.list.unorderedMarker`,
+`fuxiFmt.blankLines.aroundBlocks` and the other 21 — contributed with their defaults, their allowed
+values and the specification rule each one implements. They render in the Settings UI as ordinary
+controls, so the panel doubles as the reference.
+
+Four layers, **last wins**:
+
+| # | Layer | Lives in |
+|---|---|---|
+| 1 | Contributed defaults | the extension; nothing to set |
+| 2 | Individual `fuxiFmt.*` settings | editor settings, `resource`-scoped |
+| 3 | `fuxi-fmt.json` | the repository |
+| 4 | `fuxiFmt.config` object | editor settings, explicit override |
+
+**Layer 3 beats layer 2 deliberately.** The CLI and CI can never see editor settings, so if a
+personal setting beat the committed file, the editor and `fuxi-fmt --check` would disagree about the
+same document — a file that formats clean on save and fails the pipeline. `fuxiFmt.config` exists for
+when you do mean to override the project, on purpose.
+
+`packages/core/src/settings.test.ts` asserts that this list and the core's option surface are
+identical in both directions, that each setting carries the core's own default, and that every
+setting is `resource`-scoped.
+
 ## Constraints
 
 These are not preferences. Each one is measured, and the numbers are in the specification's

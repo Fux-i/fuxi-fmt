@@ -250,7 +250,7 @@ These are the general form of "don't touch code blocks". Every one is byte-verba
 
 ### G. Tunable surface
 
-**CFG-01 — Configuration file with per-directory resolution**, plus a preset layer, with VS Code settings as an override layer.
+**CFG-01 — Configuration file with per-directory resolution**, plus a preset layer. The editor adds two layers around the file rather than one: the individual `fuxiFmt.*` settings sit **below** `fuxi-fmt.json`, and the `fuxiFmt.config` object sits **above** it. The file beats the granular settings because the CLI cannot see editor settings; the alternative is an editor that disagrees with `--check` about the same document.
 
 **CFG-02 — Rule registry.** Every rule has a stable ID (the IDs in this document), an `off | warn | error` severity, and typed options. No flat option bag.
 
