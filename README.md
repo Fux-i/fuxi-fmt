@@ -40,7 +40,8 @@ The normative behavioural contract is [FUXI-FMT-SPEC.md](FUXI-FMT-SPEC.md) — r
 first. The prior-art survey is
 [MAINSTREAM_MD_FORMATTERS_REPORT.md](MAINSTREAM_MD_FORMATTERS_REPORT.md).
 
-Nothing is published. The repository is local-only for now.
+An `origin` remote is configured (`git@github.com:Fux-i/fuxi-fmt.git`) but nothing has
+been pushed. Releases are tagged locally and do not exist upstream.
 
 ## What it will do
 
