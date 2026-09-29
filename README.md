@@ -166,6 +166,27 @@ structure. Three existing tests caught it (`  - nested` becoming `- nested`). An
 implementation needs the absolute nesting baseline for a list before it reindents anything, which
 is a block-parsing question rather than a stack question. Do not re-attempt the stack version.
 
+**BLK-08: the shape of a correct implementation.** The dead end above failed by *inferring* depth
+from indentation. The way out is to never infer it: read the marker column of each item directly,
+because a list marker is an observable fact rather than a deduction.
+
+1. Walk the lines once and record, per list item, the column of its marker and the column where
+   its content begins. A line is an item when it matches `^(\s*)([-*+]|\d+[.)])\s`.
+2. Group consecutive items whose markers share a parent: an item is a child of the most recent item
+   whose content column is less than this item's marker column.
+3. Rewrite each marker to its parent's content column, and shift that item's continuation lines by
+   the same delta. Nothing is inferred from how deep the indentation *looks*; the parent is the one
+   whose content column the marker is actually nested under.
+4. A list containing a protected block is excluded entirely and a diagnostic is reported (spec
+   section 7 item 1, option b). Moving code the author fixed in place is what SAFE-02 exists to
+   prevent.
+5. An item whose marker column matches no parent's content column is left alone rather than snapped
+   to the nearest, which is the failure mode of the stack version.
+
+Tests this has to satisfy before it ships: a fragment whose first item is already indented; a nested
+list; a list inside a blockquote; a list containing a fence (excluded, diagnostic); an ordered list
+whose markers change width (`9.` to `10.`); and idempotence over all of them.
+
 **The range directive: done in 0.17.0, kept as a lesson.** The plan written before the attempt
 named three wiring points; there were five, and it took three attempts. The two that were missed
 first — the width and punctuation passes, which run before typography and mask themselves
