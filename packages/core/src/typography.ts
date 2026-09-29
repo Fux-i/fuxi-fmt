@@ -27,12 +27,12 @@ interface Unit {
   readonly cls: CharClass;
 }
 
-function classOf(ch: string, hashtag: boolean, classes: readonly CjkClass[]): CharClass {
-  if (isCjk(ch, classes)) return 'cjk';
+function classOf(ch: string, options: TypographyOptions): CharClass {
+  if (isCjk(ch, options.cjkClasses)) return 'cjk';
   // TYPO-09: a mid-text '#' is a hashtag or an anchor and is never spaced by
   // default, because '中文#标签' becoming '中文 # 标签' breaks the tag wherever
   // it is published. Opting in is a deliberate choice, not an oversight.
-  if (ch === '#' && hashtag) return 'latin';
+  if (ch === '#' && options.hashtag) return 'latin';
   if (isSpacingChar(ch)) return 'latin';
   if (isFullPunct(ch)) return 'fullpunct';
   return 'other';
@@ -59,8 +59,7 @@ function tokenize(
   from: number,
   to: number,
   mask: Uint8Array,
-  hashtag: boolean,
-  classes: readonly CjkClass[],
+  options: TypographyOptions,
 ): Unit[] {
   const units: Unit[] = [];
   let i = from;
@@ -81,7 +80,7 @@ function tokenize(
       i = j;
       continue;
     }
-    units.push({ text: ch, cls: classOf(ch, hashtag, classes) });
+    units.push({ text: ch, cls: classOf(ch, options) });
     i++;
   }
   return units;
@@ -93,8 +92,7 @@ function formatLine(
   to: number,
   mask: Uint8Array,
   blockMask: Uint8Array,
-  hashtag: boolean,
-  classes: readonly CjkClass[],
+  options: TypographyOptions,
 ): string {
   if (from >= to) return '';
   let allBlock = true;
@@ -106,7 +104,7 @@ function formatLine(
   }
   if (allBlock) return text.slice(from, to);
 
-  const units = tokenize(text, from, to, mask, hashtag, classes);
+  const units = tokenize(text, from, to, mask, options);
   let out = '';
   let prev: Unit | null = null;
   let pending = '';
@@ -157,7 +155,7 @@ export function applyTypography(
     const next = lines[li + 1];
     const newline = text.slice(line.end, next === undefined ? text.length : next.start);
     out +=
-      formatLine(text, line.start, line.end, mask, blockMask, options.hashtag, options.cjkClasses) +
+      formatLine(text, line.start, line.end, mask, blockMask, options) +
       newline;
   }
   return out;
