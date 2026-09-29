@@ -144,6 +144,23 @@ environment excludes it, so a fresh clone will not contain it.
 - **The core knows nothing about VS Code.** Adapters translate; they do not decide.
 - **Test first.** Rules are written as failing tests before they are implemented.
 
+## Constraints
+
+These are not preferences. Each one is measured, and the numbers are in the specification's
+performance envelope.
+
+- **No runtime dependencies in `packages/core`.** It has none, and adding one needs an argument
+  rather than a convenience.
+- **No remark or micromark on the formatting path.** remark parses the 10,129-line fixture in
+  164.5 ms against markdown-it's 8.3 ms, and a full AST is not needed for this job — the whole
+  document is formatted in 47.3 ms.
+- **No pangu, and no wholesale copy of its rule set.** Section 1.2 of the specification lists where
+  it is wrong for Markdown. The specification's own rule table is authoritative.
+
+They are here rather than only in `AGENTS.md` because that file is excluded by a global gitignore
+in the author's environment, so a fresh clone would not receive them — the same reason the
+verification warnings above were moved here.
+
 ## Remaining work
 
 Kept here rather than in a session because it has to survive a fresh clone. The specification
