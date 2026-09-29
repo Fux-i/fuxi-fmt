@@ -11,6 +11,24 @@ with release candidates suffixed `-rcN`.
 
 Nothing yet.
 
+## [0.15.0] - 2026-09-28
+
+Closes CFG-01: a configuration file with per-directory discovery, a preset
+layer, and editor settings as the override above it.
+
+### Added
+
+- **`fuxiFmt.config`** in VS Code settings, merged over the project's
+  `fuxi-fmt.json`. Editor settings win, so a personal preference does not
+  require editing a committed file.
+
+### Fixed
+
+- The extension host test built the bundle only when the bundle was missing, so
+  it could run against a stale build and silently verify the previous revision.
+  It now rebuilds every run. The first attempt at this release's feature
+  appeared to do nothing because of it.
+
 ## [0.14.0] - 2026-09-28
 
 ### Added

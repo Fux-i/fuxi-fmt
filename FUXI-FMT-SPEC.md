@@ -389,7 +389,7 @@ block is implemented.
 Configuration is read from the nearest `fuxi-fmt.json` above the file being
 formatted, which may contain comments and trailing commas. Presets (CFG-01) are implemented; the
 platform presets named in an early draft were removed rather than guessed at.
-The VS Code settings override layer is specified but not implemented.
+Everything in this block is implemented.
 
 ---
 
