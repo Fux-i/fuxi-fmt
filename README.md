@@ -31,10 +31,15 @@ node packages/cli/src/main.ts --diff  docs/   # show the lines that would change
 node packages/cli/src/main.ts --write docs/   # rewrite in place
 ```
 
-`--diff` is approximate and says so. It aligns lines by common prefix and suffix, so a document
-edited in several places reports some unchanged lines as removed and re-added. It is a hint about
-where to look, not a patch. A correct implementation needs a line alignment algorithm, shared
-with the adapter's minimal-edit computation, which approximates the same problem the same way.
+`--diff` resynchronises line by line: it trims the common prefix and suffix, then walks the
+middle, reporting a line that matches the other side one position ahead as the insertion or
+deletion it is. It is greedy rather than LCS or Myers, so a document full of repeated lines can
+still mis-align, and `--help` calls the output approximate for that reason.
+
+The adapter's `computeEdits` computes minimal edits for the editor and still uses the older
+prefix-and-suffix approximation, emitting one wide edit when a document changed at both ends.
+The CLI's walk is the better of the two; the remaining work is to lift it into `core` as a
+character-range diff and have both call it, rather than maintaining two answers to one question.
 
 The VS Code extension builds: `npm run build` produces `packages/vscode/dist/extension.cjs`
 with the core inlined, and the manifest declares `onLanguage:markdown` activation,
