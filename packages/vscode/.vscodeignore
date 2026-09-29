@@ -1,0 +1,10 @@
+# What must not ship inside the packaged extension.
+#
+# Without this, vsce would bundle the TypeScript sources, the test suite and the
+# vscode stub fixture used by the host test. The bundle is the only thing the
+# extension host loads.
+src/
+test/
+build.mjs
+tsconfig.json
+**/*.map
