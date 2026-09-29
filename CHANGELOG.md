@@ -9,7 +9,23 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **`diffEdits`** in `@fuxi-fmt/core`: minimal character-range edits between two documents,
+  aligned line by line and returned in ascending non-overlapping order, with `applyEdits` so the
+  round trip is testable.
+
+### Changed
+
+- The CLI's `--diff` and the extension's edit computation now share that one alignment
+  (`core/diff.ts`) instead of each approximating it separately. Two implementations of one
+  question is how they drift apart.
+- `--diff` resynchronises line by line rather than reporting every line after an insertion as
+  rewritten and re-added.
+- The adapter tightens each changed region to the characters that actually differ, so a document
+  edited in several places yields several small edits rather than one wide one. This also fixes
+  "format selection" silently doing nothing when a document had changed at both ends: one wide
+  edit lay outside the selection and `editsInRange` discarded it.
 
 ## [0.18.0] - 2026-09-28
 
