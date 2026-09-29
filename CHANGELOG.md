@@ -11,6 +11,22 @@ with release candidates suffixed `-rcN`.
 
 Nothing yet.
 
+## [0.16.0] - 2026-09-28
+
+### Added
+
+- **`ignore.file`** (CFG-03, first of four directives). A document whose body is
+  nothing but `fuxi-fmt-ignore-file` in an HTML comment is returned byte for
+  byte, byte order mark and line endings included. The directive must be the
+  entire comment body, or the specification - which documents the directive -
+  would opt itself out. The name is configurable.
+
+### Notes
+
+- `ignore.start`, `ignore.end` and `ignore.line` remain unimplemented and are
+  declared as such in both the specification and the README, which a test keeps
+  in agreement.
+
 ## [0.15.0] - 2026-09-28
 
 Closes CFG-01: a configuration file with per-directory discovery, a preset
