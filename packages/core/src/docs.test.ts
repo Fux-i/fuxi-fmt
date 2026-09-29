@@ -66,7 +66,7 @@ describe('documentation stays true to the code', () => {
     assert.ok(lines.length > 0, 'expected the readme to state what is outstanding');
 
     for (const line of lines) {
-      for (const match of line.matchAll(/`(typography|list)\.([A-Za-z]+)`/g)) {
+      for (const match of line.matchAll(/`([A-Za-z]+)\.([A-Za-z]+)`/g)) {
         const section = match[1] ?? '';
         const name = match[2] ?? '';
         const bag = (defaultOptions as unknown as Record<string, Record<string, unknown>>)[section];
@@ -78,6 +78,49 @@ describe('documentation stays true to the code', () => {
         );
       }
     }
+  });
+
+  test('every option the specification documents is implemented or declared missing', () => {
+    // The inverse of the check above, and the one that had never been run: the
+    // specification documented nine options that nothing implements, including
+    // all four ignore directives. A user setting any of them got silence.
+    const block = (spec.split('```yaml')[1] ?? '').split('```')[0] ?? '';
+    assert.ok(block.length > 0, 'the specification has no config block');
+
+    const declared = new Set(
+      [
+        ...(spec.slice(spec.indexOf('**Not implemented at all:**')).split('\n\n')[0] ?? '').matchAll(
+          /`([A-Za-z]+)\.([A-Za-z]+)`/g,
+        ),
+      ].map((match) => (match[1] ?? '') + '.' + (match[2] ?? '')),
+    );
+
+    const bags = defaultOptions as unknown as Record<string, Record<string, unknown>>;
+    let section = '';
+    let checked = 0;
+
+    for (const raw of block.split('\n')) {
+      const line = raw.replace(/#.*$/, '');
+      if (line.trim().length === 0) continue;
+      const top = /^([A-Za-z][A-Za-z0-9]*):/.exec(line);
+      if (top !== null) {
+        section = top[1] ?? '';
+        continue;
+      }
+      const nested = /^ {2}([A-Za-z][A-Za-z0-9]*):/.exec(line);
+      if (nested === null || section.length === 0) continue;
+      const name = nested[1] ?? '';
+      const key = section + '.' + name;
+      checked++;
+      const bag = bags[section];
+      const present = bag !== undefined && Object.prototype.hasOwnProperty.call(bag, name);
+      assert.ok(
+        present || declared.has(key),
+        'the specification documents ' + key + ' but nothing implements it',
+      );
+    }
+
+    assert.ok(checked >= 20, 'expected to check many keys, saw ' + String(checked));
   });
 
   test('the changelog has an entry for the newest tag', () => {
