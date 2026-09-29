@@ -105,6 +105,19 @@ describe('the extension bundle against a stubbed host', () => {
     vscode.config = {};
   });
 
+  test('an individual setting reaches the formatter', () => {
+    assert.ok(documentProvider);
+    const list = { getText: () => '- item\n', uri: { fsPath: join(dist, 'list.md') } };
+
+    vscode.settings = {};
+    const without = documentProvider.provider.provideDocumentFormattingEdits(list);
+    vscode.settings = { 'fuxiFmt.list.unorderedMarker': 'asterisks' };
+    const withSetting = documentProvider.provider.provideDocumentFormattingEdits(list);
+
+    assert.notDeepEqual(withSetting, without, 'the individual setting did not reach the formatter');
+    vscode.settings = {};
+  });
+
   test('disposing the context releases both registrations', () => {
     for (const subscription of context.subscriptions as Array<{ dispose(): void }>) {
       subscription.dispose();

@@ -14,8 +14,14 @@ module.exports = {
   registrations,
   disposed,
 
-  /** Editor settings, so a test can change what getConfiguration returns. */
+  /** The `fuxiFmt.config` object, so a test can change what getConfiguration returns. */
   config: {},
+
+  /**
+   * Individual settings, keyed by full id, e.g. 'fuxiFmt.list.unorderedMarker'.
+   * Only keys present here count as user-set, which is what inspect() reports.
+   */
+  settings: {},
 
   languages: {
     registerDocumentFormattingEditProvider(selector, provider) {
@@ -29,8 +35,23 @@ module.exports = {
   },
 
   workspace: {
-    getConfiguration: () => ({
-      get: (key, fallback) => (key === 'config' ? module.exports.config : fallback),
+    getConfiguration: (section) => ({
+      get: (key, fallback) => {
+        if (key === 'config') return module.exports.config;
+        if (key === 'enable') return module.exports.enable ?? true;
+        const id = section + '.' + key;
+        if (Object.prototype.hasOwnProperty.call(module.exports.settings, id)) {
+          return module.exports.settings[id];
+        }
+        return fallback;
+      },
+      inspect: (key) => {
+        const id = section + '.' + key;
+        if (Object.prototype.hasOwnProperty.call(module.exports.settings, id)) {
+          return { key: id, defaultValue: undefined, globalValue: module.exports.settings[id] };
+        }
+        return { key: id, defaultValue: undefined };
+      },
     }),
   },
 

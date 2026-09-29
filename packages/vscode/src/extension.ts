@@ -1,11 +1,58 @@
 import * as vscode from 'vscode';
-import { loadOptionsFor } from '../../core/src/index.ts';
+import { defaultOptions, loadOptionsFor } from '../../core/src/index.ts';
 import type { FormatOptionsInput } from '../../core/src/index.ts';
 import { mergeOptions } from '../../core/src/config.ts';
 import { documentEdits, editsInRange, type Edit } from './edits.ts';
 import { offsetToPosition } from './positions.ts';
 
 const SELECTOR: vscode.DocumentSelector = [{ language: 'markdown' }];
+
+/**
+ * CFG-01. The individual `fuxiFmt.*` settings are a layer BELOW the project's
+ * `fuxi-fmt.json`, and the `fuxiFmt.config` object is a layer ABOVE it. The
+ * contributed defaults are what VS Code already puts at the very bottom.
+ *
+ * A setting counts as set only when someone actually set it. `get()` returns the
+ * contributed default, so reading it alone would make every setting override the
+ * project file; `inspect()` is what tells the two apart. Reading the effective
+ * value through `get()` is also what makes `[markdown]`-scoped overrides work,
+ * since VS Code has already resolved them by then.
+ */
+function isSet(configuration: vscode.WorkspaceConfiguration, key: string): boolean {
+  const info = configuration.inspect(key);
+  if (info === undefined || info === null) return false;
+  return [
+    info.globalValue,
+    info.workspaceValue,
+    info.workspaceFolderValue,
+    info.globalLanguageValue,
+    info.workspaceLanguageValue,
+    info.workspaceFolderLanguageValue,
+  ].some((value) => value !== undefined);
+}
+
+function fromIndividualSettings(): FormatOptionsInput {
+  const configuration = vscode.workspace.getConfiguration('fuxiFmt');
+  const out: Record<string, unknown> = {};
+
+  // Driven by the core's own option surface, so a new option is picked up here
+  // without a second list to keep in step with it.
+  for (const [section, value] of Object.entries(defaultOptions)) {
+    if (value !== null && typeof value === 'object') {
+      const bag: Record<string, unknown> = {};
+      for (const leaf of Object.keys(value as Record<string, unknown>)) {
+        const key = section + '.' + leaf;
+        if (!isSet(configuration, key)) continue;
+        bag[leaf] = configuration.get(key) as unknown;
+      }
+      if (Object.keys(bag).length > 0) out[section] = bag;
+    } else if (isSet(configuration, section)) {
+      out[section] = configuration.get(section) as unknown;
+    }
+  }
+
+  return out as FormatOptionsInput;
+}
 
 function optionsFor(document: vscode.TextDocument): FormatOptionsInput {
   let fromFile: FormatOptionsInput = {};
@@ -15,12 +62,14 @@ function optionsFor(document: vscode.TextDocument): FormatOptionsInput {
     // An unreadable config must not stop the formatter from working.
     fromFile = {};
   }
-  // CFG-01: editor settings are an override layer above the project config, so
-  // a personal preference does not require editing a committed file.
-  const fromSettings = vscode.workspace
+  // Lowest first: individual settings, then the project file, then the explicit
+  // object override. The file beats the granular settings on purpose - the CLI
+  // can never see editor settings, so letting them win would make the editor and
+  // `fuxi-fmt --check` disagree about the same document.
+  const override = vscode.workspace
     .getConfiguration('fuxiFmt')
     .get<FormatOptionsInput>('config', {});
-  return mergeOptions(fromFile, fromSettings ?? {});
+  return mergeOptions(mergeOptions(fromIndividualSettings(), fromFile), override ?? {});
 }
 
 function toTextEdits(document: vscode.TextDocument, edits: readonly Edit[]): vscode.TextEdit[] {

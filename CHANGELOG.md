@@ -17,6 +17,15 @@ with release candidates suffixed `-rcN`.
   list worked only when `format()` was called directly with an input object, which is to say in
   tests and not for anyone using the CLI or the extension.
 
+### Added
+
+- **Every option is now a VS Code setting.** `fuxiFmt.typography.cjkSpacing` and the rest — 24 in
+  all — appear in the Settings UI with their defaults, their enums and the specification rule each
+  one implements. They sit in a layer **below** the project `fuxi-fmt.json`, so a personal
+  preference fills in what a project does not state without making the editor disagree with
+  `fuxi-fmt --check`. `fuxiFmt.config` keeps its existing behaviour as an explicit override above
+  the file. See "Settings" in the readme for the full precedence.
+
 ### Changed
 
 - **The VS Code extension is publishable.** It gained an icon, a Marketplace listing README, a

@@ -55,12 +55,174 @@
         "fuxiFmt.enable": {
           "type": "boolean",
           "default": true,
+          "scope": "resource",
           "description": "Format Markdown with fuxi-fmt."
         },
         "fuxiFmt.config": {
           "type": "object",
           "default": {},
-          "description": "fuxi-fmt options, merged over the project fuxi-fmt.json. Editor settings win, so a personal preference does not require editing the repository."
+          "scope": "resource",
+          "description": "Explicit override, merged last. The individual fuxiFmt.* settings sit below the project fuxi-fmt.json; this sits above it, so a personal preference can beat a committed file on purpose."
+        },
+        "fuxiFmt.blankLines.aroundBlocks": {
+          "type": "string",
+          "default": "exact",
+          "scope": "resource",
+          "enum": ["exact", "atLeast"],
+          "enumDescriptions": ["Separate blocks by exactly one blank line.", "Separate blocks by at least one blank line."],
+          "markdownDescription": "How blank lines separate blocks (BLK-01)."
+        },
+        "fuxiFmt.blankLines.maxConsecutive": {
+          "type": ["integer", "null"],
+          "default": 1,
+          "scope": "resource",
+          "minimum": 1,
+          "markdownDescription": "Cap on consecutive blank lines. `null` means unbounded, which is what makes `atLeast` meaningful (BLK-02)."
+        },
+        "fuxiFmt.blankLines.insideLists": {
+          "type": "boolean",
+          "default": false,
+          "scope": "resource",
+          "markdownDescription": "Insert a blank line between list items. **This flips a tight list to loose**, which changes how the document renders, so it is off by default (BLK-03)."
+        },
+        "fuxiFmt.typography.cjkSpacing": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "markdownDescription": "Insert one space at every CJK to non-CJK boundary (TYPO-01)."
+        },
+        "fuxiFmt.typography.punctuationStyle": {
+          "type": "string",
+          "default": "fullwidth",
+          "scope": "resource",
+          "enum": ["fullwidth", "halfwidth", "mixed", "off"],
+          "enumDescriptions": ["Convert toward full-width.", "Convert toward half-width.", "Convert toward whichever the surrounding script uses.", "Leave punctuation width alone."],
+          "markdownDescription": "Direction of punctuation width normalisation (TYPO-05)."
+        },
+        "fuxiFmt.typography.punctuationAllowlist": {
+          "type": "array",
+          "default": [",", ".", ":", "!", "?"],
+          "scope": "resource",
+          "items": { "type": "string" },
+          "markdownDescription": "Half-width marks eligible for conversion; each entry is a single character (TYPO-05)."
+        },
+        "fuxiFmt.typography.halfwidthAlphanumerics": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "markdownDescription": "Full-width letters and digits become half-width (TYPO-06)."
+        },
+        "fuxiFmt.typography.ideographicSpace": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "markdownDescription": "U+3000 becomes an ordinary space (TYPO-06)."
+        },
+        "fuxiFmt.typography.hashtag": {
+          "type": "boolean",
+          "default": false,
+          "scope": "resource",
+          "markdownDescription": "Space a mid-text `#` from CJK. Off by default, because `#` is usually a hashtag or an anchor (TYPO-09)."
+        },
+        "fuxiFmt.typography.parenStyle": {
+          "type": "string",
+          "default": "mixed",
+          "scope": "resource",
+          "enum": ["mixed", "fullwidth", "halfwidth", "preserve"],
+          "enumDescriptions": ["By the script of the contents.", "Force full-width.", "Force half-width.", "Leave as written."],
+          "markdownDescription": "Parenthesis width, by the script of the contents (TYPO-08)."
+        },
+        "fuxiFmt.typography.semicolon": {
+          "type": "boolean",
+          "default": false,
+          "scope": "resource",
+          "markdownDescription": "Also convert `;` beside CJK. Off by default (TYPO-05)."
+        },
+        "fuxiFmt.typography.cjkClasses": {
+          "type": "array",
+          "default": ["han"],
+          "scope": "resource",
+          "items": { "enum": ["han", "kana", "hangul", "bopomofo", "enclosed"] },
+          "markdownDescription": "Which scripts count as CJK. Defaults to Han alone."
+        },
+        "fuxiFmt.typography.symbolWhitelist": {
+          "type": "array",
+          "default": ["+", "-", "=", "<", ">", "%", "\u00b0", "\u2103", "\u2109"],
+          "scope": "resource",
+          "items": { "type": "string" },
+          "markdownDescription": "Symbols that CJK spacing treats as word characters (TYPO-01)."
+        },
+        "fuxiFmt.list.orderedStyle": {
+          "type": "string",
+          "default": "increment",
+          "scope": "resource",
+          "enum": ["increment", "lazy-one"],
+          "enumDescriptions": ["Renumber from the declared start.", "Force every item to 1."],
+          "markdownDescription": "How ordered lists are numbered (BLK-06)."
+        },
+        "fuxiFmt.list.orderedDelimiter": {
+          "type": "string",
+          "default": "preserve",
+          "scope": "resource",
+          "enum": ["preserve", ".", ")"],
+          "markdownDescription": "Marker delimiter for ordered lists: keep it, or force `.` or `)`."
+        },
+        "fuxiFmt.list.indentWidth": {
+          "enum": [2, 4, "tab"],
+          "default": 2,
+          "scope": "resource",
+          "markdownDescription": "Indent width for list nesting, and the width hard tabs are expanded to."
+        },
+        "fuxiFmt.list.unorderedMarker": {
+          "type": "string",
+          "default": "dashes",
+          "scope": "resource",
+          "enum": ["dashes", "asterisks", "preserve"],
+          "markdownDescription": "Bullet character for unordered lists (BLK-05)."
+        },
+        "fuxiFmt.codeBlock.fenceChar": {
+          "type": "string",
+          "default": "backticks",
+          "scope": "resource",
+          "enum": ["backticks", "tildes", "preserve"],
+          "markdownDescription": "Fence character for code blocks (BLK-10)."
+        },
+        "fuxiFmt.codeBlock.normalizeLength": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "markdownDescription": "Make a fence as long as its contents require (BLK-10)."
+        },
+        "fuxiFmt.endOfLine": {
+          "type": "string",
+          "default": "lf",
+          "scope": "resource",
+          "enum": ["lf", "crlf", "auto"],
+          "markdownDescription": "Line ending to write. `auto` keeps whatever the file already used (BLK-11)."
+        },
+        "fuxiFmt.ignore.file": {
+          "type": "string",
+          "default": "fuxi-fmt-ignore-file",
+          "scope": "resource",
+          "markdownDescription": "Comment text that makes the formatter skip a whole document (CFG-03)."
+        },
+        "fuxiFmt.ignore.start": {
+          "type": "string",
+          "default": "fuxi-fmt-ignore-start",
+          "scope": "resource",
+          "markdownDescription": "Comment text that opens a range the formatter leaves alone (CFG-03)."
+        },
+        "fuxiFmt.ignore.end": {
+          "type": "string",
+          "default": "fuxi-fmt-ignore-end",
+          "scope": "resource",
+          "markdownDescription": "Comment text that closes such a range (CFG-03)."
+        },
+        "fuxiFmt.ignore.line": {
+          "type": "string",
+          "default": "fuxi-fmt-ignore",
+          "scope": "resource",
+          "markdownDescription": "Comment text that makes the formatter skip the next block (CFG-03)."
         }
       }
     }
