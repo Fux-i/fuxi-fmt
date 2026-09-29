@@ -123,6 +123,26 @@ describe('documentation stays true to the code', () => {
     assert.ok(checked >= 20, 'expected to check many keys, saw ' + String(checked));
   });
 
+  /** The options a document declares as not implemented at all. */
+  function declaredMissing(text: string): string[] {
+    const marker = text.indexOf('**Not implemented at all:**');
+    assert.ok(marker > -1, 'no "not implemented at all" note found');
+    const after = text.slice(marker + '**Not implemented at all:**'.length);
+    // Stop at a blank line or at the sentence that follows in the same
+    // paragraph, whichever comes first: the specification puts "partially
+    // implemented" right after the list, and the readme keeps prose below it.
+    const paragraph = after.split(/\n\n|\*\*Partially/)[0] ?? '';
+    return [...paragraph.matchAll(/`([A-Za-z]+)\.([A-Za-z]+)`/g)]
+      .map((match) => (match[1] ?? '') + '.' + (match[2] ?? ''))
+      .sort();
+  }
+
+  test('the readme and the specification agree on what is missing', () => {
+    // Two documents claiming the same thing is exactly the arrangement that
+    // drifts. Requiring them to agree means neither can rot alone.
+    assert.deepEqual(declaredMissing(readme), declaredMissing(spec));
+  });
+
   test('the changelog has an entry for the newest tag', () => {
     const newest = newestTag();
     if (newest === null) return;

@@ -122,10 +122,16 @@ is the authority; this is the shortest accurate summary of the gap.
 | **Extension host** | The bundle runs against a stubbed `vscode` module in tests. It has never been loaded by a real editor. |
 | **Real documents** | Everything is verified against generated fixtures, a synthetic article, and this repository's own Markdown. The formatter has never seen a real Chinese technical article. |
 
+**Not implemented at all:** `blankLines.insideLists`, `blankLines.insideBlockquotes`,
+`typography.collapseBoundarySpaces`, `typography.symbolWhitelist`, `frontMatter.enabled`,
+`ignore.file`, `ignore.start`, `ignore.end`, `ignore.line`. The specification declares the
+same set, and a test asserts the two lists agree.
+
 The table is the handoff. It has drifted before — it listed `typography.semicolon` and
 config presets as unimplemented more than a release after each shipped — which is why the
-specification's own status note is checked by a test. This table is not; treat it as
-unverified until it is.
+specification's own status note is checked by a test. The two "not implemented at all"
+lists are now checked against each other as well. The table's prose is still unverified; its
+claims about what is missing are not.
 
 **BLK-08: an approach already tried and disproven.** Deriving nesting depth from a
 stack of *observed* indents does not work. For any list whose first item is already indented —
