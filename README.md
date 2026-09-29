@@ -153,11 +153,16 @@ know how to handle a protected region:
 
 1. `format()` — mark the ignored lines protected, exactly as atomic ranges already do, so the
    structural pass leaves them verbatim.
-2. `applyTypography(text, options, extra?)` — OR the ranges into the mask it already builds.
-   Recompute them on the *structural output*, not the source, because blank-line changes shift
-   the offsets.
-3. `trimTrailingWhitespace(text, extra?)` — same, so trailing whitespace inside an ignored
-   region survives.
+2. `normalizeFullwidthAlphanumerics`, `normalizePunctuation` and `normalizeParens` — **these run
+   before typography** and each masks itself through `protectedMask`, so each needs the ranges
+   too. An attempt that skipped them left `中文abc,中文` inside a range rewritten with a full-width
+   comma: the two passes that read the text first were the two that were forgotten.
+3. `applyTypography(text, options, extra?)` and `trimTrailingWhitespace(text, extra?)` — OR the
+   ranges into the masks they already build.
+
+That is **five wiring points, not three**. Recompute the ranges before *each* pass from that
+pass's own input, not once from the source: every pass can change a length before the next runs,
+and the ignored regions stay verbatim, so the directives remain findable each time.
 
 Move the existing `hasIgnoreFile` out of `format.ts` into the same module, and add `start` and
 `end` to `IgnoreOptions`. The specification's and this file's "not implemented at all" lists
