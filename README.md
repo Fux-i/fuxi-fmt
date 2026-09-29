@@ -101,6 +101,23 @@ npm run ci           # typecheck + tests, what CI runs
 npm run build        # bundle the VS Code extension
 ```
 
+### Verifying a change without lying to yourself
+
+**Never pipe a verification command.** `npm run typecheck | tail -4` reports *tail's* exit status,
+so a typecheck failure scrolls past and `set -e` never fires. Redirect and test the real status:
+
+```sh
+npm run typecheck > /tmp/tc.log 2>&1 || { tail -8 /tmp/tc.log; exit 1; }
+```
+
+The mirror hazard is `set -o pipefail` with a consumer that exits early. `grep -A2 x file | head -3`
+makes `grep` die of SIGPIPE, `pipefail` surfaces it, and the script stops half-way — with
+correct-looking output above the failure. Both cost this repository a round each: the first let a
+broken commit land, the second silently truncated an audit.
+
+This note is here rather than in `AGENTS.md` because that file is excluded by a global gitignore in
+the author's environment, so a fresh clone would not receive it.
+
 ## Repository layout
 
 ```
