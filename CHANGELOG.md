@@ -9,13 +9,24 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.21.0] - 2026-09-28
+
+The last behavioural rule in the specification. Every rule it states is now implemented, and every
+configuration directive works.
+
 ### Added
 
-- **BLK-08 list reindentation.** A nested list item's marker is moved under its parent's
-  content column, computed top-down so the result settles in one pass. An item with no parent
-  keeps the offset it was written at, so a fragment is never snapped to column zero. A list
-  containing a protected block is excluded entirely (spec section 7 item 1, option b). This was
-  the last behavioural rule in the specification.
+- **BLK-08 list reindentation.** A nested list item's marker moves under its parent's content
+  column, computed top-down so the result settles in one pass. An item with no parent keeps the
+  offset it was written at, so a fragment is never snapped to column zero. A list containing a
+  protected block is excluded entirely (spec section 7 item 1, option b).
+
+### Notes
+
+- Five documented options remain unimplemented, all in the specification's implementation-status
+  note and the readme's remaining-work table, which a test keeps in agreement.
 
 ## [0.20.0] - 2026-09-28
 
