@@ -165,6 +165,43 @@ describe('documentation stays true to the code', () => {
     }
   });
 
+  test('the readme installs the way CI installs', () => {
+    // I claimed last round that this had no mechanical check. It does: the
+    // workflow file says which command CI runs, and the readme says which one a
+    // contributor should run. They are two statements of the same fact.
+    const workflow = readFileSync(join(root, '.github', 'workflows', 'ci.yml'), 'utf8');
+    const ciUses = /npm ci\b/.test(workflow) ? 'npm ci' : /npm install\b/.test(workflow) ? 'npm install' : null;
+    assert.ok(ciUses !== null, 'the CI workflow installs nothing?');
+
+    const readmeMentions = new RegExp(ciUses.replace(' ', '\\s+') + '\\b');
+    assert.ok(
+      readmeMentions.test(readme),
+      'CI runs "' + ciUses + '" but the readme never mentions it',
+    );
+  });
+
+  test('the readme documents every script CI runs', () => {
+    const workflow = readFileSync(join(root, '.github', 'workflows', 'ci.yml'), 'utf8');
+    const scripts = new Set(
+      Object.keys(
+        (JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as {
+          scripts?: Record<string, string>;
+        }).scripts ?? {},
+      ),
+    );
+    let seen = 0;
+    for (const match of workflow.matchAll(/npm run ([a-z][a-z:-]*)/g)) {
+      const name = match[1] ?? '';
+      if (!scripts.has(name)) continue;
+      seen++;
+      assert.ok(
+        new RegExp('npm run ' + name + '\\b').test(readme),
+        'CI runs "npm run ' + name + '" but the readme does not document it',
+      );
+    }
+    assert.ok(seen > 0, 'expected CI to run at least one script');
+  });
+
   test('the changelog has an entry for the newest tag', () => {
     const newest = newestTag();
     if (newest === null) return;
