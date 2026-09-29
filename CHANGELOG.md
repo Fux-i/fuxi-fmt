@@ -11,6 +11,23 @@ with release candidates suffixed `-rcN`.
 
 Nothing yet.
 
+## [0.18.0] - 2026-09-28
+
+CFG-03 is complete. An author can now say *not this file*, *not this range*, *not this line* -
+and the last is the one that matters, because a false positive is usually one paragraph rather
+than a whole document or a range marked out in advance.
+
+### Added
+
+- **`ignore.line`**, the last of the four directives. A comment whose body is
+  `fuxi-fmt-ignore` leaves the next block as written: the following non-blank
+  lines, ending at the first blank one.
+
+### Changed
+
+- `ignoreRanges` is derived from `ignoreLines` rather than scanning separately,
+  so the two views of the same decision cannot disagree.
+
 ## [0.17.0] - 2026-09-28
 
 The escape hatch is now usable where it matters. A false positive is usually local, and until

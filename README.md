@@ -124,8 +124,7 @@ is the authority; this is the shortest accurate summary of the gap.
 | Item | State |
 |---|---|
 | **BLK-08 list reindentation** | Decision recorded in spec section 7 item 1 (option b: a list containing a protected block is excluded). **Not implemented.** `list.indentWidth` today only controls hard-tab expansion. This is the last unimplemented structural rule. |
-| **`ignore.line` (CFG-03)** | **Not implemented.** Three of the four ignore directives work as of 0.17.0: a whole file, and a range. This is the range form with a computed end, for the local false positive — the case an author is most likely to hit. |
-| **Six documented options** | **Not implemented.** `blankLines.insideLists`, `blankLines.insideBlockquotes`, `typography.collapseBoundarySpaces`, `typography.symbolWhitelist`, `frontMatter.enabled` and `ignore.line`. Setting any of them produces silence. |
+| **Five documented options** | **Not implemented.** `blankLines.insideLists`, `blankLines.insideBlockquotes`, `typography.collapseBoundarySpaces`, `typography.symbolWhitelist` and `frontMatter.enabled`. Setting any of them produces silence. |
 | **Extension host** | The bundle runs against a stubbed `vscode` module in tests. It has never been loaded by a real editor. |
 | **Real documents** | Everything is verified against generated fixtures, a synthetic article, and this repository's own Markdown. The formatter has never seen a real Chinese technical article. |
 
