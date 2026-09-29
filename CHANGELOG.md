@@ -9,6 +9,10 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.19.0] - 2026-09-28
+
 ### Added
 
 - **`diffEdits`** in `@fuxi-fmt/core`: minimal character-range edits between two documents,
