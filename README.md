@@ -31,15 +31,15 @@ node packages/cli/src/main.ts --diff  docs/   # show the lines that would change
 node packages/cli/src/main.ts --write docs/   # rewrite in place
 ```
 
-`--diff` resynchronises line by line: it trims the common prefix and suffix, then walks the
-middle, reporting a line that matches the other side one position ahead as the insertion or
-deletion it is. It is greedy rather than LCS or Myers, so a document full of repeated lines can
-still mis-align, and `--help` calls the output approximate for that reason.
+`--diff` resynchronises line by line. The alignment lives in `core/diff.ts` and the CLI
+formats its result. It is greedy rather than LCS or Myers, so a document full of repeated lines
+can still mis-align, and `--help` calls the output approximate for that reason.
 
-The adapter's `computeEdits` computes minimal edits for the editor and still uses the older
-prefix-and-suffix approximation, emitting one wide edit when a document changed at both ends.
-The CLI's walk is the better of the two; the remaining work is to lift it into `core` as a
-character-range diff and have both call it, rather than maintaining two answers to one question.
+The adapter computes its edits from the same alignment, tightening each region to the characters
+that actually differ so that inserting one space does not replace a whole line. That tightening
+is what makes a document edited in several places yield several small edits rather than one wide
+one, and it matters for range formatting: a single document-wide edit lies outside any selection,
+so `editsInRange` would discard it and "format selection" would silently do nothing.
 
 The VS Code extension builds: `npm run build` produces `packages/vscode/dist/extension.cjs`
 with the core inlined, and the manifest declares `onLanguage:markdown` activation,
