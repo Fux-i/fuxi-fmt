@@ -202,6 +202,50 @@ describe('documentation stays true to the code', () => {
     assert.ok(seen > 0, 'expected CI to run at least one script');
   });
 
+  test('every option the code has is documented in the specification', () => {
+    // The inverse of the audit above, which asks whether documented options
+    // exist. This asks whether existing options are documented - an option the
+    // specification never mentions is one nobody can discover.
+    const block = (spec.split('```yaml')[1] ?? '').split('```')[0] ?? '';
+    assert.ok(block.length > 0, 'the specification has no config block');
+
+    const documented = new Set<string>();
+    let section = '';
+    for (const raw of block.split('\n')) {
+      const line = raw.replace(/#.*$/, '');
+      if (line.trim().length === 0) continue;
+      const top = /^([A-Za-z][A-Za-z0-9]*):/.exec(line);
+      if (top !== null) {
+        section = top[1] ?? '';
+        documented.add(section);
+        continue;
+      }
+      const nested = /^ {2}([A-Za-z][A-Za-z0-9]*):/.exec(line);
+      if (nested !== null && section.length > 0) documented.add(section + '.' + (nested[1] ?? ''));
+    }
+
+    const bags = defaultOptions as unknown as Record<string, unknown>;
+    let checked = 0;
+    for (const [name, value] of Object.entries(bags)) {
+      if (value !== null && typeof value === 'object') {
+        for (const key of Object.keys(value as Record<string, unknown>)) {
+          checked++;
+          assert.ok(
+            documented.has(name + '.' + key),
+            'the code has ' + name + '.' + key + ' but the specification does not document it',
+          );
+        }
+      } else {
+        checked++;
+        assert.ok(
+          documented.has(name),
+          'the code has ' + name + ' but the specification does not document it',
+        );
+      }
+    }
+    assert.ok(checked >= 15, 'expected to check many options, saw ' + String(checked));
+  });
+
   test('the changelog has an entry for the newest tag', () => {
     const newest = newestTag();
     if (newest === null) return;
