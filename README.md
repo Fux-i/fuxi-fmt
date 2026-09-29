@@ -33,7 +33,7 @@ with the core inlined, and the manifest declares `onLanguage:markdown` activatio
 `untrustedWorkspaces: supported`, and the `fuxiFmt.enable` setting. Loading it in a real
 extension host has not been verified.
 
-Also outstanding: list reindentation (BLK-08), the VS Code settings override layer,
+Also outstanding: in-document ignore directives (CFG-03), list reindentation (BLK-08),
 and loading the extension in a real editor.
 
 The normative behavioural contract is [FUXI-FMT-SPEC.md](FUXI-FMT-SPEC.md) — read that
@@ -117,10 +117,15 @@ is the authority; this is the shortest accurate summary of the gap.
 | Item | State |
 |---|---|
 | **BLK-08 list reindentation** | Decision recorded in spec section 7 item 1 (option b: a list containing a protected block is excluded). **Not implemented.** `list.indentWidth` today only controls hard-tab expansion. This is the last unimplemented structural rule. |
-| **`typography.semicolon`** | Not implemented. Converts `;` to `；` beside CJK; excluded from the default allowlist because AutoCorrect excludes it deliberately, annotating the decision "danger". |
-| **Config presets** | Not implemented. `fuxi-fmt.json` names a `preset` in the specification; the key is currently ignored. |
+| **In-document ignore directives (CFG-03)** | **Not implemented.** All four — `ignore.file`, `ignore.start`, `ignore.end`, `ignore.line` — are documented in the specification and do nothing. The most consequential gap here: an author who hits a false positive has no escape hatch short of switching the formatter off. |
+| **Nine documented options** | **Not implemented.** `blankLines.insideLists`, `blankLines.insideBlockquotes`, `typography.collapseBoundarySpaces`, `typography.symbolWhitelist`, `frontMatter.enabled`, and the four ignore directives. Setting any of them produces silence. |
 | **Extension host** | The bundle runs against a stubbed `vscode` module in tests. It has never been loaded by a real editor. |
 | **Real documents** | Everything is verified against generated fixtures, a synthetic article, and this repository's own Markdown. The formatter has never seen a real Chinese technical article. |
+
+The table is the handoff. It has drifted before — it listed `typography.semicolon` and
+config presets as unimplemented more than a release after each shipped — which is why the
+specification's own status note is checked by a test. This table is not; treat it as
+unverified until it is.
 
 **BLK-08: an approach already tried and disproven.** Deriving nesting depth from a
 stack of *observed* indents does not work. For any list whose first item is already indented —
