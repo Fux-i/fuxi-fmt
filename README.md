@@ -13,12 +13,12 @@ fuxi-fmt is one engine with one configuration surface that owns both halves.
 
 ## Status
 
-**Alpha.** The core engine is feature-complete against the specification for block
-structure, blank lines, list numbering, CJK typography, punctuation and character width,
-file hygiene, and project configuration. 173 tests.
+**Alpha.** 254 tests. Every behavioural rule in the specification is implemented
+except list reindentation, and every option it names.
 
 Implemented: SAFE-01–SAFE-06, FM-01, BLK-01–BLK-07, BLK-09–BLK-11,
-TYPO-01–TYPO-03, TYPO-05–TYPO-07, TYPO-09, GRT-01–GRT-04, CFG-01 (config file).
+TYPO-01–TYPO-09, GRT-01–GRT-04, GRT-06, CFG-01, CFG-04, the CLI and the VS Code
+extension.
 
 There is now a command line interface:
 
@@ -33,8 +33,8 @@ with the core inlined, and the manifest declares `onLanguage:markdown` activatio
 `untrustedWorkspaces: supported`, and the `fuxiFmt.enable` setting. Loading it in a real
 extension host has not been verified.
 
-Also outstanding: list reindentation (BLK-08) and the `parenStyle`, `cjkClasses`,
-`hashtag` and `semicolon` typography options.
+Also outstanding: list reindentation (BLK-08), the VS Code settings override layer,
+and loading the extension in a real editor.
 
 The normative behavioural contract is [FUXI-FMT-SPEC.md](FUXI-FMT-SPEC.md) — read that
 first. The prior-art survey is

@@ -16,6 +16,7 @@ import { defaultOptions } from './options.ts';
 
 const root = new URL('../../../', import.meta.url).pathname;
 const spec = readFileSync(join(root, 'FUXI-FMT-SPEC.md'), 'utf8');
+const readme = readFileSync(join(root, 'README.md'), 'utf8');
 const changelog = readFileSync(join(root, 'CHANGELOG.md'), 'utf8');
 
 describe('documentation stays true to the code', () => {
@@ -56,6 +57,28 @@ describe('documentation stays true to the code', () => {
     if (versions.length === 0) return null;
     return versions.sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).at(-1) ?? null;
   }
+
+  test('the readme does not call an implemented option outstanding', () => {
+    // The specification was checked from the start; the readme was not, and it
+    // drifted: it listed four typography options as outstanding long after each
+    // had shipped, and still claimed 173 tests at 254.
+    const lines = readme.split('\n').filter((line) => /outstanding/i.test(line));
+    assert.ok(lines.length > 0, 'expected the readme to state what is outstanding');
+
+    for (const line of lines) {
+      for (const match of line.matchAll(/`(typography|list)\.([A-Za-z]+)`/g)) {
+        const section = match[1] ?? '';
+        const name = match[2] ?? '';
+        const bag = (defaultOptions as unknown as Record<string, Record<string, unknown>>)[section];
+        const present = bag !== undefined && Object.prototype.hasOwnProperty.call(bag, name);
+        assert.equal(
+          present,
+          false,
+          'the readme calls ' + section + '.' + name + ' outstanding, but it is implemented',
+        );
+      }
+    }
+  });
 
   test('the changelog has an entry for the newest tag', () => {
     const newest = newestTag();
