@@ -7,16 +7,20 @@
  * provider re-analyses the file. So the adapter works out the smallest
  * character range that actually differs.
  *
- * The reducer is a common prefix plus a common suffix. That is exact and
- * produces one edit for any localised change, which is the overwhelmingly
- * common case. A document edited at both ends collapses into one wide edit;
- * that is a strictly better worst case than replacing everything, and it is
- * recorded here rather than left implicit.
+ * The reducer is the core's line-aligned diff (core/diff.ts), tightened within
+ * each region. The line diff decides *where* the changed regions are, so a
+ * document edited in several places yields several small edits rather than one
+ * wide one - which matters for range formatting, where a single document-wide
+ * edit lies outside any selection and editsInRange would discard it, leaving
+ * "format selection" silently doing nothing.
+ *
+ * The tightening decides *how much* of each region to replace: without it,
+ * inserting one space would replace the whole line.
  *
  * Nothing in this module imports 'vscode', so it is testable in plain Node.
  */
 
-import { format, splitSourceLines } from '../../core/src/index.ts';
+import { diffEdits, format, splitSourceLines } from '../../core/src/index.ts';
 import type { FormatOptionsInput, SourceLine } from '../../core/src/index.ts';
 
 export interface Edit {
@@ -52,31 +56,34 @@ function lineOf(lines: readonly SourceLine[], offset: number): number {
 export function computeEdits(before: string, after: string): Edit[] {
   if (before === after) return [];
 
-  let prefix = 0;
-  while (
-    prefix < before.length &&
-    prefix < after.length &&
-    before.charAt(prefix) === after.charAt(prefix)
-  ) {
-    prefix++;
-  }
-
-  let suffix = 0;
-  while (
-    suffix < before.length - prefix &&
-    suffix < after.length - prefix &&
-    before.charAt(before.length - 1 - suffix) === after.charAt(after.length - 1 - suffix)
-  ) {
-    suffix++;
-  }
-
-  const start = prefix;
-  const end = before.length - suffix;
   const lines = splitSourceLines(before);
-  const startLine = lineOf(lines, start);
-  const endLine = end <= start ? startLine : lineOf(lines, Math.max(start, end - 1));
+  return diffEdits(before, after).map((region) => {
+    let start = region.start;
+    let end = region.end;
+    let text = region.text;
 
-  return [{ start, end, newText: after.slice(prefix, after.length - suffix), startLine, endLine }];
+    let head = 0;
+    while (head < end - start && head < text.length && before.charAt(start + head) === text.charAt(head)) {
+      head++;
+    }
+    start += head;
+    text = text.slice(head);
+
+    let tail = 0;
+    while (
+      tail < end - start &&
+      tail < text.length &&
+      before.charAt(end - 1 - tail) === text.charAt(text.length - 1 - tail)
+    ) {
+      tail++;
+    }
+    end -= tail;
+    text = text.slice(0, text.length - tail);
+
+    const startLine = lineOf(lines, start);
+    const endLine = end <= start ? startLine : lineOf(lines, Math.max(start, end - 1));
+    return { start, end, newText: text, startLine, endLine };
+  });
 }
 
 export function applyEdits(text: string, edits: readonly Edit[]): string {

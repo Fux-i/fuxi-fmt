@@ -45,5 +45,7 @@ export { DEFAULT_CJK_CLASSES, isAlphanumeric, isCjk, isFullPunct, isSpacingChar 
 export type { CjkClass } from './chars.ts';
 export { normalizeFullwidthAlphanumerics, normalizePunctuation } from './widths.ts';
 export type { Region, RegionKind } from './scan.ts';
+export { applyEdits, diffEdits } from './diff.ts';
+export type { TextEdit } from './diff.ts';
 export { classifyContent, classifyLine, segment } from './blocks.ts';
 export type { Block, BlockKind, ContentKind, LineKind } from './blocks.ts';
