@@ -70,5 +70,47 @@ describe('CLI as a real process', () => {
     assert.match(result.stdout, /fuxi-fmt/);
   });
 
-  after(() => rmSync(scratch, { recursive: true, force: true }));
+  // Remove only this block's fixture. Deleting all of dist/ would wipe the next
+  // block's configuration fixture, which is created during collection before
+  // either block's tests run.
+  after(() => rmSync(fixture, { force: true }));
+});
+
+describe('the real entry point discovers configuration', () => {
+  mkdirSync(scratch, { recursive: true });
+  const dir = join(scratch, 'config-probe');
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'fuxi-fmt.json'), '{ "list": { "unorderedMarker": "asterisks" } }');
+  const doc = join(dir, 'doc.md');
+
+  test('a config file beside the document changes the result', () => {
+    writeFileSync(doc, '- item\n');
+    assert.equal(cli(['--write', doc]).status, 0);
+    assert.equal(readFileSync(doc, 'utf8'), '* item\n');
+  });
+
+  test('the same file is then clean, so discovery is stable', () => {
+    assert.equal(cli(['--check', doc]).status, 0);
+  });
+
+  test('a relative path resolves against the working directory', () => {
+    writeFileSync(doc, '- item\n');
+    const result = spawnSync(process.execPath, [entry, '--write', 'doc.md'], {
+      cwd: dir,
+      encoding: 'utf8',
+    });
+    assert.equal(result.status, 0);
+    assert.equal(readFileSync(doc, 'utf8'), '* item\n');
+  });
+
+  test('without the config the default marker is used', () => {
+    const bare = join(scratch, 'bare');
+    mkdirSync(bare, { recursive: true });
+    const file = join(bare, 'doc.md');
+    writeFileSync(file, '* item\n');
+    assert.equal(cli(['--write', file]).status, 0);
+    assert.equal(readFileSync(file, 'utf8'), '- item\n');
+  });
+
+  after(() => rmSync(join(scratch, 'config-probe'), { recursive: true, force: true }));
 });
