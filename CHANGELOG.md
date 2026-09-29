@@ -9,6 +9,14 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`ignore.*` and `typography.symbolWhitelist` could not be set in a `fuxi-fmt.json`.**
+  `readSections` had no branch for either, and `mergeOptions` dropped `ignore` outright - so the
+  editor's own settings layer lost it too, at the merge step. Four directive names and one symbol
+  list worked only when `format()` was called directly with an input object, which is to say in
+  tests and not for anyone using the CLI or the extension.
+
 ### Changed
 
 - **The VS Code extension is publishable.** It gained an icon, a Marketplace listing README, a

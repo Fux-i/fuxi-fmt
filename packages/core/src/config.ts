@@ -16,6 +16,7 @@ import { presetOptions } from './presets.ts';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import type {
+  IgnoreInput,
   BlankLinesInput,
   CodeBlockInput,
   EndOfLine,
@@ -34,6 +35,7 @@ interface Sections {
   list?: ListInput;
   codeBlock?: CodeBlockInput;
   endOfLine?: EndOfLine;
+  ignore?: IgnoreInput;
 }
 
 function isRecord(value: unknown): value is Raw {
@@ -241,6 +243,7 @@ function readSections(raw: Raw): FormatOptionsInput {
       parenStyle?: 'mixed' | 'fullwidth' | 'halfwidth' | 'preserve';
       semicolon?: boolean;
       cjkClasses?: readonly CjkClass[];
+      symbolWhitelist?: readonly string[];
     } = {};
     if (from.cjkSpacing !== undefined) to.cjkSpacing = bool(from.cjkSpacing, 'typography.cjkSpacing');
     if (from.punctuationStyle !== undefined) {
@@ -284,7 +287,27 @@ function readSections(raw: Raw): FormatOptionsInput {
       }
       to.cjkClasses = names as readonly CjkClass[];
     }
+    if (from.symbolWhitelist !== undefined) {
+      to.symbolWhitelist = strings(from.symbolWhitelist, 'typography.symbolWhitelist');
+    }
     out.typography = to;
+  }
+
+  // CFG-03: the ignore directive names are configuration like any other. They
+  // were absent from this reader and from mergeOptions, so a fuxi-fmt.json could
+  // not name them and the editor lost them on the way through.
+  if (raw.ignore !== undefined) {
+    const from = section(raw.ignore, 'ignore');
+    const to: { file?: string; start?: string; end?: string; line?: string } = {};
+    for (const key of ['file', 'start', 'end', 'line'] as const) {
+      const value = from[key];
+      if (value === undefined) continue;
+      if (typeof value !== 'string' || value.length === 0) {
+        throw new Error('config: ignore.' + key + ' must be a non-empty string');
+      }
+      to[key] = value;
+    }
+    out.ignore = to;
   }
 
   return out;
@@ -306,6 +329,8 @@ export function mergeOptions(base: FormatOptionsInput, override: FormatOptionsIn
   if (list !== undefined) out.list = list;
   const codeBlock = mergeSection(base.codeBlock, override.codeBlock);
   if (codeBlock !== undefined) out.codeBlock = codeBlock;
+  const ignore = mergeSection(base.ignore, override.ignore);
+  if (ignore !== undefined) out.ignore = ignore;
   const endOfLine = override.endOfLine ?? base.endOfLine;
   if (endOfLine !== undefined) out.endOfLine = endOfLine;
   return out;
