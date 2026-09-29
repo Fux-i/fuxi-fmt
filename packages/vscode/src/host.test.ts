@@ -1,26 +1,27 @@
 import { test, describe, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 
 /**
- * The bundle built, parsed, and contained the expected strings - but it had
- * never RUN. Loading it needs a 'vscode' module, which only exists inside the
- * editor, so this writes a stub into the gitignored dist/node_modules and loads
- * the real bundle against it.
+ * The bundle built, parsed and contained the expected strings - but it had
+ * never RUN. Loading it needs a 'vscode' module, which exists only inside the
+ * editor, so this writes the stub from test/stubs/ into the gitignored
+ * dist/node_modules and loads the real bundle against it.
  *
- * This is the only way to execute the extension without installing VS Code.
+ * The stub is a real file rather than a string inside this test, because a
+ * string has to be escaped to be edited - and editing inside a string literal
+ * instead of inside code is exactly how an earlier attempt broke the suite.
  */
 
 const here = new URL('.', import.meta.url).pathname;
 const pkgRoot = join(here, '..');
 const dist = join(pkgRoot, 'dist');
 const bundle = join(dist, 'extension.cjs');
+const stubSource = join(pkgRoot, 'test', 'stubs', 'vscode.cjs');
 const stubDir = join(dist, 'node_modules', 'vscode');
-
-const STUB_SOURCE = "const registrations = [];\nconst disposed = [];\nmodule.exports = {\n  registrations,\n  disposed,\n  languages: {\n    registerDocumentFormattingEditProvider(selector, provider) {\n      registrations.push({ kind: 'document', selector, provider });\n      return { dispose: () => disposed.push('document') };\n    },\n    registerDocumentRangeFormattingEditProvider(selector, provider) {\n      registrations.push({ kind: 'range', selector, provider });\n      return { dispose: () => disposed.push('range') };\n    },\n  },\n  workspace: { getConfiguration: () => ({ get: (_key, fallback) => fallback }) },\n  Position: class Position { constructor(line, character) { this.line = line; this.character = character; } },\n  Range: class Range { constructor(start, end) { this.start = start; this.end = end; } },\n  TextEdit: { replace: (range, newText) => ({ range, newText }) },\n};\n";
 
 describe('the extension bundle against a stubbed host', () => {
   if (!existsSync(bundle)) {
@@ -31,9 +32,13 @@ describe('the extension bundle against a stubbed host', () => {
     assert.equal(built.status, 0, 'build failed: ' + String(built.stderr));
   }
 
+  assert.ok(existsSync(stubSource), 'the vscode stub fixture is missing: ' + stubSource);
   mkdirSync(stubDir, { recursive: true });
-  writeFileSync(join(stubDir, 'package.json'), JSON.stringify({ name: 'vscode', version: '0.0.0', main: 'index.js' }));
-  writeFileSync(join(stubDir, 'index.js'), STUB_SOURCE);
+  writeFileSync(
+    join(stubDir, 'package.json'),
+    JSON.stringify({ name: 'vscode', version: '0.0.0', main: 'index.js' }),
+  );
+  writeFileSync(join(stubDir, 'index.js'), readFileSync(stubSource, 'utf8'));
 
   const requireFromDist = createRequire(join(dist, 'loader.cjs'));
   const vscode = requireFromDist(join(stubDir, 'index.js'));
@@ -46,8 +51,8 @@ describe('the extension bundle against a stubbed host', () => {
     provideDocumentRangeFormattingEdits(document: unknown, range: unknown): unknown[];
   }
   const registrations = vscode.registrations as Array<{ kind: string; provider: Provider }>;
-  const documentProvider = registrations.find((r) => r.kind === 'document');
-  const rangeProvider = registrations.find((r) => r.kind === 'range');
+  const documentProvider = registrations.find((entry) => entry.kind === 'document');
+  const rangeProvider = registrations.find((entry) => entry.kind === 'range');
 
   const document = {
     getText: () => '#标题\n',
@@ -87,7 +92,9 @@ describe('the extension bundle against a stubbed host', () => {
   });
 
   test('disposing the context releases both registrations', () => {
-    for (const subscription of context.subscriptions as Array<{ dispose(): void }>) subscription.dispose();
+    for (const subscription of context.subscriptions as Array<{ dispose(): void }>) {
+      subscription.dispose();
+    }
     assert.deepEqual(vscode.disposed, ['document', 'range']);
   });
 
