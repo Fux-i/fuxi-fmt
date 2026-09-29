@@ -50,3 +50,36 @@ export function scanListItems(lines: readonly string[]): ListItem[] {
   }
   return items;
 }
+
+/**
+ * BLK-08 step two: which item is each item nested under?
+ *
+ * The parent is the nearest preceding item whose content column is at or before
+ * this item's marker column. That is a comparison between two recorded facts,
+ * not an inference - which is what the stack version got wrong when it treated
+ * the first observed indent as depth zero.
+ *
+ * Returns -1 for an item with no parent. Those are top level, and top level
+ * items keep the indentation they were written with: snapping them to column 0
+ * is precisely the bug that dedented an already-indented fragment.
+ */
+export function assignParents(items: readonly ListItem[]): number[] {
+  const parents: number[] = [];
+  const open: number[] = [];
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (item === undefined) continue;
+
+    while (open.length > 0) {
+      const top = items[open[open.length - 1] ?? 0];
+      if (top === undefined || top.contentColumn <= item.indent) break;
+      open.pop();
+    }
+
+    parents.push(open.length > 0 ? (open[open.length - 1] ?? -1) : -1);
+    open.push(i);
+  }
+
+  return parents;
+}

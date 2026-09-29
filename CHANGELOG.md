@@ -9,7 +9,10 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- `scanListItems` and `assignParents` in `@fuxi-fmt/core`: the first two steps of BLK-08
+  list reindentation. Neither is wired into the pipeline yet.
 
 ## [0.20.0] - 2026-09-28
 
