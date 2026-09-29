@@ -118,6 +118,36 @@ describe('the extension bundle against a stubbed host', () => {
     vscode.settings = {};
   });
 
+  test('the project file beats an individual setting, so the editor agrees with --check', () => {
+    assert.ok(documentProvider);
+    const file = join(dist, 'fuxi-fmt.json');
+    const doc = join(dist, 'precedence.md');
+
+    // The document uses asterisks, the project file asks for dashes, and the
+    // editor setting asks for asterisks back. If the setting won, the document
+    // would already be formatted and the edit list would be empty.
+    writeFileSync(file, JSON.stringify({ list: { unorderedMarker: 'dashes' } }));
+    writeFileSync(doc, '* item\n');
+    try {
+      const document = { getText: () => '* item\n', uri: { fsPath: doc } };
+      vscode.settings = { 'fuxiFmt.list.unorderedMarker': 'asterisks' };
+      const edits = documentProvider.provider.provideDocumentFormattingEdits(document) as
+        | readonly { newText?: string }[]
+        | undefined;
+      // Edits are character ranges, so rewriting the marker yields '-', not a
+      // whole line. What matters is that dashes appear and asterisks do not.
+      const produced = (edits ?? []).map((edit) => edit.newText ?? '').join('');
+      assert.ok(
+        produced.includes('-') && !produced.includes('*'),
+        'the editor setting overrode the project file; the edit was: ' + JSON.stringify(produced),
+      );
+    } finally {
+      vscode.settings = {};
+      rmSync(file, { force: true });
+      rmSync(doc, { force: true });
+    }
+  });
+
   test('disposing the context releases both registrations', () => {
     for (const subscription of context.subscriptions as Array<{ dispose(): void }>) {
       subscription.dispose();
