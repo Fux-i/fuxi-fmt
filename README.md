@@ -153,6 +153,26 @@ is the authority; this is the shortest accurate summary of the gap.
 |---|---|
 | **Five documented options** | **Not implemented**, and not equally worth doing. See below. Setting any of them produces silence. |
 
+### `typography.symbolWhitelist`: the shape, now that the refactor is done
+
+The signature refactor (`3d19468`) removed the obstacle. What is left is mechanical:
+
+1. `chars.ts` — export the current `SPACING_SYMBOLS` list as `DEFAULT_SPACING_SYMBOLS` (a plain
+   array), and give `isSpacingChar(ch, symbols = SPACING_SYMBOLS)` a `Set` parameter.
+2. `options.ts` — `symbolWhitelist?: readonly string[]` on the input, `ReadonlySet<string>` on the
+   resolved options, defaulted to `DEFAULT_SPACING_SYMBOLS`. Build the Set once at resolve time,
+   not once per character.
+3. `typography.ts` — `classOf` passes `options.symbolWhitelist` to `isSpacingChar`. This is the
+   single line the refactor existed to make possible.
+4. Remove `typography.symbolWhitelist` from **both** "not implemented at all" lists in the same
+   commit, or the cross-document check fails.
+5. Tests — a custom set that adds a character, one that removes a default such as `%`, and one
+   asserting the default set is unchanged.
+
+**Do not land 1 to 3 without 4, and do not land any of them without a test.** An option sitting in
+the defaults that nothing reads is precisely the defect `list.indentWidth` carried for twenty
+releases, and this option is one careless commit away from repeating it.
+
 ### The four remaining options, ranked by whether they are worth building
 
 | Option | Judgment |
