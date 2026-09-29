@@ -190,6 +190,27 @@ The signature refactor (`3d19468`) removed the obstacle. What is left is mechani
 the defaults that nothing reads is precisely the defect `list.indentWidth` carried for twenty
 releases, and this option is one careless commit away from repeating it.
 
+### `blankLines.insideBlockquotes`: what is known, and what is not
+
+Probed rather than assumed:
+
+| Input | Result |
+|---|---|
+| `> a\n>\n> b\n` | unchanged — a marker blank line survives |
+| `> a\n> \n> b\n` | `> a\n>\n> b\n` — the trailing space is trimmed |
+| `> a\n\n> b\n` | unchanged — those are two blockquotes, correctly left alone |
+
+So the mechanism works. A blank line inside a blockquote is a `>` line, and the pipeline already
+preserves one and trims its trailing space.
+
+What is **not** settled is what the option should insert a blank *between*. `> a` and `> b` are one
+paragraph, and a `>` between them would change how the document renders — which the specification
+forbids for precisely this class of option. A correct rule needs the block boundaries *inside* the
+quote, and `segment` does not currently expose them.
+
+So the option stays declared missing. Implementing it on a guess would produce a rule with passing
+tests and the wrong output, which is worse than an honest gap.
+
 ### The two remaining options, ranked by whether they are worth building
 
 | Option | Judgment |
