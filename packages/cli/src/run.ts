@@ -44,12 +44,10 @@ function messageOf(error: unknown): string {
  * diffs, is the worst possible lie to tell. Blank lines are shown, because
  * blank-line normalisation is one of the things being reported.
  *
- * KNOWN LIMITATION, and it is the common case rather than the edge: the region
- * between the common prefix and the common suffix is emitted wholesale, so a
- * document edited in several places reports unchanged lines on both sides. The
- * fix is a line alignment algorithm - LCS or Myers - shared with the adapter's
- * computeEdits, which approximates the same problem the same way. Until then
- * this output is a hint about where to look, not a patch, and --help says so.
+ * The middle is walked with a one-line resync, not emitted wholesale. It is a
+ * greedy alignment rather than LCS or Myers, so a pathological document full of
+ * repeated lines can still mis-align; for a formatter's output it resynchronises
+ * at the next unchanged line, which is what was needed.
  */
 export function diffLines(path: string, before: string, after: string): string {
   const left = before.split('\n');
@@ -67,9 +65,40 @@ export function diffLines(path: string, before: string, after: string): string {
     suffix++;
   }
 
+  const endL = left.length - suffix;
+  const endR = right.length - suffix;
   let out = '--- ' + path + '\n';
-  for (let i = prefix; i < left.length - suffix; i++) out += '-' + (left[i] ?? '') + '\n';
-  for (let i = prefix; i < right.length - suffix; i++) out += '+' + (right[i] ?? '') + '\n';
+
+  // Walk the middle with a one-line resync. Emitting it wholesale - which the
+  // previous version did - reports unchanged lines on both sides whenever the
+  // edits are scattered, and scattered is the normal case for this formatter.
+  let i = prefix;
+  let j = prefix;
+  while (i < endL || j < endR) {
+    if (i < endL && j < endR && left[i] === right[j]) {
+      i++;
+      j++;
+      continue;
+    }
+    if (i < endL && j < endR && left[i] === right[j + 1]) {
+      out += '-' + (left[i] ?? '') + '\n';
+      i++;
+      continue;
+    }
+    if (i < endL && j < endR && left[i + 1] === right[j]) {
+      out += '+' + (right[j] ?? '') + '\n';
+      j++;
+      continue;
+    }
+    if (i < endL) {
+      out += '-' + (left[i] ?? '') + '\n';
+      i++;
+    }
+    if (j < endR) {
+      out += '+' + (right[j] ?? '') + '\n';
+      j++;
+    }
+  }
   return out;
 }
 
