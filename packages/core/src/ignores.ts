@@ -31,15 +31,50 @@ export function hasIgnoreFile(source: string, name: string): boolean {
   return false;
 }
 
-/** Per-line flags, for the structural pass. */
+/**
+ * Per-line flags, for the structural pass.
+ *
+ * Three directives, one pass: a range opened by start and closed by end, and a
+ * one-off directive that covers the next block - the following non-blank lines,
+ * ending at the first blank one. The one-off exists because a false positive is
+ * usually one paragraph, not one file.
+ */
 export function ignoreLines(source: string, options: IgnoreOptions): boolean[] {
   const flags: boolean[] = [];
   let open = false;
+  let pending = false;
+  let inBlock = false;
+
   for (const line of splitSourceLines(source)) {
     const body = commentBody(line.text);
-    if (body === options.start) open = true;
-    flags.push(open);
-    if (body === options.end) open = false;
+    const blank = line.text.trim().length === 0;
+    let flag = open;
+
+    if (body === options.start) {
+      open = true;
+      flag = true;
+    } else if (body === options.end) {
+      flag = true;
+      open = false;
+    } else if (body === options.line) {
+      pending = true;
+      inBlock = false;
+      flag = true;
+    } else if (pending) {
+      if (!blank) {
+        pending = false;
+        inBlock = true;
+        flag = true;
+      }
+    } else if (inBlock) {
+      if (blank) {
+        inBlock = false;
+      } else {
+        flag = true;
+      }
+    }
+
+    flags.push(flag);
   }
   return flags;
 }
@@ -52,21 +87,18 @@ export function ignoreLines(source: string, options: IgnoreOptions): boolean[] {
  * while the ignored regions stay verbatim and therefore findable.
  */
 export function ignoreRanges(source: string, options: IgnoreOptions): CharRange[] {
+  const lines = splitSourceLines(source);
+  const flags = ignoreLines(source, options);
   const ranges: CharRange[] = [];
   let start = -1;
-  let open = false;
-  for (const line of splitSourceLines(source)) {
-    const body = commentBody(line.text);
-    if (body === options.start && !open) {
-      open = true;
-      start = line.start;
-    }
-    if (body === options.end && open) {
-      ranges.push({ start, end: line.end });
-      open = false;
+  for (let i = 0; i < lines.length; i++) {
+    const on = flags[i] === true;
+    if (on && start === -1) start = lines[i]?.start ?? 0;
+    if (!on && start !== -1) {
+      ranges.push({ start, end: lines[i - 1]?.end ?? start });
       start = -1;
     }
   }
-  if (open) ranges.push({ start, end: source.length });
+  if (start !== -1) ranges.push({ start, end: source.length });
   return ranges;
 }

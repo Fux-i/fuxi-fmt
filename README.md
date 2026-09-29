@@ -130,8 +130,7 @@ is the authority; this is the shortest accurate summary of the gap.
 | **Real documents** | Everything is verified against generated fixtures, a synthetic article, and this repository's own Markdown. The formatter has never seen a real Chinese technical article. |
 
 **Not implemented at all:** `blankLines.insideLists`, `blankLines.insideBlockquotes`,
-`typography.collapseBoundarySpaces`, `typography.symbolWhitelist`, `frontMatter.enabled`,
-`ignore.line`. The specification declares the
+`typography.collapseBoundarySpaces`, `typography.symbolWhitelist`, `frontMatter.enabled`. The specification declares the
 same set, and a test asserts the two lists agree.
 
 The table is the handoff. It has drifted before — it listed `typography.semicolon` and

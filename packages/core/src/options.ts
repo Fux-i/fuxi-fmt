@@ -73,12 +73,15 @@ export interface IgnoreOptions {
   readonly start: string;
   /** Comment body that closes an ignored range. */
   readonly end: string;
+  /** Comment body that ignores the next block. */
+  readonly line: string;
 }
 
 export interface IgnoreInput {
   readonly file?: string;
   readonly start?: string;
   readonly end?: string;
+  readonly line?: string;
 }
 
 export interface FormatOptions {
@@ -148,6 +151,7 @@ export const defaultOptions: FormatOptions = {
     file: 'fuxi-fmt-ignore-file',
     start: 'fuxi-fmt-ignore-start',
     end: 'fuxi-fmt-ignore-end',
+    line: 'fuxi-fmt-ignore',
   },
 };
 
@@ -191,6 +195,7 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
       file: input?.ignore?.file ?? defaultOptions.ignore.file,
       start: input?.ignore?.start ?? defaultOptions.ignore.start,
       end: input?.ignore?.end ?? defaultOptions.ignore.end,
+      line: input?.ignore?.line ?? defaultOptions.ignore.line,
     },
   };
 }
