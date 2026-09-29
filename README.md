@@ -13,9 +13,9 @@ fuxi-fmt is one engine with one configuration surface that owns both halves.
 
 ## Status
 
-**Alpha.** Every behavioural rule in the specification is implemented except list
-reindentation (BLK-08). Every configuration directive works. Five documented options do not, and
-are listed under Remaining work rather than left for a reader to discover by setting one.
+**Alpha.** Every behavioural rule in the specification is implemented, and every configuration
+directive works. Five documented options do not, and are listed under Remaining work rather than
+left for a reader to discover by setting one.
 
 There is deliberately no test count here. It read 173, then 254, then 315 — accurate each time it
 was written, wrong within a few releases, and not something a reader can act on. Run `npm test`.
@@ -134,7 +134,6 @@ is the authority; this is the shortest accurate summary of the gap.
 
 | Item | State |
 |---|---|
-| **BLK-08 list reindentation** | Decision recorded in spec section 7 item 1 (option b: a list containing a protected block is excluded). **Not implemented.** `list.indentWidth` today only controls hard-tab expansion. This is the last unimplemented structural rule. |
 | **Five documented options** | **Not implemented**, and not equally worth doing. See below. Setting any of them produces silence. |
 
 ### The five options, ranked by whether they are worth building

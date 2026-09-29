@@ -11,8 +11,11 @@ with release candidates suffixed `-rcN`.
 
 ### Added
 
-- `scanListItems` and `assignParents` in `@fuxi-fmt/core`: the first two steps of BLK-08
-  list reindentation. Neither is wired into the pipeline yet.
+- **BLK-08 list reindentation.** A nested list item's marker is moved under its parent's
+  content column, computed top-down so the result settles in one pass. An item with no parent
+  keeps the offset it was written at, so a fragment is never snapped to column zero. A list
+  containing a protected block is excluded entirely (spec section 7 item 1, option b). This was
+  the last behavioural rule in the specification.
 
 ## [0.20.0] - 2026-09-28
 
