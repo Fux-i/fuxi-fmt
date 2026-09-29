@@ -35,19 +35,34 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** Line based diff, deliberately simple: it is a CI hint, not a patch format. */
+/**
+ * Line based diff, deliberately simple: it is a CI hint, not a patch format.
+ *
+ * It aligns by common prefix and suffix rather than by index. Comparing index
+ * to index made a single inserted blank line report every subsequent line as
+ * removed and re-added - which, for a formatter whose selling point is minimal
+ * diffs, is the worst possible lie to tell. Blank lines are shown, because
+ * blank-line normalisation is one of the things being reported.
+ */
 export function diffLines(path: string, before: string, after: string): string {
   const left = before.split('\n');
   const right = after.split('\n');
-  let out = '--- ' + path + '\n';
-  const length = Math.max(left.length, right.length);
-  for (let i = 0; i < length; i++) {
-    const a = left[i];
-    const b = right[i];
-    if (a === b) continue;
-    if (a !== undefined && a.length > 0) out += '-' + a + '\n';
-    if (b !== undefined && b.length > 0) out += '+' + b + '\n';
+
+  let prefix = 0;
+  while (prefix < left.length && prefix < right.length && left[prefix] === right[prefix]) prefix++;
+
+  let suffix = 0;
+  while (
+    suffix < left.length - prefix &&
+    suffix < right.length - prefix &&
+    left[left.length - 1 - suffix] === right[right.length - 1 - suffix]
+  ) {
+    suffix++;
   }
+
+  let out = '--- ' + path + '\n';
+  for (let i = prefix; i < left.length - suffix; i++) out += '-' + (left[i] ?? '') + '\n';
+  for (let i = prefix; i < right.length - suffix; i++) out += '+' + (right[i] ?? '') + '\n';
   return out;
 }
 
