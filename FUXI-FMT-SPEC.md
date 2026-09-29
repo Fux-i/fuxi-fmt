@@ -391,7 +391,7 @@ ignore:
 ```
 
 **Implementation status.** **Not implemented at all:** `blankLines.insideLists`, `blankLines.insideBlockquotes`,
-`typography.collapseBoundarySpaces`, `typography.symbolWhitelist`.
+`typography.collapseBoundarySpaces`.
 **Partially implemented:** `list.indentWidth`, which today only controls how
 hard tabs are expanded, and also sets the minimum indent width that list reindentation targets. Everything else in this
 block is implemented.

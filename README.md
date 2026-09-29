@@ -190,7 +190,7 @@ The signature refactor (`3d19468`) removed the obstacle. What is left is mechani
 the defaults that nothing reads is precisely the defect `list.indentWidth` carried for twenty
 releases, and this option is one careless commit away from repeating it.
 
-### The four remaining options, ranked by whether they are worth building
+### The three remaining options, ranked by whether they are worth building
 
 | Option | Judgment |
 |---|---|
@@ -201,7 +201,7 @@ releases, and this option is one careless commit away from repeating it.
 | **Real documents** | Everything is verified against generated fixtures, a synthetic article, and this repository's own Markdown. The formatter has never seen a real Chinese technical article. |
 
 **Not implemented at all:** `blankLines.insideLists`, `blankLines.insideBlockquotes`,
-`typography.collapseBoundarySpaces`, `typography.symbolWhitelist`. The specification declares the
+`typography.collapseBoundarySpaces`. The specification declares the
 same set, and a test asserts the two lists agree.
 
 The table is the handoff. It has drifted before — it listed `typography.semicolon` and

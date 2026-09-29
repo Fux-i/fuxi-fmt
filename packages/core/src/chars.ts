@@ -22,7 +22,8 @@ export const DEFAULT_CJK_CLASSES: readonly CjkClass[] = ['han'];
 const ALPHANUMERIC = /[A-Za-z0-9]/;
 
 /** Symbols that attach to an adjacent run (TYPO-04, TYPO-10). */
-const SPACING_SYMBOLS = new Set(['+', '-', '=', '<', '>', '%', '\u00b0', '\u2103', '\u2109']);
+export const DEFAULT_SPACING_SYMBOLS: readonly string[] = ['+', '-', '=', '<', '>', '%', '\u00b0', '\u2103', '\u2109'];
+const SPACING_SYMBOLS = new Set(DEFAULT_SPACING_SYMBOLS);
 
 /** Full-width punctuation is a boundary, never a spacing target (TYPO-07). */
 const FULL_PUNCT = new Set([
@@ -45,8 +46,11 @@ export function isAlphanumeric(ch: string): boolean {
 }
 
 /** A character that takes a space at a CJK boundary. */
-export function isSpacingChar(ch: string): boolean {
-  return isAlphanumeric(ch) || SPACING_SYMBOLS.has(ch);
+export function isSpacingChar(
+  ch: string,
+  symbols: ReadonlySet<string> = SPACING_SYMBOLS,
+): boolean {
+  return isAlphanumeric(ch) || symbols.has(ch);
 }
 
 export function isFullPunct(ch: string): boolean {

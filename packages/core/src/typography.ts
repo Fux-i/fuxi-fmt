@@ -33,7 +33,7 @@ function classOf(ch: string, options: TypographyOptions): CharClass {
   // default, because '中文#标签' becoming '中文 # 标签' breaks the tag wherever
   // it is published. Opting in is a deliberate choice, not an oversight.
   if (ch === '#' && options.hashtag) return 'latin';
-  if (isSpacingChar(ch)) return 'latin';
+  if (isSpacingChar(ch, options.symbolWhitelist)) return 'latin';
   if (isFullPunct(ch)) return 'fullpunct';
   return 'other';
 }

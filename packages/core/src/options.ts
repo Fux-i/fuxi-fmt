@@ -1,4 +1,4 @@
-import { DEFAULT_CJK_CLASSES, type CjkClass } from './chars.ts';
+import { DEFAULT_CJK_CLASSES, DEFAULT_SPACING_SYMBOLS, type CjkClass } from './chars.ts';
 
 export type AroundBlocks = 'exact' | 'atLeast';
 
@@ -31,6 +31,8 @@ export interface TypographyOptions {
   readonly semicolon: boolean;
   /** Which scripts count as CJK. Defaults to Han alone. */
   readonly cjkClasses: readonly CjkClass[];
+  /** Symbols CJK spacing treats as word characters (TYPO-01). */
+  readonly symbolWhitelist: ReadonlySet<string>;
 }
 
 export type EndOfLine = 'lf' | 'crlf' | 'auto';
@@ -108,6 +110,7 @@ export interface TypographyInput {
   readonly parenStyle?: ParenStyle;
   readonly semicolon?: boolean;
   readonly cjkClasses?: readonly CjkClass[];
+  readonly symbolWhitelist?: readonly string[];
 }
 
 export interface ListInput {
@@ -138,6 +141,7 @@ export const defaultOptions: FormatOptions = {
     parenStyle: 'mixed',
     semicolon: false,
     cjkClasses: DEFAULT_CJK_CLASSES,
+    symbolWhitelist: new Set(DEFAULT_SPACING_SYMBOLS),
   },
   list: {
     orderedStyle: 'increment',
@@ -178,6 +182,9 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
       parenStyle: input?.typography?.parenStyle ?? defaultOptions.typography.parenStyle,
       semicolon: input?.typography?.semicolon ?? defaultOptions.typography.semicolon,
       cjkClasses: input?.typography?.cjkClasses ?? defaultOptions.typography.cjkClasses,
+      symbolWhitelist: new Set(
+        input?.typography?.symbolWhitelist ?? defaultOptions.typography.symbolWhitelist,
+      ),
     },
     list: {
       orderedStyle: input?.list?.orderedStyle ?? defaultOptions.list.orderedStyle,
