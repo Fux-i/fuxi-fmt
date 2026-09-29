@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { format, loadOptionsFor } from '../../core/src/index.ts';
+import { diffEdits, format, loadOptionsFor } from '../../core/src/index.ts';
 import type { FormatOptionsInput } from '../../core/src/index.ts';
 import { parseArgs } from './args.ts';
 
@@ -38,68 +38,24 @@ function messageOf(error: unknown): string {
 /**
  * Line based diff, deliberately simple: it is a CI hint, not a patch format.
  *
- * It aligns by common prefix and suffix rather than by index. Comparing index
- * to index made a single inserted blank line report every subsequent line as
- * removed and re-added - which, for a formatter whose selling point is minimal
- * diffs, is the worst possible lie to tell. Blank lines are shown, because
- * blank-line normalisation is one of the things being reported.
- *
- * The middle is walked with a one-line resync, not emitted wholesale. It is a
- * greedy alignment rather than LCS or Myers, so a pathological document full of
- * repeated lines can still mis-align; for a formatter's output it resynchronises
- * at the next unchanged line, which is what was needed.
+ * Alignment lives in core/diff.ts, so the CLI and the adapter cannot drift into
+ * two answers to one question. This only formats that result.
  */
 export function diffLines(path: string, before: string, after: string): string {
-  const left = before.split('\n');
-  const right = after.split('\n');
-
-  let prefix = 0;
-  while (prefix < left.length && prefix < right.length && left[prefix] === right[prefix]) prefix++;
-
-  let suffix = 0;
-  while (
-    suffix < left.length - prefix &&
-    suffix < right.length - prefix &&
-    left[left.length - 1 - suffix] === right[right.length - 1 - suffix]
-  ) {
-    suffix++;
-  }
-
-  const endL = left.length - suffix;
-  const endR = right.length - suffix;
   let out = '--- ' + path + '\n';
-
-  // Walk the middle with a one-line resync. Emitting it wholesale - which the
-  // previous version did - reports unchanged lines on both sides whenever the
-  // edits are scattered, and scattered is the normal case for this formatter.
-  let i = prefix;
-  let j = prefix;
-  while (i < endL || j < endR) {
-    if (i < endL && j < endR && left[i] === right[j]) {
-      i++;
-      j++;
-      continue;
-    }
-    if (i < endL && j < endR && left[i] === right[j + 1]) {
-      out += '-' + (left[i] ?? '') + '\n';
-      i++;
-      continue;
-    }
-    if (i < endL && j < endR && left[i + 1] === right[j]) {
-      out += '+' + (right[j] ?? '') + '\n';
-      j++;
-      continue;
-    }
-    if (i < endL) {
-      out += '-' + (left[i] ?? '') + '\n';
-      i++;
-    }
-    if (j < endR) {
-      out += '+' + (right[j] ?? '') + '\n';
-      j++;
-    }
+  for (const edit of diffEdits(before, after)) {
+    out += diffSide('-', before.slice(edit.start, edit.end));
+    out += diffSide('+', edit.text);
   }
   return out;
+}
+
+/** One side, without a stray empty line from a trailing newline. */
+function diffSide(prefix: string, text: string): string {
+  if (text.length === 0) return '';
+  const parts = text.split('\n');
+  if (parts[parts.length - 1] === '') parts.pop();
+  return parts.map((line) => prefix + line + '\n').join('');
 }
 
 export function run(argv: readonly string[], io: Io): number {
