@@ -9,6 +9,12 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
+### Changed
+
+- **The VS Code extension is publishable.** It gained an icon, a Marketplace listing README, a
+  changelog and a licence, plus the manifest fields the Marketplace requires. `npm run vsix`
+  packages it reproducibly.
+
 ### Removed
 
 - **`blankLines.insideBlockquotes` withdrawn.** A blank line inside a blockquote is a `>` line, a

@@ -7,4 +7,6 @@ src/
 test/
 build.mjs
 tsconfig.json
+node_modules/
+.npm-cache/
 **/*.map

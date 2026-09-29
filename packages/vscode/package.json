@@ -1,18 +1,47 @@
 {
   "name": "fuxi-fmt-vscode",
   "displayName": "fuxi-fmt",
-  "description": "Format Markdown for Chinese technical writing",
+  "description": "Format Markdown for Chinese technical writing: blank lines, marker spacing, list renumbering, CJK to Latin spacing and Chinese punctuation width - with code, front matter and inline spans never touched.",
   "version": "0.22.0",
   "private": true,
-  "publisher": "fuxi",
+  "publisher": "Fux-i",
   "license": "MIT",
+  "icon": "icon.png",
+  "galleryBanner": {
+    "color": "#5B7355",
+    "theme": "light"
+  },
   "type": "module",
   "engines": {
     "vscode": "^1.138.0"
   },
-  "categories": ["Formatters"],
+  "categories": [
+    "Formatters"
+  ],
+  "keywords": [
+    "markdown",
+    "chinese",
+    "cjk",
+    "formatter",
+    "punctuation",
+    "spacing",
+    "typography",
+    "format-on-save",
+    "zh"
+  ],
   "main": "./dist/extension.cjs",
-  "activationEvents": ["onLanguage:markdown"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Fux-i/fuxi-fmt.git",
+    "directory": "packages/vscode"
+  },
+  "homepage": "https://github.com/Fux-i/fuxi-fmt#readme",
+  "bugs": {
+    "url": "https://github.com/Fux-i/fuxi-fmt/issues"
+  },
+  "activationEvents": [
+    "onLanguage:markdown"
+  ],
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": true,
@@ -38,6 +67,7 @@
   },
   "scripts": {
     "test": "node --test \"src/**/*.test.ts\"",
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "vscode:prepublish": "node build.mjs"
   }
 }

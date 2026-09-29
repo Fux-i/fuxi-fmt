@@ -17,11 +17,13 @@
     "typecheck": "tsc -p packages/core && tsc -p packages/cli && tsc -p packages/vscode",
     "fuxi-fmt": "node packages/cli/src/main.ts",
     "ci": "npm run typecheck && npm test",
-    "build": "npm run build -w fuxi-fmt-vscode"
+    "build": "npm run build -w fuxi-fmt-vscode",
+    "vsix": "npm run build && node packages/vscode/package-vsix.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "@types/vscode": "^1.138.0",
+    "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.28.2",
     "typescript": "^5.9.0"
   }
