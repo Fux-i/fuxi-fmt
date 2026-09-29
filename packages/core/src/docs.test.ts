@@ -143,6 +143,28 @@ describe('documentation stays true to the code', () => {
     assert.deepEqual(declaredMissing(readme), declaredMissing(spec));
   });
 
+  test('every command the readme names actually exists', () => {
+    // The readme's development block had drifted: it said 'npm install' where CI
+    // runs 'npm ci', described typecheck as 'tsc --noEmit', and never mentioned
+    // 'npm run build' at all. None of that fails a test, and all of it misleads
+    // a reader. This is the cheapest possible check for that class.
+    const parsed = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as {
+      scripts?: Record<string, string>;
+    };
+    const scripts = new Set(Object.keys(parsed.scripts ?? {}));
+
+    const required = new Set<string>();
+    for (const match of readme.matchAll(/npm run ([a-z][a-z:-]*)/g)) required.add(match[1] ?? '');
+    if (/npm test\b/.test(readme)) required.add('test');
+
+    // 'npm ci' and 'npm install' are npm's own subcommands, not scripts.
+    assert.ok(required.size >= 3, 'expected the readme to name several commands');
+
+    for (const name of required) {
+      assert.ok(scripts.has(name), 'the readme names "npm run ' + name + '" but no such script exists');
+    }
+  });
+
   test('the changelog has an entry for the newest tag', () => {
     const newest = newestTag();
     if (newest === null) return;
