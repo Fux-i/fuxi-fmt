@@ -114,3 +114,28 @@ describe('the real entry point discovers configuration', () => {
 
   after(() => rmSync(join(scratch, 'config-probe'), { recursive: true, force: true }));
 });
+
+describe('the entry point respects the ignore-file directive', () => {
+  mkdirSync(scratch, { recursive: true });
+  const ignored = join(scratch, 'ignored.md');
+  const source = '<!-- fuxi-fmt-ignore-file -->\n#标题\n\n本项目 使用Vue3开发\n';
+
+  test('--check reports nothing to do', () => {
+    writeFileSync(ignored, source);
+    const result = cli(['--check', ignored]);
+    assert.equal(result.status, 0, 'an ignored file should need no formatting');
+    assert.equal(result.stderr, '');
+  });
+
+  test('--write leaves the file byte for byte', () => {
+    writeFileSync(ignored, source);
+    assert.equal(cli(['--write', ignored]).status, 0);
+    assert.equal(readFileSync(ignored, 'utf8'), source);
+  });
+
+  test('--diff prints nothing', () => {
+    assert.equal(cli(['--diff', ignored]).stdout, '');
+  });
+
+  after(() => rmSync(ignored, { force: true }));
+});
