@@ -145,6 +145,29 @@ structure. Three existing tests caught it (`  - nested` becoming `- nested`). An
 implementation needs the absolute nesting baseline for a list before it reindents anything, which
 is a block-parsing question rather than a stack question. Do not re-attempt the stack version.
 
+**CFG-03 range directive: the design is settled, the work is not.** Add an `ignore.ts`
+exporting `commentBody(line)`, `ignoreRanges(source, options)` and a per-line form for the
+structural pass. The ranges run from the start directive to the end directive inclusive, and an
+unterminated start runs to the end of the document. Then wire it in the three places that already
+know how to handle a protected region:
+
+1. `format()` — mark the ignored lines protected, exactly as atomic ranges already do, so the
+   structural pass leaves them verbatim.
+2. `applyTypography(text, options, extra?)` — OR the ranges into the mask it already builds.
+   Recompute them on the *structural output*, not the source, because blank-line changes shift
+   the offsets.
+3. `trimTrailingWhitespace(text, extra?)` — same, so trailing whitespace inside an ignored
+   region survives.
+
+Move the existing `hasIgnoreFile` out of `format.ts` into the same module, and add `start` and
+`end` to `IgnoreOptions`. The specification's and this file's "not implemented at all" lists
+must change in the same commit: the cross-document check fails otherwise, because both options
+would then exist in the defaults.
+
+This is four files and roughly eight edits. It was attempted nowhere and deferred five times;
+the cost is not the design, it is a change of that size needing more room than one sitting has
+had available.
+
 Two things are worth doing before adding any of the above:
 
 1. **Run it on a real article.** If the spacing, punctuation or parenthesis rules disagree with
