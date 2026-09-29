@@ -124,7 +124,16 @@ is the authority; this is the shortest accurate summary of the gap.
 | Item | State |
 |---|---|
 | **BLK-08 list reindentation** | Decision recorded in spec section 7 item 1 (option b: a list containing a protected block is excluded). **Not implemented.** `list.indentWidth` today only controls hard-tab expansion. This is the last unimplemented structural rule. |
-| **Five documented options** | **Not implemented.** `blankLines.insideLists`, `blankLines.insideBlockquotes`, `typography.collapseBoundarySpaces`, `typography.symbolWhitelist` and `frontMatter.enabled`. Setting any of them produces silence. |
+| **Five documented options** | **Not implemented**, and not equally worth doing. See below. Setting any of them produces silence. |
+
+### The five options, ranked by whether they are worth building
+
+| Option | Judgment |
+|---|---|
+| `blankLines.insideLists`, `blankLines.insideBlockquotes` | **Worth doing, carefully.** The only two that change rendering: inserting a blank line between list items flips a tight list to loose. The option is the escape hatch for an author who wants the loose form, and BLK-03 exists precisely to stop the formatter doing it unasked. Any implementation must leave the default off. |
+| `typography.symbolWhitelist` | **Worth doing, cheaply.** The symbol set is hardcoded in `chars.ts`; exposing it is mostly threading. A Japanese or Korean user will want a different set, and `cjkClasses` already set the precedent for making a character class configurable. |
+| `typography.collapseBoundarySpaces` | **Marginal.** TYPO-02 is implemented and always on. Exposing it means threading a flag through `separator` and `formatLine` for a behaviour nobody has asked to turn off. Do it only if someone does. |
+| `frontMatter.enabled` | **Probably not.** Turning it off would mean formatting YAML as Markdown, which is worse than either protecting it (today) or formatting it properly (spec section 7 item 2). Delete the option rather than implement it. |
 | **Extension host** | The bundle runs against a stubbed `vscode` module in tests. It has never been loaded by a real editor. |
 | **Real documents** | Everything is verified against generated fixtures, a synthetic article, and this repository's own Markdown. The formatter has never seen a real Chinese technical article. |
 
