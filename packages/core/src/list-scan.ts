@@ -83,3 +83,68 @@ export function assignParents(items: readonly ListItem[]): number[] {
 
   return parents;
 }
+
+export interface Reindent {
+  readonly line: number;
+  readonly text: string;
+}
+
+/**
+ * BLK-08 step three: which lines should be rewritten, and to what.
+ *
+ * A nested item's marker moves under its parent's content column, and the target
+ * is computed top-down from where the parent ends up - not from where it started.
+ * Using the original column looks right on one pass and is not idempotent: a
+ * grandchild stays one level too deep, and a second run moves it again. The
+ * parent's own delta has to be applied before its children are placed.
+ *
+ * An item with no parent is untouched, so a fragment keeps the offset it was
+ * written at however deep the nesting inside it goes.
+ *
+ * Continuation lines - the prose under an item, up to the next item or blank
+ * line - move by the same delta so an item keeps its body aligned. A line less
+ * indented than the item it follows is not part of it and ends the run.
+ *
+ * Indentation is written as spaces; hard tabs are expanded by the structural
+ * pass before this runs.
+ */
+export function planListIndent(
+  lines: readonly string[],
+  items: readonly ListItem[],
+  parents: readonly number[],
+): Reindent[] {
+  const isItemLine = new Set(items.map((item) => item.line));
+  const planned = new Map<number, string>();
+  const placed: number[] = [];
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (item === undefined) continue;
+
+    const parentIndex = parents[i] ?? -1;
+    const parent = items[parentIndex];
+    const target =
+      parent === undefined
+        ? item.indent
+        : (placed[parentIndex] ?? parent.indent) + (parent.contentColumn - parent.indent);
+    placed.push(target);
+
+    const delta = target - item.indent;
+    if (delta === 0) continue;
+
+    const original = lines[item.line] ?? '';
+    planned.set(item.line, ' '.repeat(target) + original.slice(item.indent));
+
+    for (let j = item.line + 1; j < lines.length; j++) {
+      const text = lines[j] ?? '';
+      if (text.trim().length === 0 || isItemLine.has(j)) break;
+      const indent = (/^\s*/.exec(text)?.[0] ?? '').length;
+      if (indent < item.indent) break;
+      planned.set(j, ' '.repeat(Math.max(0, indent + delta)) + text.slice(indent));
+    }
+  }
+
+  return [...planned.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([line, text]) => ({ line, text }));
+}
