@@ -67,8 +67,32 @@ function atomicRanges(lines: readonly SourceLine[], regions: readonly Region[]):
   return ranges;
 }
 
+/**
+ * CFG-03. The directive must be the whole body of an HTML comment, so a
+ * document that merely mentions it in prose or in a fenced example is
+ * unaffected. Matching on a substring would make the specification, which
+ * documents the directive, opt itself out.
+ */
+function hasIgnoreFile(source: string, name: string): boolean {
+  let index = source.indexOf('<!--');
+  while (index !== -1) {
+    const end = source.indexOf('-->', index + 4);
+    if (end === -1) return false;
+    if (source.slice(index + 4, end).trim() === name) return true;
+    index = source.indexOf('<!--', end);
+  }
+  return false;
+}
+
 export function format(source: string, input?: FormatOptionsInput): FormatResult {
   const options = resolveOptions(input);
+
+  // A document can opt out entirely. Returning the source rather than the
+  // normalised text keeps the promise that an ignored file is untouched - byte
+  // order mark and line endings included.
+  if (hasIgnoreFile(source, options.ignore.file)) {
+    return { output: source, changed: false, diagnostics: [] };
+  }
 
   // BLK-11: the byte order mark and the line ending belong to the file, not the
   // document, so they are settled before anything else looks at the text.

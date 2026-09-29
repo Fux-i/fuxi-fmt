@@ -124,7 +124,7 @@ is the authority; this is the shortest accurate summary of the gap.
 
 **Not implemented at all:** `blankLines.insideLists`, `blankLines.insideBlockquotes`,
 `typography.collapseBoundarySpaces`, `typography.symbolWhitelist`, `frontMatter.enabled`,
-`ignore.file`, `ignore.start`, `ignore.end`, `ignore.line`. The specification declares the
+`ignore.start`, `ignore.end`, `ignore.line`. The specification declares the
 same set, and a test asserts the two lists agree.
 
 The table is the handoff. It has drifted before — it listed `typography.semicolon` and

@@ -66,12 +66,22 @@ export interface CodeBlockInput {
   readonly normalizeLength?: boolean;
 }
 
+export interface IgnoreOptions {
+  /** Comment body that opts a whole document out (CFG-03). */
+  readonly file: string;
+}
+
+export interface IgnoreInput {
+  readonly file?: string;
+}
+
 export interface FormatOptions {
   readonly blankLines: BlankLinesOptions;
   readonly typography: TypographyOptions;
   readonly list: ListOptions;
   readonly codeBlock: CodeBlockOptions;
   readonly endOfLine: EndOfLine;
+  readonly ignore: IgnoreOptions;
 }
 
 export interface BlankLinesInput {
@@ -104,6 +114,7 @@ export interface FormatOptionsInput {
   readonly list?: ListInput;
   readonly codeBlock?: CodeBlockInput;
   readonly endOfLine?: EndOfLine;
+  readonly ignore?: IgnoreInput;
 }
 
 export const defaultOptions: FormatOptions = {
@@ -127,6 +138,7 @@ export const defaultOptions: FormatOptions = {
   },
   codeBlock: { fenceChar: 'backticks', normalizeLength: true },
   endOfLine: 'lf',
+  ignore: { file: 'fuxi-fmt-ignore-file' },
 };
 
 export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
@@ -165,5 +177,6 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
         input?.codeBlock?.normalizeLength ?? defaultOptions.codeBlock.normalizeLength,
     },
     endOfLine: input?.endOfLine ?? defaultOptions.endOfLine,
+    ignore: { file: input?.ignore?.file ?? defaultOptions.ignore.file },
   };
 }
