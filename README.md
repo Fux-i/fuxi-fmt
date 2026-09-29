@@ -14,7 +14,8 @@ fuxi-fmt is one engine with one configuration surface that owns both halves.
 ## Status
 
 **Alpha.** Every behavioural rule in the specification is implemented except list
-reindentation, and every option it names.
+reindentation (BLK-08). Every configuration directive works. Five documented options do not, and
+are listed under Remaining work rather than left for a reader to discover by setting one.
 
 There is deliberately no test count here. It read 173, then 254, then 315 — accurate each time it
 was written, wrong within a few releases, and not something a reader can act on. Run `npm test`.
