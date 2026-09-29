@@ -9,7 +9,11 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- **`list.indentWidth`** now also sets the minimum indent width that list reindentation targets,
+  as a floor under the parent's content column. Default behaviour is unchanged: at width 2 the
+  content column always wins, so a long ordered marker like `10. ` still keeps its own column.
 
 ## [0.21.0] - 2026-09-28
 

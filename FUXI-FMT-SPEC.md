@@ -110,7 +110,7 @@ Exactly one space after the opening `#` run. Collapses multiple spaces; inserts 
 
 **BLK-08 — List indentation width** · default `2`
 
-`list.indentWidth: 2 | 4 | "tab"`. Applies to nested list content and continuation lines. **Interacts with SAFE-02**: a list containing a protected block is excluded from reindentation, and a diagnostic is reported. See §7 open item 1. **Not yet implemented** — today the width only controls how hard tabs are expanded.
+`list.indentWidth: 2 | 4 | "tab"`. Applies to nested list content and continuation lines. **Interacts with SAFE-02**: a list containing a protected block is excluded from reindentation, and a diagnostic is reported. See §7 open item 1. **Implemented** — the width is a floor under the parent's content column, so a long ordered marker keeps its own column and an explicit width of 4 widens nesting.
 
 **BLK-09 — Blockquote marker spacing**
 
@@ -393,7 +393,7 @@ ignore:
 **Implementation status.** **Not implemented at all:** `blankLines.insideLists`, `blankLines.insideBlockquotes`,
 `typography.collapseBoundarySpaces`, `typography.symbolWhitelist`.
 **Partially implemented:** `list.indentWidth`, which today only controls how
-hard tabs are expanded and does not reindent lists. Everything else in this
+hard tabs are expanded, and also sets the minimum indent width that list reindentation targets. Everything else in this
 block is implemented.
 
 Configuration is read from the nearest `fuxi-fmt.json` above the file being
@@ -409,7 +409,7 @@ Everything in this block is implemented.
 indentation normalization, and a diagnostic is reported when that happens. Option (a) — letting
 the fence follow the list — would move code the author wrote at a fixed indentation, and moving
 code is precisely what SAFE-02 exists to prevent. Excluding the list keeps both promises.
-**Implemented.** Note that `list.indentWidth` still only controls how hard tabs are expanded:
+**Implemented.** Note that `list.indentWidth` sets both the hard-tab expansion width and the minimum indent width used by list reindentation:
 reindentation is driven by the parent's content column, not by that option.
 2. **YAML front matter format** (FM-01) is currently "protect entirely". The `frontMatter.enabled`
 option that once appeared in the config block has been **removed rather than implemented**: turning
