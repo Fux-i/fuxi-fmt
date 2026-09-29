@@ -31,6 +31,11 @@ node packages/cli/src/main.ts --diff  docs/   # show the lines that would change
 node packages/cli/src/main.ts --write docs/   # rewrite in place
 ```
 
+`--diff` is approximate and says so. It aligns lines by common prefix and suffix, so a document
+edited in several places reports some unchanged lines as removed and re-added. It is a hint about
+where to look, not a patch. A correct implementation needs a line alignment algorithm, shared
+with the adapter's minimal-edit computation, which approximates the same problem the same way.
+
 The VS Code extension builds: `npm run build` produces `packages/vscode/dist/extension.cjs`
 with the core inlined, and the manifest declares `onLanguage:markdown` activation,
 `untrustedWorkspaces: supported`, and the `fuxiFmt.enable` setting. Loading it in a real

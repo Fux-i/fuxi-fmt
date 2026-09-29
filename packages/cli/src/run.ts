@@ -23,7 +23,7 @@ export const USAGE = [
   '',
   'Options:',
   '  --check   exit 1 if any file would change; write nothing',
-  '  --diff    print the lines that would change; write nothing',
+  '  --diff    print the lines that would change, approximately; write nothing',
   '  --write   rewrite the files in place',
   '  --help    print this message',
   '',
@@ -43,6 +43,13 @@ function messageOf(error: unknown): string {
  * removed and re-added - which, for a formatter whose selling point is minimal
  * diffs, is the worst possible lie to tell. Blank lines are shown, because
  * blank-line normalisation is one of the things being reported.
+ *
+ * KNOWN LIMITATION, and it is the common case rather than the edge: the region
+ * between the common prefix and the common suffix is emitted wholesale, so a
+ * document edited in several places reports unchanged lines on both sides. The
+ * fix is a line alignment algorithm - LCS or Myers - shared with the adapter's
+ * computeEdits, which approximates the same problem the same way. Until then
+ * this output is a hint about where to look, not a patch, and --help says so.
  */
 export function diffLines(path: string, before: string, after: string): string {
   const left = before.split('\n');
