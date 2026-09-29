@@ -84,6 +84,71 @@ export function assignParents(items: readonly ListItem[]): number[] {
   return parents;
 }
 
+/** The top-level item a given item descends from. */
+function rootOf(parents: readonly number[], index: number): number {
+  let at = index;
+  const seen = new Set<number>();
+  while (!seen.has(at)) {
+    seen.add(at);
+    const next = parents[at] ?? -1;
+    if (next === -1) break;
+    at = next;
+  }
+  return at;
+}
+
+/** The last line belonging to an item: its continuation run, or the item alone. */
+function spanEnd(
+  lines: readonly string[],
+  isItemLine: ReadonlySet<number>,
+  item: ListItem,
+): number {
+  let end = item.line;
+  for (let j = item.line + 1; j < lines.length; j++) {
+    const text = lines[j] ?? '';
+    if (text.trim().length === 0 || isItemLine.has(j)) break;
+    const indent = (/^\s*/.exec(text)?.[0] ?? '').length;
+    if (indent < item.indent) break;
+    end = j;
+  }
+  return end;
+}
+
+/**
+ * BLK-08 step four: which lists contain a protected block?
+ *
+ * A list that contains one is excluded from indentation normalisation entirely,
+ * and the caller reports a diagnostic (spec section 7 item 1, option b). Moving
+ * code the author fixed at a particular indentation is what SAFE-02 exists to
+ * prevent, and reindenting a list around a fence would either move the fence or
+ * leave the list half normalised.
+ *
+ * Returns the index of each excluded list's top-level item, ascending.
+ */
+export function findExcludedLists(
+  lines: readonly string[],
+  items: readonly ListItem[],
+  parents: readonly number[],
+  protectedLines: readonly boolean[],
+): number[] {
+  const isItemLine = new Set(items.map((item) => item.line));
+  const excluded = new Set<number>();
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (item === undefined) continue;
+    const end = spanEnd(lines, isItemLine, item);
+    for (let j = item.line; j <= end; j++) {
+      if (protectedLines[j] === true) {
+        excluded.add(rootOf(parents, i));
+        break;
+      }
+    }
+  }
+
+  return [...excluded].sort((a, b) => a - b);
+}
+
 export interface Reindent {
   readonly line: number;
   readonly text: string;
@@ -112,6 +177,7 @@ export function planListIndent(
   lines: readonly string[],
   items: readonly ListItem[],
   parents: readonly number[],
+  excluded: ReadonlySet<number> = new Set(),
 ): Reindent[] {
   const isItemLine = new Set(items.map((item) => item.line));
   const planned = new Map<number, string>();
@@ -127,7 +193,10 @@ export function planListIndent(
       parent === undefined
         ? item.indent
         : (placed[parentIndex] ?? parent.indent) + (parent.contentColumn - parent.indent);
+    // Pushed before the exclusion test so that placed stays aligned with the
+    // item indices; a skipped item still has to occupy its slot.
     placed.push(target);
+    if (excluded.has(rootOf(parents, i))) continue;
 
     const delta = target - item.indent;
     if (delta === 0) continue;
