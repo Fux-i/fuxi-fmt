@@ -6,7 +6,7 @@ import { renumberOrderedLists } from './lists.ts';
 import { normalizeFences } from './fences.ts';
 import { normalizeMarkers, normalizeUnorderedMarker } from './markers.ts';
 import { resolveOptions, type FormatOptions, type FormatOptionsInput } from './options.ts';
-import { scanRegions, splitSourceLines, type Region, type SourceLine } from './scan.ts';
+import { protectedMask, scanRegions, splitSourceLines, type Region, type SourceLine } from './scan.ts';
 import { applyTypography } from './typography.ts';
 import { normalizeFullwidthAlphanumerics, normalizeParens, normalizePunctuation } from './widths.ts';
 
@@ -121,22 +121,14 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   const structural = parts.length === 0 ? '' : parts.join('\n') + '\n';
   // Width first, so that spacing sees ordinary digits; punctuation before
   // spacing, so that TYPO-07 can remove the gaps a conversion leaves behind.
-  // Every pass recomputes the ranges from its own input: each can change a
-  // length before the next runs, while the ignored regions stay verbatim.
-  const withIgnores = (
-    text: string,
-    pass: (input: string, extra: readonly CharRange[]) => string,
-  ): string => pass(text, ignoreRanges(text, options.ignore));
-
-  const widths = withIgnores(structural, (t, extra) =>
-    normalizeFullwidthAlphanumerics(t, options.typography, extra),
-  );
-  const punctuation = withIgnores(widths, (t, extra) =>
-    normalizePunctuation(t, options.typography, extra),
-  );
-  const parens = withIgnores(punctuation, (t, extra) =>
-    normalizeParens(t, options.typography, extra),
-  );
+  // The three width passes each rewrite one character for one character, so
+  // offsets never move and one mask serves all three - two of the four full
+  // region scans per format, measured at about 6%. widths.length.test.ts pins
+  // the property that makes this sound rather than hopeful.
+  const widthMask = protectedMask(structural, ignoreRanges(structural, options.ignore));
+  const widths = normalizeFullwidthAlphanumerics(structural, options.typography, widthMask);
+  const punctuation = normalizePunctuation(widths, options.typography, widthMask);
+  const parens = normalizeParens(punctuation, options.typography, widthMask);
   const spaced = applyTypography(parens, options.typography, ignoreRanges(parens, options.ignore));
   const candidate = trimTrailingWhitespace(spaced, ignoreRanges(spaced, options.ignore));
 

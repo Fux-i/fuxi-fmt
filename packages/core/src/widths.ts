@@ -11,7 +11,6 @@
  */
 
 import { isAlphanumeric, isCjk, type CjkClass } from './chars.ts';
-import type { CharRange } from './ignores.ts';
 
 const OPENERS = new Set(['(', '\uff08']);
 const CLOSERS = new Set([')', '\uff09']);
@@ -49,10 +48,10 @@ const FULLWIDTH_OFFSET = 0xfee0;
 export function normalizeFullwidthAlphanumerics(
   text: string,
   options: TypographyOptions,
-  extra: readonly CharRange[] = [],
+  maskIn?: Uint8Array,
 ): string {
   if (!options.halfwidthAlphanumerics && !options.ideographicSpace) return text;
-  const mask = protectedMask(text, extra);
+  const mask = maskIn ?? protectedMask(text);
   let out = '';
   for (let i = 0; i < text.length; i++) {
     const ch = text.charAt(i);
@@ -88,10 +87,10 @@ export function normalizeFullwidthAlphanumerics(
 export function normalizeParens(
   text: string,
   options: TypographyOptions,
-  extra: readonly CharRange[] = [],
+  maskIn?: Uint8Array,
 ): string {
   if (options.parenStyle === 'preserve') return text;
-  const mask = protectedMask(text, extra);
+  const mask = maskIn ?? protectedMask(text);
   const chars = text.split('');
   for (let i = 0; i < text.length; i++) {
     if (mask[i] === 1 || !OPENERS.has(text.charAt(i))) continue;
@@ -124,7 +123,7 @@ export function normalizeParens(
 export function normalizePunctuation(
   text: string,
   options: TypographyOptions,
-  extra: readonly CharRange[] = [],
+  maskIn?: Uint8Array,
 ): string {
   if (options.punctuationStyle === 'off') return text;
 
@@ -147,7 +146,7 @@ export function normalizePunctuation(
   const style = options.punctuationStyle;
   const doFull = style === 'fullwidth' || style === 'mixed';
   const doHalf = style === 'halfwidth' || style === 'mixed';
-  const mask = protectedMask(text, extra);
+  const mask = maskIn ?? protectedMask(text);
 
   let out = '';
   for (let i = 0; i < text.length; i++) {
