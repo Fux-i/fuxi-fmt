@@ -247,6 +247,22 @@ describe('documentation stays true to the code', () => {
     assert.ok(checked >= 15, 'expected to check many options, saw ' + String(checked));
   });
 
+  test('the readme opening does not claim completeness it contradicts below', () => {
+    // Every other check here compares one artifact to another: spec to readme,
+    // manifests to tags, workflow to readme. None compares a document to itself,
+    // which is how the status line came to say "every option it names" while five
+    // unimplemented options were listed four paragraphs below it. This is the
+    // narrow half of that gap: if gaps are declared, the opening must admit them.
+    const missing = declaredMissing(readme);
+    if (missing.length === 0) return;
+
+    const opening = readme.slice(0, readme.indexOf('## Remaining work'));
+    assert.ok(
+      /do not|not implemented|unimplemented|incomplete/i.test(opening),
+      'the readme declares ' + String(missing.length) + ' missing options but its opening does not say so',
+    );
+  });
+
   test('unreleased work is recorded, or there is none', () => {
     // The changelog check above asserts the newest TAG has an entry, so its frame
     // is tag -> entry and untagged work falls outside it entirely. That is how
