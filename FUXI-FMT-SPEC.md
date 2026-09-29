@@ -403,9 +403,9 @@ the fence follow the list — would move code the author wrote at a fixed indent
 code is precisely what SAFE-02 exists to prevent. Excluding the list keeps both promises.
 **Not yet implemented**: `list.indentWidth` today only controls how hard tabs are expanded.
 2. **YAML front matter format** (FM-01) is currently "protect entirely". The original goal was "format the YAML". Formatting it safely requires a YAML-significant-character audit and a parse-equality guard, because `:`, `#`, `&`, `*`, `|`, `>`, `@`, quotes and `-` are all significant at some position. Revisit after v1 if comment- and key-order-preserving YAML formatting proves worth the risk.
-3. **Punctuation allowlist contents.** Semicolon is excluded by default (TYPO-05). Whether `、` and the paired quotes are in the default allowlist is not yet settled.
+3. **Punctuation allowlist contents.** Semicolon is excluded from the default allowlist but reachable through `typography.semicolon` (TYPO-05, implemented in 0.12.0). Whether `、` and the paired quotes belong in the default allowlist is still not settled.
 4. **`……` and `——` normalization.** Not in v1. If added, they are opt-in rules, and no existing tool converts `--` to `——`.
-5. **Range-formatting semantics.** GRT-06 requires minimal edits; how a partial selection interacts with block-level rules (a selection spanning half a list) is unspecified.
+5. **Range-formatting semantics.** GRT-06 requires minimal edits. The adapter answers this narrowly: it computes the whole document's edits and keeps only those whose line span intersects the selection, so a partial selection never receives an edit outside it. It does not reason about block-level rules reaching across the boundary — a selection covering half a list is given the half it covers. That is a deliberate simplification, and it should be revisited if it proves surprising in an editor rather than left as an open question.
 
 ---
 
