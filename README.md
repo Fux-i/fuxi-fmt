@@ -79,11 +79,12 @@ The formatter is expected to be, and is tested to be:
 ## Development
 
 ```sh
-npm install          # dev dependencies only (TypeScript, Node types)
+npm ci               # install exact dependencies from the lockfile, as CI does
 npm test             # run the test suite
 npm run test:watch   # watch mode
-npm run typecheck    # tsc --noEmit
+npm run typecheck    # tsc -p for each package
 npm run ci           # typecheck + tests, what CI runs
+npm run build        # bundle the VS Code extension
 ```
 
 ## Repository layout
@@ -91,14 +92,17 @@ npm run ci           # typecheck + tests, what CI runs
 ```
 packages/
   core/              adapter-free formatting engine (no VS Code imports, ever)
-    src/
-    test/fixtures/
+  cli/               fuxi-fmt --check --diff --write
+  vscode/            extension: providers, minimal edits, esbuild bundle
 FUXI-FMT-SPEC.md     normative behavioural contract
-AGENTS.md            contributor and agent guidance
+MAINSTREAM_MD_FORMATTERS_REPORT.md
+                     prior-art survey, with primary sources
 .bench/              benchmark harness (see Appendix B of the spec)
 ```
 
-The VS Code extension and CLI will be thin adapters over `@fuxi-fmt/core`.
+The CLI and the extension are thin adapters over `@fuxi-fmt/core`, which never imports from
+either. `AGENTS.md` holds contributor and agent guidance, but a global gitignore in this
+environment excludes it, so a fresh clone will not contain it.
 
 ## Design principles
 
