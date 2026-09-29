@@ -24,13 +24,14 @@ const stubSource = join(pkgRoot, 'test', 'stubs', 'vscode.cjs');
 const stubDir = join(dist, 'node_modules', 'vscode');
 
 describe('the extension bundle against a stubbed host', () => {
-  if (!existsSync(bundle)) {
-    const built = spawnSync(process.execPath, [join(pkgRoot, 'build.mjs')], {
-      cwd: pkgRoot,
-      encoding: 'utf8',
-    });
-    assert.equal(built.status, 0, 'build failed: ' + String(built.stderr));
-  }
+  // Always rebuild. Guarding on the bundle's absence meant this test could run
+  // against a stale build and silently verify the previous revision - which is
+  // exactly what happened when the settings override was first added.
+  const built = spawnSync(process.execPath, [join(pkgRoot, 'build.mjs')], {
+    cwd: pkgRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(built.status, 0, 'build failed: ' + String(built.stderr));
 
   assert.ok(existsSync(stubSource), 'the vscode stub fixture is missing: ' + stubSource);
   mkdirSync(stubDir, { recursive: true });
@@ -89,6 +90,19 @@ describe('the extension bundle against a stubbed host', () => {
     });
     assert.equal(inside.length, 1);
     assert.equal(outside.length, 0);
+  });
+
+  test('editor settings override the project config', () => {
+    assert.ok(documentProvider);
+    const list = { getText: () => '- item\n', uri: { fsPath: join(dist, 'list.md') } };
+
+    vscode.config = {};
+    const without = documentProvider.provider.provideDocumentFormattingEdits(list);
+    vscode.config = { list: { unorderedMarker: 'asterisks' } };
+    const withSetting = documentProvider.provider.provideDocumentFormattingEdits(list);
+
+    assert.notDeepEqual(withSetting, without, 'the setting did not reach the formatter');
+    vscode.config = {};
   });
 
   test('disposing the context releases both registrations', () => {

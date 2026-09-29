@@ -27,6 +27,11 @@
           "type": "boolean",
           "default": true,
           "description": "Format Markdown with fuxi-fmt."
+        },
+        "fuxiFmt.config": {
+          "type": "object",
+          "default": {},
+          "description": "fuxi-fmt options, merged over the project fuxi-fmt.json. Editor settings win, so a personal preference does not require editing the repository."
         }
       }
     }

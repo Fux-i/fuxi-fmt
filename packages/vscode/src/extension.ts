@@ -1,18 +1,26 @@
 import * as vscode from 'vscode';
 import { loadOptionsFor } from '../../core/src/index.ts';
 import type { FormatOptionsInput } from '../../core/src/index.ts';
+import { mergeOptions } from '../../core/src/config.ts';
 import { documentEdits, editsInRange, type Edit } from './edits.ts';
 import { offsetToPosition } from './positions.ts';
 
 const SELECTOR: vscode.DocumentSelector = [{ language: 'markdown' }];
 
 function optionsFor(document: vscode.TextDocument): FormatOptionsInput {
+  let fromFile: FormatOptionsInput = {};
   try {
-    return loadOptionsFor(document.uri.fsPath).options;
+    fromFile = loadOptionsFor(document.uri.fsPath).options;
   } catch {
     // An unreadable config must not stop the formatter from working.
-    return {};
+    fromFile = {};
   }
+  // CFG-01: editor settings are an override layer above the project config, so
+  // a personal preference does not require editing a committed file.
+  const fromSettings = vscode.workspace
+    .getConfiguration('fuxiFmt')
+    .get<FormatOptionsInput>('config', {});
+  return mergeOptions(fromFile, fromSettings ?? {});
 }
 
 function toTextEdits(document: vscode.TextDocument, edits: readonly Edit[]): vscode.TextEdit[] {
