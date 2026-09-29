@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -244,6 +245,34 @@ describe('documentation stays true to the code', () => {
       }
     }
     assert.ok(checked >= 15, 'expected to check many options, saw ' + String(checked));
+  });
+
+  test('unreleased work is recorded, or there is none', () => {
+    // The changelog check above asserts the newest TAG has an entry, so its frame
+    // is tag -> entry and untagged work falls outside it entirely. That is how
+    // '[Unreleased] Nothing yet.' survived nine commits.
+    const tags = execFileSync('git', ['tag', '-l'], { cwd: root, encoding: 'utf8' })
+      .split('\n')
+      .filter((tag) => tag.length > 0)
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    const newest = tags[tags.length - 1];
+    assert.ok(newest !== undefined, 'expected at least one tag');
+
+    const subjects = execFileSync('git', ['log', '--format=%s', newest + '..HEAD'], {
+      cwd: root,
+      encoding: 'utf8',
+    })
+      .split('\n')
+      .filter((line) => line.length > 0);
+    const substantive = subjects.filter((line) => /^(feat|fix|perf)[(:]/.test(line));
+
+    const unreleased = (changelog.split('## [Unreleased]')[1] ?? '').split('## [')[0] ?? '';
+    if (substantive.length > 0) {
+      assert.ok(
+        !/Nothing yet/.test(unreleased),
+        String(substantive.length) + ' unreleased feature commits but the changelog says nothing yet',
+      );
+    }
   });
 
   test('the changelog has an entry for the newest tag', () => {
