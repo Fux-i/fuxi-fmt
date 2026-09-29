@@ -9,7 +9,10 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **`typography.symbolWhitelist`**: which characters CJK spacing treats as word-like is now
+  configurable. The default set is unchanged, so nothing moves unless it is set.
 
 ## [0.22.0] - 2026-09-28
 
