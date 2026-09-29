@@ -12,6 +12,7 @@
  */
 
 import type { CjkClass } from './chars.ts';
+import { presetOptions } from './presets.ts';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import type {
@@ -154,7 +155,12 @@ export function parseConfig(text: string): FormatOptionsInput {
     throw new Error('config: invalid JSON. ' + message);
   }
   if (!isRecord(raw)) throw new Error('config: the document must be an object');
-  return readSections(raw);
+
+  const stated = readSections(raw);
+  // A preset supplies values; anything the config states explicitly wins.
+  if (raw.preset === undefined) return stated;
+  if (typeof raw.preset !== 'string') throw new Error('config: preset must be a string');
+  return mergeOptions(presetOptions(raw.preset), stated);
 }
 
 function readSections(raw: Raw): FormatOptionsInput {

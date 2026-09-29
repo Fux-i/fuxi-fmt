@@ -338,7 +338,7 @@ Y = covers, P = partial or conditional, N = does not cover.
 
 ```yaml
 # fuxi-fmt.toml / .fuxi-fmtrc — illustrative, not final
-preset: zhihu            # zhihu | hugo | vitepress | obsidian | strict-commonmark
+preset: default          # default | strict-commonmark
 
 blankLines:
   aroundBlocks: exact    # exact | atLeast
@@ -387,8 +387,9 @@ hard tabs are expanded and does not reindent lists. Everything else in this
 block is implemented.
 
 Configuration is read from the nearest `fuxi-fmt.json` above the file being
-formatted, which may contain comments and trailing commas. Presets (CFG-01) and
-the VS Code settings override layer are specified but not implemented.
+formatted, which may contain comments and trailing commas. Presets (CFG-01) are implemented; the
+platform presets named in an early draft were removed rather than guessed at.
+The VS Code settings override layer is specified but not implemented.
 
 ---
 

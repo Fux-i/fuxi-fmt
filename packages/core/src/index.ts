@@ -25,6 +25,7 @@ export { applyEndOfLine, normalizeInput, trimTrailingWhitespace } from './hygien
 export type { Eol, NormalizedInput } from './hygiene.ts';
 export { renumberOrderedLists } from './lists.ts';
 export { normalizeFences } from './fences.ts';
+export { PRESETS, PRESET_NAMES, presetOptions } from './presets.ts';
 export { normalizeMarkers, normalizeUnorderedMarker } from './markers.ts';
 export { checkSemantics } from './guard.ts';
 export {

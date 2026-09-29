@@ -2,6 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { findConfigFile, loadOptionsFor, mergeOptions, parseConfig } from './config.ts';
 import { format } from './format.ts';
+import { resolveOptions } from './options.ts';
 
 const fixtures = new URL('../test/fixtures/', import.meta.url).pathname;
 const fixture = (rel: string) => fixtures + rel;
@@ -38,6 +39,27 @@ describe('CFG-01 parsing a configuration document', () => {
     assert.deepEqual(parseConfig('{"blankLines": {"maxConsecutive": null}}'), {
       blankLines: { maxConsecutive: null },
     });
+  });
+});
+
+describe('CFG-01 presets', () => {
+  test('a preset supplies values the config did not state', () => {
+    const resolved = resolveOptions(parseConfig('{ "preset": "strict-commonmark" }'));
+    assert.equal(resolved.list.unorderedMarker, 'preserve');
+    assert.equal(resolved.typography.punctuationStyle, 'off');
+    assert.equal(resolved.typography.cjkSpacing, true, 'spacing is the point of the tool');
+  });
+  test('explicit options win over the preset', () => {
+    const resolved = resolveOptions(
+      parseConfig('{ "preset": "strict-commonmark", "list": { "unorderedMarker": "dashes" } }'),
+    );
+    assert.equal(resolved.list.unorderedMarker, 'dashes');
+  });
+  test('an unknown preset is rejected rather than ignored', () => {
+    assert.throws(() => parseConfig('{ "preset": "hugo" }'), /unknown preset/);
+  });
+  test('the default preset is the shipped defaults', () => {
+    assert.deepEqual(parseConfig('{ "preset": "default" }'), {});
   });
 });
 

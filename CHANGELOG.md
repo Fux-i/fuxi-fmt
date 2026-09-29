@@ -11,6 +11,30 @@ with release candidates suffixed `-rcN`.
 
 Nothing yet.
 
+## [0.14.0] - 2026-09-28
+
+### Added
+
+- **Configuration presets** (CFG-01): `preset` in `fuxi-fmt.json`, resolved
+  *below* the project's own settings so a preset supplies values and anything
+  stated explicitly wins. `default` and `strict-commonmark` ship;
+  `strict-commonmark` switches off every rule that rewrites an author's choice
+  and keeps CJK spacing, which is the point of the tool rather than an opinion.
+- An unknown preset is rejected with the list of known names, rather than
+  silently ignored.
+
+### Removed
+
+- The `zhihu`, `hugo`, `vitepress` and `obsidian` presets named in an early
+  draft of the specification. Their intended behaviour was never defined, and a
+  preset called `hugo` that does not match what a Hugo author expects is worse
+  than no preset. They can return when their meaning is decided.
+
+### Fixed
+
+- All four manifests declared `0.1.0` while thirteen releases had been tagged.
+  They now track the newest tag, enforced by a test.
+
 ## [0.13.0] - 2026-09-28
 
 Every typography option named in the specification is now implemented. The
