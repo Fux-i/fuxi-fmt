@@ -375,8 +375,6 @@ typography:
   cjkClasses: [han]               # han | kana | hangul | bopomofo | enclosed
   symbolWhitelist: ["+", "-", "=", "<", ">", "%", "°", "℃", "℉"]
 
-frontMatter:
-  enabled: true                   # detection only; content is always verbatim
 
 endOfLine: lf
 ignore:
@@ -387,7 +385,7 @@ ignore:
 ```
 
 **Implementation status.** **Not implemented at all:** `blankLines.insideLists`, `blankLines.insideBlockquotes`,
-`typography.collapseBoundarySpaces`, `typography.symbolWhitelist`, `frontMatter.enabled`.
+`typography.collapseBoundarySpaces`, `typography.symbolWhitelist`.
 **Partially implemented:** `list.indentWidth`, which today only controls how
 hard tabs are expanded and does not reindent lists. Everything else in this
 block is implemented.
@@ -407,7 +405,11 @@ the fence follow the list — would move code the author wrote at a fixed indent
 code is precisely what SAFE-02 exists to prevent. Excluding the list keeps both promises.
 **Implemented.** Note that `list.indentWidth` still only controls how hard tabs are expanded:
 reindentation is driven by the parent's content column, not by that option.
-2. **YAML front matter format** (FM-01) is currently "protect entirely". The original goal was "format the YAML". Formatting it safely requires a YAML-significant-character audit and a parse-equality guard, because `:`, `#`, `&`, `*`, `|`, `>`, `@`, quotes and `-` are all significant at some position. Revisit after v1 if comment- and key-order-preserving YAML formatting proves worth the risk.
+2. **YAML front matter format** (FM-01) is currently "protect entirely". The `frontMatter.enabled`
+option that once appeared in the config block has been **removed rather than implemented**: turning
+protection off would mean formatting YAML as Markdown, which is worse than either protecting it (as
+now) or formatting it properly (as this item contemplates). A config key that only makes the output
+worse is not worth keeping as an unimplemented promise. The original goal was "format the YAML". Formatting it safely requires a YAML-significant-character audit and a parse-equality guard, because `:`, `#`, `&`, `*`, `|`, `>`, `@`, quotes and `-` are all significant at some position. Revisit after v1 if comment- and key-order-preserving YAML formatting proves worth the risk.
 3. **Punctuation allowlist contents.** Semicolon is excluded from the default allowlist but reachable through `typography.semicolon` (TYPO-05, implemented in 0.12.0). Whether `、` and the paired quotes belong in the default allowlist is still not settled.
 4. **`……` and `——` normalization.** Not in v1. If added, they are opt-in rules, and no existing tool converts `--` to `——`.
 5. **Range-formatting semantics.** GRT-06 requires minimal edits. The adapter answers this narrowly: it computes the whole document's edits and keeps only those whose line span intersects the selection, so a partial selection never receives an edit outside it. It does not reason about block-level rules reaching across the boundary — a selection covering half a list is given the half it covers. That is a deliberate simplification, and it should be revisited if it proves surprising in an editor rather than left as an open question.

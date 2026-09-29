@@ -14,7 +14,7 @@ fuxi-fmt is one engine with one configuration surface that owns both halves.
 ## Status
 
 **Alpha.** Every behavioural rule in the specification is implemented, and every configuration
-directive works. Five documented options do not, and are listed under Remaining work rather than
+directive works. Four documented options do not, and are listed under Remaining work rather than
 left for a reader to discover by setting one.
 
 There is deliberately no test count here. It read 173, then 254, then 315 — accurate each time it
@@ -136,19 +136,18 @@ is the authority; this is the shortest accurate summary of the gap.
 |---|---|
 | **Five documented options** | **Not implemented**, and not equally worth doing. See below. Setting any of them produces silence. |
 
-### The five options, ranked by whether they are worth building
+### The four remaining options, ranked by whether they are worth building
 
 | Option | Judgment |
 |---|---|
 | `blankLines.insideLists`, `blankLines.insideBlockquotes` | **Worth doing, carefully.** The only two that change rendering: inserting a blank line between list items flips a tight list to loose. The option is the escape hatch for an author who wants the loose form, and BLK-03 exists precisely to stop the formatter doing it unasked. Any implementation must leave the default off. |
 | `typography.symbolWhitelist` | **Worth doing, cheaply.** The symbol set is hardcoded in `chars.ts`; exposing it is mostly threading. A Japanese or Korean user will want a different set, and `cjkClasses` already set the precedent for making a character class configurable. |
 | `typography.collapseBoundarySpaces` | **Marginal.** TYPO-02 is implemented and always on. Exposing it means threading a flag through `separator` and `formatLine` for a behaviour nobody has asked to turn off. Do it only if someone does. |
-| `frontMatter.enabled` | **Probably not.** Turning it off would mean formatting YAML as Markdown, which is worse than either protecting it (today) or formatting it properly (spec section 7 item 2). Delete the option rather than implement it. |
 | **Extension host** | The bundle runs against a stubbed `vscode` module in tests. It has never been loaded by a real editor. |
 | **Real documents** | Everything is verified against generated fixtures, a synthetic article, and this repository's own Markdown. The formatter has never seen a real Chinese technical article. |
 
 **Not implemented at all:** `blankLines.insideLists`, `blankLines.insideBlockquotes`,
-`typography.collapseBoundarySpaces`, `typography.symbolWhitelist`, `frontMatter.enabled`. The specification declares the
+`typography.collapseBoundarySpaces`, `typography.symbolWhitelist`. The specification declares the
 same set, and a test asserts the two lists agree.
 
 The table is the handoff. It has drifted before — it listed `typography.semicolon` and
