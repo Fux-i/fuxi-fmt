@@ -6,6 +6,7 @@ import { renumberOrderedLists } from './lists.ts';
 import { normalizeFences } from './fences.ts';
 import { normalizeMarkers, normalizeUnorderedMarker } from './markers.ts';
 import { resolveOptions, type FormatOptions, type FormatOptionsInput } from './options.ts';
+import { assignParents, findExcludedLists, planListIndent, scanListItems } from './list-scan.ts';
 import { protectedMask, scanRegions, splitSourceLines, type Region, type SourceLine } from './scan.ts';
 import { applyTypography } from './typography.ts';
 import { normalizeFullwidthAlphanumerics, normalizeParens, normalizePunctuation } from './widths.ts';
@@ -105,7 +106,21 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
 
   const renumbered = renumberOrderedLists(normalizedTexts, protectedLine, options.list);
   const texts = normalizeFences(renumbered, ranges, options.codeBlock);
-  const blocks = segment(texts, ranges);
+  // BLK-08: normalise list indentation. This runs on the line array rather than
+  // on source offsets, which is what makes it safe here: it keeps the line count,
+  // so every line-indexed range the segmenter and fence pass use stays valid.
+  // Lists containing a protected block are excluded from the plan (option b).
+  const listItems = scanListItems(texts);
+  const listParents = assignParents(listItems);
+  const excludedLists = new Set(
+    findExcludedLists(texts, listItems, listParents, protectedLine),
+  );
+  const reindented = [...texts];
+  for (const change of planListIndent(texts, listItems, listParents, excludedLists)) {
+    reindented[change.line] = change.text;
+  }
+
+  const blocks = segment(reindented, ranges);
 
   const parts: string[] = [];
   for (let i = 0; i < blocks.length; i++) {
@@ -115,7 +130,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
       const blanks = blankCount(block.blanksBefore, options);
       for (let k = 0; k < blanks; k++) parts.push('');
     }
-    for (let j = block.start; j < block.end; j++) parts.push(texts[j] ?? '');
+    for (let j = block.start; j < block.end; j++) parts.push(reindented[j] ?? texts[j] ?? '');
   }
 
   const structural = parts.length === 0 ? '' : parts.join('\n') + '\n';
