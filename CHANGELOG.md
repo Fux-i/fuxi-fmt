@@ -9,10 +9,22 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.20.0] - 2026-09-28
+
+Two measured performance changes rather than features. Between them they recover 18% of format
+time on a 9,996-line document, and both were found by profiling rather than by guessing.
+
 ### Changed
 
-- A document containing no ignore directives no longer scans itself five times per format to
-  discover that. Measured at 18.6 ms of 266.8 ms — 7% — on a 9,996-line document.
+- One protected-region mask is shared by `normalizeFullwidthAlphanumerics`,
+  `normalizePunctuation` and `normalizeParens`, which each rewrite one character
+  for one character so offsets never move. **11.8%** faster on a 9,996-line,
+  1164 KB document. The property it depends on is pinned by a test written before
+  the change existed.
+- A document containing no ignore directives no longer scans itself five times per
+  format to discover that. **7%** on the same document.
 
 ## [0.19.0] - 2026-09-28
 
