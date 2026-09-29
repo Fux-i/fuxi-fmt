@@ -211,6 +211,25 @@ quote, and `segment` does not currently expose them.
 So the option stays declared missing. Implementing it on a guess would produce a rule with passing
 tests and the wrong output, which is worse than an honest gap.
 
+**And then a harder fact.** Two more probes:
+
+- `segment` returns **one** block for all quote lines. `> a\n> b\n`, `> # h\n> text\n` and
+  `> a\n>\n> b\n` each produce a single `blockquote[0,N)`. The boundaries inside a quote are not
+  exposed, and a bare `>` classifies as `blockquote` like every other quote line.
+- `guard.ts` compares the **non-blank line count** and rejects any change to it.
+
+A `>` line is non-blank. So inserting one — the only way to put a blank line inside a blockquote —
+raises that count, and the guard refuses the entire document. The formatter would return the input
+unchanged with a diagnostic, having "implemented" the option.
+
+That makes this a tension inside the specification rather than a missing feature. The config
+surface promises `blankLines.insideBlockquotes`, while GRT-01 forbids the only mechanism that
+could provide it. Either the guard needs a way to declare a documented intentional difference, or
+the option should be withdrawn.
+
+That is a decision about what the tool should guarantee — not a wiring task — which is why this is
+the one option still declared missing while every other has been built, deleted, or made honest.
+
 ### The two remaining options, ranked by whether they are worth building
 
 | Option | Judgment |
