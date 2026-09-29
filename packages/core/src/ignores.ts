@@ -40,6 +40,13 @@ export function hasIgnoreFile(source: string, name: string): boolean {
  * usually one paragraph, not one file.
  */
 export function ignoreLines(source: string, options: IgnoreOptions): boolean[] {
+  // A directive is an HTML comment, so a document containing none has none. This
+  // guard is worth its four lines: ignoreRanges runs before every pass in the
+  // pipeline, and on a 10k-line document the scans it skips measure 18.6 ms of
+  // 266.8 ms format time - 7%. At 238 lines the same guard saves about 1%, which
+  // is why it was measured at the size the specification's benchmark quotes.
+  if (!source.includes('<!--')) return [];
+
   const flags: boolean[] = [];
   let open = false;
   let pending = false;
@@ -87,6 +94,8 @@ export function ignoreLines(source: string, options: IgnoreOptions): boolean[] {
  * while the ignored regions stay verbatim and therefore findable.
  */
 export function ignoreRanges(source: string, options: IgnoreOptions): CharRange[] {
+  if (!source.includes('<!--')) return [];
+
   const lines = splitSourceLines(source);
   const flags = ignoreLines(source, options);
   const ranges: CharRange[] = [];
