@@ -9,7 +9,10 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- A document containing no ignore directives no longer scans itself five times per format to
+  discover that. Measured at 18.6 ms of 266.8 ms — 7% — on a 9,996-line document.
 
 ## [0.19.0] - 2026-09-28
 
