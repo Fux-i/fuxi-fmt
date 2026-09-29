@@ -116,7 +116,8 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     findExcludedLists(texts, listItems, listParents, protectedLine),
   );
   const reindented = [...texts];
-  for (const change of planListIndent(texts, listItems, listParents, excludedLists)) {
+  const reindentWidth = options.list.indentWidth === 'tab' ? 2 : options.list.indentWidth;
+  for (const change of planListIndent(texts, listItems, listParents, excludedLists, reindentWidth)) {
     reindented[change.line] = change.text;
   }
 

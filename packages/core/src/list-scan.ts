@@ -178,6 +178,7 @@ export function planListIndent(
   items: readonly ListItem[],
   parents: readonly number[],
   excluded: ReadonlySet<number> = new Set(),
+  minIndent = 0,
 ): Reindent[] {
   const isItemLine = new Set(items.map((item) => item.line));
   const planned = new Map<number, string>();
@@ -189,10 +190,15 @@ export function planListIndent(
 
     const parentIndex = parents[i] ?? -1;
     const parent = items[parentIndex];
-    const target =
-      parent === undefined
-        ? item.indent
-        : (placed[parentIndex] ?? parent.indent) + (parent.contentColumn - parent.indent);
+    // A child sits at the parent's content column, or at the configured indent
+    // width when that is wider. The max matters: a long ordered marker such as
+    // '10. ' has a content column of 4, and honouring an indentWidth of 2 there
+    // would place the child shallower than its parent's content and break the
+    // nesting it exists to keep. At the default width of 2 the max always
+    // selects the content column, so nothing changes by default.
+    const width =
+      parent === undefined ? 0 : Math.max(minIndent, parent.contentColumn - parent.indent);
+    const target = parent === undefined ? item.indent : (placed[parentIndex] ?? parent.indent) + width;
     // Pushed before the exclusion test so that placed stays aligned with the
     // item indices; a skipped item still has to occupy its slot.
     placed.push(target);
