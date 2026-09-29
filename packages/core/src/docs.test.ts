@@ -44,22 +44,37 @@ describe('documentation stays true to the code', () => {
     }
   });
 
-  test('the changelog has an entry for the newest tag', () => {
+  /** The newest release tag, or null when nothing is comparable. */
+  function newestTag(): string | null {
     const tags = spawnSync('git', ['tag', '-l'], { cwd: root, encoding: 'utf8' });
-    if (tags.status !== 0) return;
-
+    if (tags.status !== 0) return null;
     const versions = tags.stdout
       .split('\n')
       .map((line) => line.trim())
       .filter((line) => /^v\d/.test(line));
     // A shallow clone may have no tags at all; there is nothing to compare.
-    if (versions.length === 0) return;
+    if (versions.length === 0) return null;
+    return versions.sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).at(-1) ?? null;
+  }
 
-    const newest = versions.sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).at(-1) ?? '';
+  test('the changelog has an entry for the newest tag', () => {
+    const newest = newestTag();
+    if (newest === null) return;
     const version = newest.replace(/^v/, '');
     assert.ok(
       changelog.includes('## [' + version + ']'),
       'the changelog has no entry for ' + newest,
     );
+  });
+
+  test('the published package version tracks the newest tag', () => {
+    const newest = newestTag();
+    if (newest === null) return;
+    const version = newest.replace(/^v/, '');
+    // packages/vscode is the one a marketplace would read a version from.
+    for (const file of ['package.json', 'packages/core/package.json', 'packages/cli/package.json', 'packages/vscode/package.json']) {
+      const parsed = JSON.parse(readFileSync(join(root, file), 'utf8')) as { version?: string };
+      assert.equal(parsed.version, version, file + ' does not match ' + newest);
+    }
   });
 });
