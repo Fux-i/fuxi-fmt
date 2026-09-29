@@ -124,8 +124,8 @@ is the authority; this is the shortest accurate summary of the gap.
 | Item | State |
 |---|---|
 | **BLK-08 list reindentation** | Decision recorded in spec section 7 item 1 (option b: a list containing a protected block is excluded). **Not implemented.** `list.indentWidth` today only controls hard-tab expansion. This is the last unimplemented structural rule. |
-| **In-document ignore directives (CFG-03)** | **Not implemented.** All four — `ignore.file`, `ignore.start`, `ignore.end`, `ignore.line` — are documented in the specification and do nothing. The most consequential gap here: an author who hits a false positive has no escape hatch short of switching the formatter off. |
-| **Nine documented options** | **Not implemented.** `blankLines.insideLists`, `blankLines.insideBlockquotes`, `typography.collapseBoundarySpaces`, `typography.symbolWhitelist`, `frontMatter.enabled`, and the four ignore directives. Setting any of them produces silence. |
+| **`ignore.line` (CFG-03)** | **Not implemented.** Three of the four ignore directives work as of 0.17.0: a whole file, and a range. This is the range form with a computed end, for the local false positive — the case an author is most likely to hit. |
+| **Six documented options** | **Not implemented.** `blankLines.insideLists`, `blankLines.insideBlockquotes`, `typography.collapseBoundarySpaces`, `typography.symbolWhitelist`, `frontMatter.enabled` and `ignore.line`. Setting any of them produces silence. |
 | **Extension host** | The bundle runs against a stubbed `vscode` module in tests. It has never been loaded by a real editor. |
 | **Real documents** | Everything is verified against generated fixtures, a synthetic article, and this repository's own Markdown. The formatter has never seen a real Chinese technical article. |
 
@@ -148,24 +148,14 @@ structure. Three existing tests caught it (`  - nested` becoming `- nested`). An
 implementation needs the absolute nesting baseline for a list before it reindents anything, which
 is a block-parsing question rather than a stack question. Do not re-attempt the stack version.
 
-**CFG-03 range directive: the design is settled, the work is not.** Add an `ignore.ts`
-exporting `commentBody(line)`, `ignoreRanges(source, options)` and a per-line form for the
-structural pass. The ranges run from the start directive to the end directive inclusive, and an
-unterminated start runs to the end of the document. Then wire it in the three places that already
-know how to handle a protected region:
+**The range directive: done in 0.17.0, kept as a lesson.** The plan written before the attempt
+named three wiring points; there were five, and it took three attempts. The two that were missed
+first — the width and punctuation passes, which run before typography and mask themselves
+independently — are recorded in the 0.17.0 commit message.
 
-1. `format()` — mark the ignored lines protected, exactly as atomic ranges already do, so the
-   structural pass leaves them verbatim.
-2. `normalizeFullwidthAlphanumerics`, `normalizePunctuation` and `normalizeParens` — **these run
-   before typography** and each masks itself through `protectedMask`, so each needs the ranges
-   too. An attempt that skipped them left `中文abc,中文` inside a range rewritten with a full-width
-   comma: the two passes that read the text first were the two that were forgotten.
-3. `applyTypography(text, options, extra?)` and `trimTrailingWhitespace(text, extra?)` — OR the
-   ranges into the masks they already build.
-
-That is **five wiring points, not three**. Recompute the ranges before *each* pass from that
-pass's own input, not once from the source: every pass can change a length before the next runs,
-and the ignored regions stay verbatim, so the directives remain findable each time.
+What is worth keeping is the shape of the mistake: **a plan written before an attempt is a
+hypothesis, and only the attempt tests it.** The first version of this note was confidently
+wrong, and a reverted implementation is what corrected it.
 
 Move the existing `hasIgnoreFile` out of `format.ts` into the same module, and add `start` and
 `end` to `IgnoreOptions`. The specification's and this file's "not implemented at all" lists
