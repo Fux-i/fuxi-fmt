@@ -190,47 +190,23 @@ The signature refactor (`3d19468`) removed the obstacle. What is left is mechani
 the defaults that nothing reads is precisely the defect `list.indentWidth` carried for twenty
 releases, and this option is one careless commit away from repeating it.
 
-### `blankLines.insideBlockquotes`: what is known, and what is not
+### `blankLines.insideBlockquotes`: withdrawn, not built
 
-Probed rather than assumed:
+The option promised a blank line inside a blockquote. A blank line inside a blockquote is a `>`
+line, a `>` line is non-blank, and GRT-01 compares the non-blank line count and refuses any change
+to it. So the only mechanism that could implement the option is the one the semantic guard forbids:
+the formatter would return the input unchanged with a diagnostic, having "implemented" it.
 
-| Input | Result |
-|---|---|
-| `> a\n>\n> b\n` | unchanged — a marker blank line survives |
-| `> a\n> \n> b\n` | `> a\n>\n> b\n` — the trailing space is trimmed |
-| `> a\n\n> b\n` | unchanged — those are two blockquotes, correctly left alone |
+Something had to give, and it should not be the guard. Semantic preservation is the promise the
+whole tool rests on and the check the adapter refuses to write through. A cosmetic blank line is
+not worth loosening it, so the option is **withdrawn** — the same remedy `frontMatter.enabled` got,
+for the same reason.
 
-So the mechanism works. A blank line inside a blockquote is a `>` line, and the pipeline already
-preserves one and trims its trailing space.
+If quote-internal spacing is wanted later, the honest route is a guard clause naming a *documented
+intentional difference* explicitly, so the exception is visible where the guarantee is checked
+rather than implied by a config key.
 
-What is **not** settled is what the option should insert a blank *between*. `> a` and `> b` are one
-paragraph, and a `>` between them would change how the document renders — which the specification
-forbids for precisely this class of option. A correct rule needs the block boundaries *inside* the
-quote, and `segment` does not currently expose them.
-
-So the option stays declared missing. Implementing it on a guess would produce a rule with passing
-tests and the wrong output, which is worse than an honest gap.
-
-**And then a harder fact.** Two more probes:
-
-- `segment` returns **one** block for all quote lines. `> a\n> b\n`, `> # h\n> text\n` and
-  `> a\n>\n> b\n` each produce a single `blockquote[0,N)`. The boundaries inside a quote are not
-  exposed, and a bare `>` classifies as `blockquote` like every other quote line.
-- `guard.ts` compares the **non-blank line count** and rejects any change to it.
-
-A `>` line is non-blank. So inserting one — the only way to put a blank line inside a blockquote —
-raises that count, and the guard refuses the entire document. The formatter would return the input
-unchanged with a diagnostic, having "implemented" the option.
-
-That makes this a tension inside the specification rather than a missing feature. The config
-surface promises `blankLines.insideBlockquotes`, while GRT-01 forbids the only mechanism that
-could provide it. Either the guard needs a way to declare a documented intentional difference, or
-the option should be withdrawn.
-
-That is a decision about what the tool should guarantee — not a wiring task — which is why this is
-the one option still declared missing while every other has been built, deleted, or made honest.
-
-### The two remaining options, ranked by whether they are worth building
+### The remaining options
 
 | Option | Judgment |
 |---|---|
@@ -240,8 +216,7 @@ the one option still declared missing while every other has been built, deleted,
 | **Extension host** | The bundle runs against a stubbed `vscode` module in tests. It has never been loaded by a real editor. |
 | **Real documents** | Everything is verified against generated fixtures, a synthetic article, and this repository's own Markdown. The formatter has never seen a real Chinese technical article. |
 
-**Not implemented at all:** `blankLines.insideBlockquotes`,
-`typography.collapseBoundarySpaces`. The specification declares the
+**Not implemented at all:** `typography.collapseBoundarySpaces`. The specification declares the
 same set, and a test asserts the two lists agree.
 
 The table is the handoff. It has drifted before — it listed `typography.semicolon` and

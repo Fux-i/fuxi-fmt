@@ -9,6 +9,13 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
+### Removed
+
+- **`blankLines.insideBlockquotes` withdrawn.** A blank line inside a blockquote is a `>` line, a
+  `>` line is non-blank, and GRT-01 refuses any change to the non-blank line count - so the only
+  mechanism that could implement the option is the one the semantic guard forbids. The guard was
+  kept and the option withdrawn. Setting it has never done anything.
+
 ### Added
 
 - **`typography.symbolWhitelist`**: which characters CJK spacing treats as word-like is now

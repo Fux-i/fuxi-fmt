@@ -355,7 +355,6 @@ blankLines:
   aroundBlocks: exact    # exact | atLeast
   maxConsecutive: 1      # number | null
   insideLists: false
-  insideBlockquotes: false
 
 list:
   unorderedMarker: dashes   # dashes | asterisks | preserve
@@ -390,8 +389,7 @@ ignore:
   line: fuxi-fmt-ignore
 ```
 
-**Implementation status.** **Not implemented at all:** `blankLines.insideBlockquotes`,
-`typography.collapseBoundarySpaces`.
+**Implementation status.** **Not implemented at all:** `typography.collapseBoundarySpaces`.
 **Partially implemented:** `list.indentWidth`, which today only controls how
 hard tabs are expanded, and also sets the minimum indent width that list reindentation targets. Everything else in this
 block is implemented.
@@ -404,6 +402,12 @@ Everything in this block is implemented.
 ---
 
 ## 7. Open items
+
+0. **`blankLines.insideBlockquotes` was withdrawn, not built.** A blank line inside a blockquote is
+   a `>` line; a `>` line is non-blank; GRT-01 compares the non-blank line count and refuses any
+   change to it. The only mechanism that could implement the option is the one the semantic guard
+   forbids, so the option was withdrawn rather than the guard weakened.
+
 
 1. **Fence indentation vs list-indentation normalization (SAFE-02 x BLK-08).** SAFE-02 says a fence's indentation is byte-verbatim. BLK-08 normalizes list indentation. When a fenced block sits *inside* a list item, normalizing the list changes the indentation the fence must have, or the block escapes its parent. Options: (a) the fence follows its list context, so SAFE-02 applies only to fences not inside lists; (b) any list containing a fence is excluded from indentation normalization; (c) normalization is skipped and a diagnostic is reported. **Resolved: option (b).** A list containing a protected block is excluded from
 indentation normalization, and a diagnostic is reported when that happens. Option (a) — letting
