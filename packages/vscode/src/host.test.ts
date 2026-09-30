@@ -118,6 +118,19 @@ describe('the extension bundle against a stubbed host', () => {
     vscode.settings = {};
   });
 
+  test('editor.tabSize reaches the core, since it is not a fuxi-fmt setting', () => {
+    assert.ok(documentProvider);
+    const list = { getText: () => '- a\tb\n', uri: { fsPath: join(dist, 'tabs.md') } };
+
+    vscode.settings = {};
+    const without = documentProvider.provider.provideDocumentFormattingEdits(list);
+    vscode.settings = { 'editor.tabSize': 4 };
+    const withTabSize = documentProvider.provider.provideDocumentFormattingEdits(list);
+
+    assert.notDeepEqual(withTabSize, without, 'editor.tabSize did not reach the formatter');
+    vscode.settings = {};
+  });
+
   test('the project file beats an individual setting, so the editor agrees with --check', () => {
     assert.ok(documentProvider);
     const file = join(dist, 'fuxi-fmt.json');

@@ -31,7 +31,7 @@ function isSet(configuration: vscode.WorkspaceConfiguration, key: string): boole
   ].some((value) => value !== undefined);
 }
 
-function fromIndividualSettings(): FormatOptionsInput {
+function fromIndividualSettings(document: vscode.TextDocument): FormatOptionsInput {
   const configuration = vscode.workspace.getConfiguration('fuxiFmt');
   const out: Record<string, unknown> = {};
 
@@ -49,6 +49,19 @@ function fromIndividualSettings(): FormatOptionsInput {
     } else if (isSet(configuration, section)) {
       out[section] = configuration.get(section) as unknown;
     }
+  }
+
+  // The one option deliberately not contributed as a fuxi-fmt setting: VS Code
+  // already has editor.tabSize, and a second place to set the same thing is a
+  // second truth. A value set through fuxi-fmt.json still wins, because it is
+  // merged above this layer.
+  const tabSize = vscode.workspace
+    .getConfiguration('editor', document.uri)
+    .get<number>('tabSize');
+  if (typeof tabSize === 'number' && tabSize > 0) {
+    const list = (out.list as Record<string, unknown> | undefined) ?? {};
+    if (!('tabWidth' in list)) list.tabWidth = tabSize;
+    out.list = list;
   }
 
   return out as FormatOptionsInput;
@@ -69,7 +82,7 @@ function optionsFor(document: vscode.TextDocument): FormatOptionsInput {
   const override = vscode.workspace
     .getConfiguration('fuxiFmt')
     .get<FormatOptionsInput>('config', {});
-  return mergeOptions(mergeOptions(fromIndividualSettings(), fromFile), override ?? {});
+  return mergeOptions(mergeOptions(fromIndividualSettings(document), fromFile), override ?? {});
 }
 
 function toTextEdits(document: vscode.TextDocument, edits: readonly Edit[]): vscode.TextEdit[] {
