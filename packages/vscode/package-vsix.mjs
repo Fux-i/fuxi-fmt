@@ -31,6 +31,11 @@ const root = join(here, '..', '..');
 /** Everything the extension host needs, and nothing else. */
 const SHIPPED = [
   'package.json',
+  // Without these the extension still works and every string shows as a raw
+  // %key% in the Settings panel: the manifest is localised, so the locale files
+  // are not optional extras.
+  'package.nls.json',
+  'package.nls.zh-cn.json',
   'dist',
   'icon.png',
   'assets',

@@ -96,6 +96,18 @@ describe('the settings are localised, and stay localised', () => {
     }
   });
 
+  test('the packaging whitelist ships every locale file', () => {
+    // package-vsix.mjs stages an explicit file list rather than walking the
+    // directory, so a new locale file is silently left out of the package - and
+    // the extension still installs, showing every description as a raw %key%.
+    const script = readFileSync(new URL('packages/vscode/package-vsix.mjs', root), 'utf8');
+    const shipped = /const SHIPPED = \[([\s\S]*?)\]/.exec(script)?.[1] ?? '';
+    assert.ok(shipped.length > 0, 'could not read the SHIPPED list');
+    for (const name of LOCALES) {
+      assert.ok(shipped.includes(name), 'package-vsix.mjs does not ship ' + name);
+    }
+  });
+
   test('the Chinese strings are actually Chinese', () => {
     // A copy-paste of the English file would satisfy every check above.
     const zh = locale('package.nls.zh-cn.json');
