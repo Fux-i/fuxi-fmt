@@ -97,7 +97,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     if (ignoredLines[i] === true) protectedLine[i] = true;
   }
 
-  const tabWidth = options.list.indentWidth === 'tab' ? 0 : options.list.indentWidth;
+  const tabWidth = options.list.tabWidth;
   const normalizedTexts = lines.map((line, index) => {
     if (protectedLine[index] === true) return line.text;
     const expanded = tabWidth === 0 ? line.text : line.text.split('\t').join(' '.repeat(tabWidth));
@@ -117,7 +117,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     findExcludedLists(texts, listItems, listParents, protectedLine),
   );
   const reindented = [...texts];
-  const reindentWidth = options.list.indentWidth === 'tab' ? 2 : options.list.indentWidth;
+  const reindentWidth = options.list.indentWidth;
   for (const change of planListIndent(texts, listItems, listParents, excludedLists, reindentWidth)) {
     reindented[change.line] = change.text;
   }

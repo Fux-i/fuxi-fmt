@@ -241,8 +241,7 @@
         "fuxiFmt.list.indentWidth": {
           "enum": [
             2,
-            4,
-            "tab"
+            4
           ],
           "default": 2,
           "scope": "resource",

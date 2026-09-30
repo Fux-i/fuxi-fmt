@@ -18,6 +18,17 @@ const properties = manifest.contributes?.configuration?.properties ?? {};
 const PREFIX = 'fuxiFmt.';
 const NOT_OPTIONS = new Set(['enable', 'config']);
 
+/**
+ * Options deliberately not contributed as settings, with the reason.
+ *
+ * Each is asserted to still exist in the core, so a stale entry cannot hide an
+ * option that was removed, and a new option still has to be decided about: make
+ * it a setting or name it here.
+ */
+const NOT_SETTINGS: Record<string, string> = {
+  'list.tabWidth': "VS Code already has editor.tabSize; a second one would be a second truth",
+};
+
 interface Schema {
   readonly default?: unknown;
   readonly scope?: string;
@@ -41,7 +52,7 @@ function settingPaths(): string[] {
   return Object.keys(properties)
     .filter((id) => id.startsWith(PREFIX))
     .map((id) => id.slice(PREFIX.length))
-    .filter((path) => !NOT_OPTIONS.has(path))
+    .filter((path) => !NOT_OPTIONS.has(path) && !(path in NOT_SETTINGS))
     .sort();
 }
 
@@ -120,12 +131,20 @@ describe('the settings are localised, and stay localised', () => {
 });
 
 describe('every option is a setting, and every setting is an option', () => {
-  test('the two lists are identical', () => {
-    assert.deepEqual(settingPaths(), corePaths());
+  test('every deliberately unexposed option still exists', () => {
+    const core = new Set(corePaths());
+    for (const path of Object.keys(NOT_SETTINGS)) {
+      assert.ok(core.has(path), path + ' is excluded from the settings but is not a core option');
+    }
+  });
+
+  test('the two lists are identical, once deliberate exclusions are removed', () => {
+    const expected = corePaths().filter((path) => !(path in NOT_SETTINGS));
+    assert.deepEqual(settingPaths(), expected);
   });
 
   test('each setting carries the core default', () => {
-    for (const path of corePaths()) {
+    for (const path of corePaths().filter((path) => !(path in NOT_SETTINGS))) {
       const schema = properties[PREFIX + path] as Schema | undefined;
       assert.ok(schema !== undefined, 'no setting for ' + path);
       const expected = defaultOf(path);

@@ -38,7 +38,7 @@ export interface TypographyOptions {
 }
 
 export type EndOfLine = 'lf' | 'crlf' | 'auto';
-export type IndentWidth = 2 | 4 | 'tab';
+export type IndentWidth = 2 | 4;
 export type UnorderedMarker = 'dashes' | 'asterisks' | 'preserve';
 export type FenceChar = 'backticks' | 'tildes' | 'preserve';
 export type OrderedStyle = 'renumber' | 'keep-all-ones' | 'preserve';
@@ -56,6 +56,10 @@ export interface ListOptions {
   readonly orderedDelimiter: OrderedDelimiter;
   /** Width used when expanding hard tabs; 'tab' leaves them alone (BLK-11). */
   readonly indentWidth: IndentWidth;
+  /** Width hard tabs are expanded to. 0 leaves them exactly as written. The
+   * editor's own `editor.tabSize` governs this in VS Code, so it is deliberately
+   * not contributed as a fuxi-fmt setting. */
+  readonly tabWidth: number;
   /** Marker to use for unordered lists (BLK-07). */
   readonly unorderedMarker: UnorderedMarker;
 }
@@ -122,6 +126,7 @@ export interface ListInput {
   readonly orderedStyle?: OrderedStyle;
   readonly orderedDelimiter?: OrderedDelimiter;
   readonly indentWidth?: IndentWidth;
+  readonly tabWidth?: number;
   readonly unorderedMarker?: UnorderedMarker;
 }
 
@@ -152,6 +157,7 @@ export const defaultOptions: FormatOptions = {
     orderedStyle: 'keep-all-ones',
     orderedDelimiter: 'preserve',
     indentWidth: 2,
+    tabWidth: 2,
     unorderedMarker: 'dashes',
   },
   codeBlock: { fenceChar: 'backticks', normalizeLength: true },
@@ -196,6 +202,7 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
       orderedStyle: input?.list?.orderedStyle ?? defaultOptions.list.orderedStyle,
       orderedDelimiter: input?.list?.orderedDelimiter ?? defaultOptions.list.orderedDelimiter,
       indentWidth: input?.list?.indentWidth ?? defaultOptions.list.indentWidth,
+      tabWidth: input?.list?.tabWidth ?? defaultOptions.list.tabWidth,
       unorderedMarker: input?.list?.unorderedMarker ?? defaultOptions.list.unorderedMarker,
     },
     codeBlock: {

@@ -131,7 +131,7 @@ Fence character and length only. Length is `max(3, longest run of the fence char
 | Rule | Default |
 |---|---|
 | Trailing whitespace trimmed (except hard-break double-space when `hardBreakKind` uses it) | on |
-| Hard tabs replaced per `indentWidth` | on |
+| Hard tabs replaced per `list.tabWidth` | on |
 | Exactly one final newline | on |
 | BOM stripped | on |
 | Line endings per `endOfLine: "lf" \| "crlf" \| "auto"` | `lf` |
@@ -372,7 +372,8 @@ blankLines:
 
 list:
   unorderedMarker: dashes   # dashes | asterisks | preserve
-  indentWidth: 2            # 2 | 4 | tab
+  indentWidth: 2            # 2 | 4
+  tabWidth: 2               # N, or 0 to leave hard tabs alone
   orderedStyle: keep-all-ones  # renumber | keep-all-ones | preserve
   orderedDelimiter: preserve
 
@@ -427,7 +428,8 @@ Everything in this block is implemented.
 indentation normalization, and a diagnostic is reported when that happens. Option (a) — letting
 the fence follow the list — would move code the author wrote at a fixed indentation, and moving
 code is precisely what SAFE-02 exists to prevent. Excluding the list keeps both promises.
-**Implemented.** Note that `list.indentWidth` sets both the hard-tab expansion width and the minimum indent width used by list reindentation:
+**Implemented.** `list.indentWidth` sets the minimum indent width used by list reindentation, and
+`list.tabWidth` the width hard tabs are expanded to — two jobs that one option used to conflate:
 reindentation is driven by the parent's content column, not by that option.
 2. **YAML front matter format** (FM-01) is currently "protect entirely". The `frontMatter.enabled`
 option that once appeared in the config block has been **removed rather than implemented**: turning

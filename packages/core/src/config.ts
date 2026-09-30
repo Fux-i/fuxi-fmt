@@ -193,7 +193,8 @@ function readSections(raw: Raw): FormatOptionsInput {
     const to: {
       orderedStyle?: 'renumber' | 'keep-all-ones' | 'preserve';
       orderedDelimiter?: 'preserve' | '.' | ')';
-      indentWidth?: 2 | 4 | 'tab';
+      indentWidth?: 2 | 4;
+      tabWidth?: number;
       unorderedMarker?: 'dashes' | 'asterisks' | 'preserve';
     } = {};
     if (from.orderedStyle !== undefined) {
@@ -207,11 +208,20 @@ function readSections(raw: Raw): FormatOptionsInput {
       to.orderedDelimiter = oneOf(from.orderedDelimiter, 'list.orderedDelimiter', ['preserve', '.', ')']);
     }
     if (from.indentWidth !== undefined) {
-      if (from.indentWidth === 2 || from.indentWidth === 4 || from.indentWidth === 'tab') {
+      if (from.indentWidth === 2 || from.indentWidth === 4) {
         to.indentWidth = from.indentWidth;
       } else {
-        throw new Error('config: list.indentWidth must be 2, 4 or "tab"');
+        throw new Error('config: list.indentWidth must be 2 or 4');
       }
+    }
+    if (from.tabWidth !== undefined) {
+      const width = from.tabWidth;
+      if (typeof width !== 'number' || !Number.isInteger(width) || width < 0) {
+        throw new Error(
+          'config: list.tabWidth must be a non-negative integer (0 leaves tabs alone)',
+        );
+      }
+      to.tabWidth = width;
     }
     if (from.unorderedMarker !== undefined) {
       to.unorderedMarker = oneOf(from.unorderedMarker, 'list.unorderedMarker', [

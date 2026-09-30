@@ -29,7 +29,7 @@
   "fuxiFmt.list.orderedStyle.enum.1": "The same, but leave an all-ones list as the author wrote it.",
   "fuxiFmt.list.orderedStyle.enum.2": "Change no number at all.",
   "fuxiFmt.list.orderedDelimiter.description": "Marker delimiter for ordered lists: keep it, or force `.` or `)`.",
-  "fuxiFmt.list.indentWidth.description": "Indent width for list nesting, and the width hard tabs are expanded to.",
+  "fuxiFmt.list.indentWidth.description": "Indent width for nested list items. It is a floor under the parent's content column, so it can widen nesting but never break it.",
   "fuxiFmt.list.unorderedMarker.description": "Bullet character for unordered lists (BLK-05).",
   "fuxiFmt.codeBlock.fenceChar.description": "Fence character for code blocks (BLK-10).",
   "fuxiFmt.codeBlock.normalizeLength.description": "Make a fence as long as its contents require (BLK-10).",

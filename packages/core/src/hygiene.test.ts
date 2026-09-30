@@ -40,10 +40,10 @@ describe('BLK-11 whitespace', () => {
     assert.equal(out('- a\tb\n'), '- a  b\n');
   });
   test('honours a four space indent width', () => {
-    assert.equal(out('- a\tb\n', { list: { indentWidth: 4 } }), '- a    b\n');
+    assert.equal(out('- a\tb\n', { list: { tabWidth: 4 } }), '- a    b\n');
   });
   test('leaves tabs alone when the indent width is tab', () => {
-    assert.equal(out('- a\tb\n', { list: { indentWidth: 'tab' } }), '- a\tb\n');
+    assert.equal(out('- a\tb\n', { list: { tabWidth: 0 } }), '- a\tb\n');
   });
   test('leaves a tab that already opens an indented code block alone', () => {
     const src = '\t- item\n';
