@@ -43,5 +43,22 @@
   "fuxiFmt.ignore.start.description": "Comment text that opens a range the formatter leaves alone (CFG-03).",
   "fuxiFmt.ignore.end.description": "Comment text that closes such a range (CFG-03).",
   "fuxiFmt.ignore.line.description": "Comment text that makes the formatter skip the next block (CFG-03).",
-  "extension.description": "Format Markdown for Chinese technical writing: blank lines, marker spacing, list renumbering, CJK to Latin spacing and Chinese punctuation width - with code, front matter and inline spans never touched."
+  "extension.description": "Format Markdown for Chinese technical writing: blank lines, marker spacing, list renumbering, CJK to Latin spacing and Chinese punctuation width - with code, front matter and inline spans never touched.",
+  "fuxiFmt.list.unorderedMarker.enum.0": "A dash: -",
+  "fuxiFmt.list.unorderedMarker.enum.1": "An asterisk: *",
+  "fuxiFmt.list.unorderedMarker.enum.2": "Leave the marker as written.",
+  "fuxiFmt.list.orderedDelimiter.enum.0": "Leave the delimiter as written.",
+  "fuxiFmt.list.orderedDelimiter.enum.1": "A period: 1.",
+  "fuxiFmt.list.orderedDelimiter.enum.2": "A parenthesis: 1)",
+  "fuxiFmt.codeBlock.fenceChar.enum.0": "Backticks: ```",
+  "fuxiFmt.codeBlock.fenceChar.enum.1": "Tildes: ~~~",
+  "fuxiFmt.codeBlock.fenceChar.enum.2": "Leave the fence as written.",
+  "fuxiFmt.endOfLine.enum.0": "LF (line feed).",
+  "fuxiFmt.endOfLine.enum.1": "CRLF (carriage return and line feed).",
+  "fuxiFmt.endOfLine.enum.2": "Keep whatever the file already uses.",
+  "fuxiFmt.typography.cjkClasses.enum.0": "Han characters.",
+  "fuxiFmt.typography.cjkClasses.enum.1": "Japanese kana.",
+  "fuxiFmt.typography.cjkClasses.enum.2": "Korean hangul.",
+  "fuxiFmt.typography.cjkClasses.enum.3": "Bopomofo.",
+  "fuxiFmt.typography.cjkClasses.enum.4": "Enclosed CJK letters and months."
 }

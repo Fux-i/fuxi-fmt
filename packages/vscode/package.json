@@ -183,6 +183,13 @@
               "hangul",
               "bopomofo",
               "enclosed"
+            ],
+            "enumDescriptions": [
+              "%fuxiFmt.typography.cjkClasses.enum.0%",
+              "%fuxiFmt.typography.cjkClasses.enum.1%",
+              "%fuxiFmt.typography.cjkClasses.enum.2%",
+              "%fuxiFmt.typography.cjkClasses.enum.3%",
+              "%fuxiFmt.typography.cjkClasses.enum.4%"
             ]
           },
           "markdownDescription": "%fuxiFmt.typography.cjkClasses.description%"
@@ -231,6 +238,11 @@
             ".",
             ")"
           ],
+          "enumDescriptions": [
+            "%fuxiFmt.list.orderedDelimiter.enum.0%",
+            "%fuxiFmt.list.orderedDelimiter.enum.1%",
+            "%fuxiFmt.list.orderedDelimiter.enum.2%"
+          ],
           "markdownDescription": "%fuxiFmt.list.orderedDelimiter.description%"
         },
         "fuxiFmt.list.orderedIndent": {
@@ -270,6 +282,11 @@
             "asterisks",
             "preserve"
           ],
+          "enumDescriptions": [
+            "%fuxiFmt.list.unorderedMarker.enum.0%",
+            "%fuxiFmt.list.unorderedMarker.enum.1%",
+            "%fuxiFmt.list.unorderedMarker.enum.2%"
+          ],
           "markdownDescription": "%fuxiFmt.list.unorderedMarker.description%"
         },
         "fuxiFmt.codeBlock.fenceChar": {
@@ -280,6 +297,11 @@
             "backticks",
             "tildes",
             "preserve"
+          ],
+          "enumDescriptions": [
+            "%fuxiFmt.codeBlock.fenceChar.enum.0%",
+            "%fuxiFmt.codeBlock.fenceChar.enum.1%",
+            "%fuxiFmt.codeBlock.fenceChar.enum.2%"
           ],
           "markdownDescription": "%fuxiFmt.codeBlock.fenceChar.description%"
         },
@@ -297,6 +319,11 @@
             "lf",
             "crlf",
             "auto"
+          ],
+          "enumDescriptions": [
+            "%fuxiFmt.endOfLine.enum.0%",
+            "%fuxiFmt.endOfLine.enum.1%",
+            "%fuxiFmt.endOfLine.enum.2%"
           ],
           "markdownDescription": "%fuxiFmt.endOfLine.description%"
         },
