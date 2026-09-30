@@ -2,9 +2,10 @@
  * Ordered list renumbering.
  *
  * Numbers are renumbered at every nesting level, honouring a declared start on
- * the first item. A list the author wrote with lazy all-ones markers is
- * detected and left alone, which keeps diffs minimal for the common
- * git-diff-friendly style and matches what Prettier and dprint do.
+ * the first item. In the default 'keep-all-ones' mode a list the author wrote
+ * with lazy all-ones markers is detected and left alone, which keeps diffs
+ * minimal for the common git-diff-friendly style and matches what Prettier and
+ * dprint do; 'renumber' numbers it anyway and 'preserve' changes no number at all.
  *
  * Spec references: BLK-06.
  */
@@ -73,7 +74,12 @@ export function renumberOrderedLists(
     frame.seen++;
     if (frame.seen === 2 && frame.start === 1 && value === 1) frame.lazy = true;
 
-    const number = options.orderedStyle === 'lazy-one' || frame.lazy ? 1 : frame.start + frame.seen - 1;
+    const number =
+      options.orderedStyle === 'preserve'
+        ? value
+        : options.orderedStyle === 'keep-all-ones' && frame.lazy
+          ? 1
+          : frame.start + frame.seen - 1;
     const mark = options.orderedDelimiter === 'preserve' ? delimiter : options.orderedDelimiter;
     out[i] = indentText + String(number) + mark + gap + rest;
   }

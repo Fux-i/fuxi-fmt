@@ -25,8 +25,26 @@ describe('BLK-06 ordered list renumbering', () => {
   test('starts a new list after a paragraph', () => {
     assert.equal(out('1. a\n\ntext\n\n5. b\n'), '1. a\n\ntext\n\n5. b\n');
   });
-  test('lazy-one style forces every marker to one', () => {
-    assert.equal(out('1. a\n2. b\n', { list: { orderedStyle: 'lazy-one' } }), '1. a\n1. b\n');
+  test('an all-ones list is left alone by default', () => {
+    assert.equal(out('1. a\n1. b\n'), '1. a\n1. b\n');
+  });
+
+  test('renumber numbers an all-ones list anyway', () => {
+    assert.equal(
+      out('1. a\n1. b\n', { list: { orderedStyle: 'renumber' } }),
+      '1. a\n2. b\n',
+    );
+  });
+
+  test('preserve changes no number at all', () => {
+    assert.equal(
+      out('1. a\n5. b\n9. c\n', { list: { orderedStyle: 'preserve' } }),
+      '1. a\n5. b\n9. c\n',
+    );
+    assert.equal(
+      out('1. a\n1. b\n', { list: { orderedStyle: 'preserve' } }),
+      '1. a\n1. b\n',
+    );
   });
   test('delimiter can be normalised', () => {
     assert.equal(out('1) a\n2) b\n', { list: { orderedDelimiter: '.' } }), '1. a\n2. b\n');

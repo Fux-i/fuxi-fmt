@@ -97,11 +97,17 @@ Exactly one space after the opening `#` run. Collapses multiple spaces; inserts 
 
 - A `#` run followed immediately by a digit is treated as an issue reference (`#123 修复了`) and is left alone. Promoting it would silently turn a paragraph into a heading, which is a rendering change rather than a spacing fix.
 
-**BLK-06 — Ordered list renumbering** · always on
+**BLK-06 — Ordered list renumbering** · default `keep-all-ones`
+
+Numbers are renumbered at every nesting level, honouring a declared start on the first item.
+`list.orderedStyle` chooses between three behaviours: `renumber` numbers sequentially from the
+declared start; `keep-all-ones` (the default) does the same but leaves a list the author wrote with
+lazy all-ones markers as it is, matching Prettier and dprint and keeping diffs minimal for the
+git-diff-friendly style; `preserve` changes no number at all.
 
 - Renumber at every nesting level.
 - Honour a declared start on the first item (`3. / 4. / 5.` keeps starting at 3).
-- **Auto-detect the lazy all-`1.` style** and preserve it (matches Prettier and dprint; also the minimal-diff default in mdformat). `orderedList.style: "increment" | "lazy-one"`.
+- **Auto-detect the lazy all-`1.` style** and preserve it (matches Prettier and dprint; also the minimal-diff default in mdformat). `list.orderedStyle: "keep-all-ones"`.
 - `orderedList.delimiter: "preserve" | "." | ")"`, default `preserve`.
 
 **BLK-07 — Unordered list marker normalization** · default `-`
@@ -367,7 +373,7 @@ blankLines:
 list:
   unorderedMarker: dashes   # dashes | asterisks | preserve
   indentWidth: 2            # 2 | 4 | tab
-  orderedStyle: increment   # increment | lazy-one
+  orderedStyle: keep-all-ones  # renumber | keep-all-ones | preserve
   orderedDelimiter: preserve
 
 codeBlock:

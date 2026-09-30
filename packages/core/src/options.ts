@@ -41,14 +41,16 @@ export type EndOfLine = 'lf' | 'crlf' | 'auto';
 export type IndentWidth = 2 | 4 | 'tab';
 export type UnorderedMarker = 'dashes' | 'asterisks' | 'preserve';
 export type FenceChar = 'backticks' | 'tildes' | 'preserve';
-export type OrderedStyle = 'increment' | 'lazy-one';
+export type OrderedStyle = 'renumber' | 'keep-all-ones' | 'preserve';
 export type OrderedDelimiter = 'preserve' | '.' | ')';
 
 export interface ListOptions {
   /**
-   * 'increment' renumbers from the declared start but preserves a list the
-   * author wrote with lazy all-ones markers, matching Prettier and dprint.
-   * 'lazy-one' forces every item to 1.
+   * 'renumber' numbers sequentially from the declared start.
+   * 'keep-all-ones' is the default: the same, except that a list the author
+   * wrote with lazy all-ones markers is left that way, matching Prettier and
+   * dprint and keeping diffs minimal for the git-diff-friendly style.
+   * 'preserve' leaves every number exactly as written.
    */
   readonly orderedStyle: OrderedStyle;
   readonly orderedDelimiter: OrderedDelimiter;
@@ -147,7 +149,7 @@ export const defaultOptions: FormatOptions = {
     symbolWhitelist: new Set(DEFAULT_SPACING_SYMBOLS),
   },
   list: {
-    orderedStyle: 'increment',
+    orderedStyle: 'keep-all-ones',
     orderedDelimiter: 'preserve',
     indentWidth: 2,
     unorderedMarker: 'dashes',

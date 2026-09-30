@@ -191,13 +191,17 @@ function readSections(raw: Raw): FormatOptionsInput {
   if (raw.list !== undefined) {
     const from = section(raw.list, 'list');
     const to: {
-      orderedStyle?: 'increment' | 'lazy-one';
+      orderedStyle?: 'renumber' | 'keep-all-ones' | 'preserve';
       orderedDelimiter?: 'preserve' | '.' | ')';
       indentWidth?: 2 | 4 | 'tab';
       unorderedMarker?: 'dashes' | 'asterisks' | 'preserve';
     } = {};
     if (from.orderedStyle !== undefined) {
-      to.orderedStyle = oneOf(from.orderedStyle, 'list.orderedStyle', ['increment', 'lazy-one']);
+      to.orderedStyle = oneOf(from.orderedStyle, 'list.orderedStyle', [
+        'renumber',
+        'keep-all-ones',
+        'preserve',
+      ]);
     }
     if (from.orderedDelimiter !== undefined) {
       to.orderedDelimiter = oneOf(from.orderedDelimiter, 'list.orderedDelimiter', ['preserve', '.', ')']);

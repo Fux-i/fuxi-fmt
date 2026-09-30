@@ -11,6 +11,11 @@ with release candidates suffixed `-rcN`.
 
 ### Changed
 
+- **`list.orderedStyle` offers three behaviours instead of two.** `renumber` numbers sequentially
+  from the declared start; `keep-all-ones` — the new default, and what `increment` used to do —
+  leaves a list the author wrote as all ones alone; `preserve` changes no number at all. `lazy-one`
+  is gone: forcing every item to 1 is not something anyone chose. `increment` is now
+  `keep-all-ones`, so the default behaves exactly as before (BLK-06).
 - **Parenthesis width now follows the surrounding text, not the contents.** `中文（English）文` was
   being rewritten to `中文(English)文`, because the rule read only what sat between the parens. A
   pair now takes the width of the text before its opening parenthesis, and both parens of a pair take

@@ -213,15 +213,17 @@
         },
         "fuxiFmt.list.orderedStyle": {
           "type": "string",
-          "default": "increment",
+          "default": "keep-all-ones",
           "scope": "resource",
           "enum": [
-            "increment",
-            "lazy-one"
+            "renumber",
+            "keep-all-ones",
+            "preserve"
           ],
           "enumDescriptions": [
             "%fuxiFmt.list.orderedStyle.enum.0%",
-            "%fuxiFmt.list.orderedStyle.enum.1%"
+            "%fuxiFmt.list.orderedStyle.enum.1%",
+            "%fuxiFmt.list.orderedStyle.enum.2%"
           ],
           "markdownDescription": "%fuxiFmt.list.orderedStyle.description%"
         },

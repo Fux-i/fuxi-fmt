@@ -22,7 +22,7 @@ const DOCS = [
 ];
 
 const AROUND = ['exact', 'atLeast'] as const;
-const ORDERED = ['increment', 'lazy-one'] as const;
+const ORDERED = ['renumber', 'keep-all-ones', 'preserve'] as const;
 const MARKERS = ['dashes', 'asterisks', 'preserve'] as const;
 const FENCES = ['backticks', 'tildes', 'preserve'] as const;
 const PUNCT = ['fullwidth', 'halfwidth', 'mixed', 'off'] as const;
