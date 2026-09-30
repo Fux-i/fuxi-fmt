@@ -19,6 +19,12 @@ with release candidates suffixed `-rcN`.
 
 ### Added
 
+- **Simplified Chinese for every setting description**, and for the extension's own description in
+  the Marketplace. VS Code localises a package through `package.nls.json` and
+  `package.nls.zh-cn.json`; the manifest now references `%keys%` instead of literal English. A test
+  asserts that both locales define every referenced string, that neither defines an unused one, and
+  that the Chinese strings contain Chinese — without which a translation drifts behind silently and
+  the Settings panel shows a raw `%key%`.
 - **Every option is now a VS Code setting.** `fuxiFmt.typography.cjkSpacing` and the rest — 24 in
   all — appear in the Settings UI with their defaults, their enums and the specification rule each
   one implements. They sit in a layer **below** the project `fuxi-fmt.json`, so a personal

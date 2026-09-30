@@ -52,6 +52,61 @@ function defaultOf(path: string): unknown {
   return (value as Record<string, unknown>)[leaf];
 }
 
+function placeholders(node: unknown, out: Set<string> = new Set()): Set<string> {
+  if (typeof node === 'string') {
+    const match = /^%(\w[\w.]*)%$/.exec(node);
+    if (match !== null) out.add(match[1] ?? '');
+  } else if (node !== null && typeof node === 'object') {
+    for (const value of Object.values(node as Record<string, unknown>)) placeholders(value, out);
+  }
+  return out;
+}
+
+const LOCALES = ['package.nls.json', 'package.nls.zh-cn.json'];
+const locale = (name: string): Record<string, string> =>
+  JSON.parse(readFileSync(new URL('packages/vscode/' + name, root), 'utf8')) as Record<string, string>;
+
+describe('the settings are localised, and stay localised', () => {
+  test('every referenced string is defined in every locale', () => {
+    // The manifest carries %keys%; a locale that is missing one shows the raw key
+    // in the Settings panel, which is worse than English.
+    const used = placeholders(manifest);
+    assert.ok(used.size > 30, 'expected the manifest to reference many strings, saw ' + String(used.size));
+    for (const name of LOCALES) {
+      const table = locale(name);
+      for (const key of used) {
+        assert.ok(key in table, name + ' is missing ' + key);
+      }
+    }
+  });
+
+  test('no locale defines a string nothing references', () => {
+    const used = placeholders(manifest);
+    for (const name of LOCALES) {
+      for (const key of Object.keys(locale(name))) {
+        assert.ok(used.has(key), name + ' defines ' + key + ' but nothing uses it');
+      }
+    }
+  });
+
+  test('the locales define exactly the same keys', () => {
+    const [first, ...rest] = LOCALES.map((name) => Object.keys(locale(name)).sort());
+    for (let i = 0; i < rest.length; i++) {
+      assert.deepEqual(rest[i], first, LOCALES[i + 1] + ' has drifted from ' + LOCALES[0]);
+    }
+  });
+
+  test('the Chinese strings are actually Chinese', () => {
+    // A copy-paste of the English file would satisfy every check above.
+    const zh = locale('package.nls.zh-cn.json');
+    const han = /[\u4e00-\u9fff]/;
+    const untranslated = Object.entries(zh)
+      .filter(([key, value]) => key !== 'extension.displayName' && !han.test(value))
+      .map(([key]) => key);
+    assert.deepEqual(untranslated, [], 'these strings have no Han characters');
+  });
+});
+
 describe('every option is a setting, and every setting is an option', () => {
   test('the two lists are identical', () => {
     assert.deepEqual(settingPaths(), corePaths());

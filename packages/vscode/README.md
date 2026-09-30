@@ -41,7 +41,9 @@ code --install-extension Fux-i.fuxi-fmt-vscode
 
 ## Configure
 
-Every option is a setting. Open Settings and search for `fuxiFmt` — `fuxiFmt.typography.cjkSpacing`,
+Every option is a setting, and the settings panel is localised: with VS Code set to Simplified
+Chinese, the descriptions below appear in Chinese (`package.nls.zh-cn.json`). Open Settings and
+search for `fuxiFmt` — `fuxiFmt.typography.cjkSpacing`,
 `fuxiFmt.list.unorderedMarker`, `fuxiFmt.blankLines.aroundBlocks` and the rest. Each shows its
 default, its allowed values and the rule it implements, so the panel is the reference.
 
