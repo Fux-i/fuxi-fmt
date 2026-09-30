@@ -238,14 +238,33 @@
           ],
           "markdownDescription": "%fuxiFmt.list.orderedDelimiter.description%"
         },
-        "fuxiFmt.list.indentWidth": {
+        "fuxiFmt.list.orderedIndent": {
           "enum": [
-            2,
+            "aligned",
             4
           ],
-          "default": 2,
+          "default": "aligned",
           "scope": "resource",
-          "markdownDescription": "%fuxiFmt.list.indentWidth.description%"
+          "enumDescriptions": [
+            "%fuxiFmt.list.orderedIndent.enum.0%",
+            "%fuxiFmt.list.orderedIndent.enum.1%"
+          ],
+          "markdownDescription": "%fuxiFmt.list.orderedIndent.description%"
+        },
+        "fuxiFmt.list.unorderedIndent": {
+          "enum": [
+            "aligned",
+            3,
+            4
+          ],
+          "default": "aligned",
+          "scope": "resource",
+          "enumDescriptions": [
+            "%fuxiFmt.list.unorderedIndent.enum.0%",
+            "%fuxiFmt.list.unorderedIndent.enum.1%",
+            "%fuxiFmt.list.unorderedIndent.enum.2%"
+          ],
+          "markdownDescription": "%fuxiFmt.list.unorderedIndent.description%"
         },
         "fuxiFmt.list.unorderedMarker": {
           "type": "string",

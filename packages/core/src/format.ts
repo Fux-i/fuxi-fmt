@@ -117,8 +117,17 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     findExcludedLists(texts, listItems, listParents, protectedLine),
   );
   const reindented = [...texts];
-  const reindentWidth = options.list.indentWidth;
-  for (const change of planListIndent(texts, listItems, listParents, excludedLists, reindentWidth)) {
+  const orderedMin = options.list.orderedIndent === 'aligned' ? 0 : options.list.orderedIndent;
+  const unorderedMin =
+    options.list.unorderedIndent === 'aligned' ? 0 : options.list.unorderedIndent;
+  for (const change of planListIndent(
+    texts,
+    listItems,
+    listParents,
+    excludedLists,
+    orderedMin,
+    unorderedMin,
+  )) {
     reindented[change.line] = change.text;
   }
 

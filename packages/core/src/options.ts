@@ -38,7 +38,10 @@ export interface TypographyOptions {
 }
 
 export type EndOfLine = 'lf' | 'crlf' | 'auto';
-export type IndentWidth = 2 | 4;
+/** How far a nested ORDERED item's marker sits past its parent's content. */
+export type OrderedIndent = 'aligned' | 4;
+/** The same for an unordered item. */
+export type UnorderedIndent = 'aligned' | 3 | 4;
 export type UnorderedMarker = 'dashes' | 'asterisks' | 'preserve';
 export type FenceChar = 'backticks' | 'tildes' | 'preserve';
 export type OrderedStyle = 'renumber' | 'keep-all-ones' | 'preserve';
@@ -55,7 +58,8 @@ export interface ListOptions {
   readonly orderedStyle: OrderedStyle;
   readonly orderedDelimiter: OrderedDelimiter;
   /** Width used when expanding hard tabs; 'tab' leaves them alone (BLK-11). */
-  readonly indentWidth: IndentWidth;
+  readonly orderedIndent: OrderedIndent;
+  readonly unorderedIndent: UnorderedIndent;
   /** Width hard tabs are expanded to. 0 leaves them exactly as written. The
    * editor's own `editor.tabSize` governs this in VS Code, so it is deliberately
    * not contributed as a fuxi-fmt setting. */
@@ -125,7 +129,8 @@ export interface TypographyInput {
 export interface ListInput {
   readonly orderedStyle?: OrderedStyle;
   readonly orderedDelimiter?: OrderedDelimiter;
-  readonly indentWidth?: IndentWidth;
+  readonly orderedIndent?: OrderedIndent;
+  readonly unorderedIndent?: UnorderedIndent;
   readonly tabWidth?: number;
   readonly unorderedMarker?: UnorderedMarker;
 }
@@ -156,7 +161,8 @@ export const defaultOptions: FormatOptions = {
   list: {
     orderedStyle: 'keep-all-ones',
     orderedDelimiter: 'preserve',
-    indentWidth: 2,
+    orderedIndent: 'aligned',
+    unorderedIndent: 'aligned',
     tabWidth: 2,
     unorderedMarker: 'dashes',
   },
@@ -201,7 +207,8 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
     list: {
       orderedStyle: input?.list?.orderedStyle ?? defaultOptions.list.orderedStyle,
       orderedDelimiter: input?.list?.orderedDelimiter ?? defaultOptions.list.orderedDelimiter,
-      indentWidth: input?.list?.indentWidth ?? defaultOptions.list.indentWidth,
+      orderedIndent: input?.list?.orderedIndent ?? defaultOptions.list.orderedIndent,
+      unorderedIndent: input?.list?.unorderedIndent ?? defaultOptions.list.unorderedIndent,
       tabWidth: input?.list?.tabWidth ?? defaultOptions.list.tabWidth,
       unorderedMarker: input?.list?.unorderedMarker ?? defaultOptions.list.unorderedMarker,
     },

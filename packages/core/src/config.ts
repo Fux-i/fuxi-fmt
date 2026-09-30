@@ -193,7 +193,8 @@ function readSections(raw: Raw): FormatOptionsInput {
     const to: {
       orderedStyle?: 'renumber' | 'keep-all-ones' | 'preserve';
       orderedDelimiter?: 'preserve' | '.' | ')';
-      indentWidth?: 2 | 4;
+      orderedIndent?: 'aligned' | 4;
+      unorderedIndent?: 'aligned' | 3 | 4;
       tabWidth?: number;
       unorderedMarker?: 'dashes' | 'asterisks' | 'preserve';
     } = {};
@@ -207,11 +208,19 @@ function readSections(raw: Raw): FormatOptionsInput {
     if (from.orderedDelimiter !== undefined) {
       to.orderedDelimiter = oneOf(from.orderedDelimiter, 'list.orderedDelimiter', ['preserve', '.', ')']);
     }
-    if (from.indentWidth !== undefined) {
-      if (from.indentWidth === 2 || from.indentWidth === 4) {
-        to.indentWidth = from.indentWidth;
+    if (from.orderedIndent !== undefined) {
+      if (from.orderedIndent === 'aligned' || from.orderedIndent === 4) {
+        to.orderedIndent = from.orderedIndent;
       } else {
-        throw new Error('config: list.indentWidth must be 2 or 4');
+        throw new Error("config: list.orderedIndent must be 'aligned' or 4");
+      }
+    }
+    if (from.unorderedIndent !== undefined) {
+      const value = from.unorderedIndent;
+      if (value === 'aligned' || value === 3 || value === 4) {
+        to.unorderedIndent = value;
+      } else {
+        throw new Error("config: list.unorderedIndent must be 'aligned', 3 or 4");
       }
     }
     if (from.tabWidth !== undefined) {

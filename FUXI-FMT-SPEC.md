@@ -372,7 +372,8 @@ blankLines:
 
 list:
   unorderedMarker: dashes   # dashes | asterisks | preserve
-  indentWidth: 2            # 2 | 4
+  orderedIndent: aligned    # aligned | 4
+  unorderedIndent: aligned  # aligned | 3 | 4
   tabWidth: 2               # N, or 0 to leave hard tabs alone
   orderedStyle: keep-all-ones  # renumber | keep-all-ones | preserve
   orderedDelimiter: preserve

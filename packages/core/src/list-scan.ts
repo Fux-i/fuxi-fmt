@@ -178,7 +178,8 @@ export function planListIndent(
   items: readonly ListItem[],
   parents: readonly number[],
   excluded: ReadonlySet<number> = new Set(),
-  minIndent = 0,
+  orderedMin = 0,
+  unorderedMin = 0,
 ): Reindent[] {
   const isItemLine = new Set(items.map((item) => item.line));
   const planned = new Map<number, string>();
@@ -196,8 +197,12 @@ export function planListIndent(
     // would place the child shallower than its parent's content and break the
     // nesting it exists to keep. At the default width of 2 the max always
     // selects the content column, so nothing changes by default.
-    const width =
-      parent === undefined ? 0 : Math.max(minIndent, parent.contentColumn - parent.indent);
+    // 'aligned' passes 0 and therefore selects the parent's content column; an
+    // explicit width is a floor. The max is what keeps nesting: a '10. ' parent
+    // has a content column of 4, and a narrower setting must not place the child
+    // shallower than the parent's content.
+    const minFor = item.ordered ? orderedMin : unorderedMin;
+    const width = parent === undefined ? 0 : Math.max(minFor, parent.contentColumn - parent.indent);
     const target = parent === undefined ? item.indent : (placed[parentIndex] ?? parent.indent) + width;
     // Pushed before the exclusion test so that placed stays aligned with the
     // item indices; a skipped item still has to occupy its slot.

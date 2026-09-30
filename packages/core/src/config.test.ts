@@ -30,7 +30,8 @@ describe('CFG-01 parsing a configuration document', () => {
   test('rejects an unknown value for a known key', () => {
     assert.throws(() => parseConfig('{"endOfLine": "bogus"}'), /endOfLine/);
     assert.throws(() => parseConfig('{"blankLines": {"maxConsecutive": "lots"}}'), /maxConsecutive/);
-    assert.throws(() => parseConfig('{"list": {"indentWidth": 3}}'), /indentWidth/);
+    assert.throws(() => parseConfig('{"list": {"orderedIndent": 3}}'), /orderedIndent/);
+    assert.throws(() => parseConfig('{"list": {"unorderedIndent": 2}}'), /unorderedIndent/);
   });
   test('ignores unknown keys', () => {
     assert.deepEqual(parseConfig('{"nope": 1, "endOfLine": "lf"}'), { endOfLine: 'lf' });
@@ -67,10 +68,10 @@ describe('CFG-01 merging layers', () => {
   test('later layers win key by key', () => {
     assert.deepEqual(
       mergeOptions(
-        { list: { unorderedMarker: 'asterisks', indentWidth: 4 } },
+        { list: { unorderedMarker: 'asterisks', orderedIndent: 4 } },
         { list: { unorderedMarker: 'dashes' } },
       ),
-      { list: { unorderedMarker: 'dashes', indentWidth: 4 } },
+      { list: { unorderedMarker: 'dashes', orderedIndent: 4 } },
     );
   });
   test('an empty override changes nothing', () => {

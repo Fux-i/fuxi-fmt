@@ -11,6 +11,12 @@ with release candidates suffixed `-rcN`.
 
 ### Changed
 
+- **`list.indentWidth` became `list.orderedIndent` and `list.unorderedIndent`.** The old name
+  described neither of the two jobs the option was doing. Each is `aligned` (the default) or an
+  explicit width; `aligned` puts a nested item's marker at its parent's content column, and an
+  explicit width is a floor that can widen nesting but never break it (BLK-08).
+- **`list.tabWidth`** carries the hard-tab expansion the old option also did. It is settable from
+  `fuxi-fmt.json` but is not a fuxi-fmt setting: VS Code's own `editor.tabSize` governs it there.
 - **`list.orderedStyle` offers three behaviours instead of two.** `renumber` numbers sequentially
   from the declared start; `keep-all-ones` — the new default, and what `increment` used to do —
   leaves a list the author wrote as all ones alone; `preserve` changes no number at all. `lazy-one`
