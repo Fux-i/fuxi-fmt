@@ -2,6 +2,102 @@
 
 <img src="assets/logo.png" alt="A character in a green dinosaur hood holding a formatted document" width="160" align="right" />
 
+[中文](#中文) · [English](#english)
+
+## 中文
+
+**面向中文技术写作的 Markdown 格式化工具。**
+
+VS Code 对每种语言每次保存只能运行一个格式化器，所以格式化器无法叠加。Prettier 管块级结构，
+却会在中英文之间插入空格、也完全不懂中文标点；AutoCorrect 管中文标点，却不是格式化 provider，
+永远占不到 `editor.defaultFormatter`。fuxi-fmt 是一个引擎同时管这两半。
+
+### 它做什么
+
+| | |
+|---|---|
+| **空行** | 块与块之间：恰好一个，或至少一个。列表与引用块内部除非你主动要求，否则不动。 |
+| **标记** | `#` 之后以及每个 `-`、`*`、`+`、`1.` 标记之后加一个空格。 |
+| **有序列表** | 从声明的起始编号重排，并规范标记与缩进。 |
+| **行内代码** | 当作一个英文单词，所以 ``` `code` ``` 与中文相邻时会加空格。 |
+| **中英之间** | 只在交界处加一个空格。`GPT-4o`、`60公里/小时`、`2.5` 都不受影响。 |
+| **标点宽度** | 由紧邻的字符决定，所以 `1,000` 与 `e.g.` 保持半角。 |
+
+### 代码永远不会被改动
+
+围栏代码块内容、围栏缩进与 info string、front matter、行内代码与公式、HTML 块与注释、MDX 与
+JSX、shortcode、wikilink、URL 与链接地址，全部**逐字节保持原样**。任何规则碰到它们都是 bug，
+不是误差。
+
+### 它从不折行
+
+中文没有可断行的空格，折行器只能在**字符之间**断开。fuxi-fmt 从不合并、拆分或重排任何一行。
+
+### 安装
+
+在应用市场搜索 **fuxi-fmt**，或：
+
+```sh
+code --install-extension Fux-i.fuxi-fmt-vscode
+```
+
+### 配置
+
+每个选项都是一个设置。打开设置搜索 `fuxiFmt` —— `fuxiFmt.typography.cjkSpacing`、
+`fuxiFmt.list.unorderedMarker`、`fuxiFmt.blankLines.aroundBlocks` 等等。每项都会显示默认值、
+可选值，以及它实现的是哪条规则，所以设置面板本身就是说明书。
+
+优先级如下，**后者覆盖前者**：
+
+| # | 层级 | 位置 |
+|---|---|---|
+| 1 | 插件默认值 | 扩展内置，无需设置 |
+| 2 | 各项 `fuxiFmt.*` 设置 | 你的编辑器 —— 可按工作区文件夹、按 `[markdown]` 区分 |
+| 3 | `fuxi-fmt.json` | 提交进版本库的仓库根目录文件 |
+| 4 | `fuxiFmt.config` | 你的编辑器，作为显式覆盖 |
+
+**第 3 层故意压过第 2 层。** CLI 永远看不到你的编辑器设置；如果它们优先，编辑器与 CI 中的
+`fuxi-fmt --check` 会对同一份文档给出不同结论 —— 保存时通过，流水线里失败。确实想覆盖项目
+配置时，用第 4 层的 `fuxiFmt.config`。
+
+```json
+{
+  "fuxiFmt.enable": true,
+  "fuxiFmt.typography.punctuationChangeList": [",", ".", ":", "!", "?", ";"],
+  "fuxiFmt.config": { "blankLines": { "aroundBlocks": "atLeast" } }
+}
+```
+
+把 `fuxiFmt.enable` 设为 `false`，可以在不卸载的前提下关闭格式化。
+
+### 当它判断错你的文档时
+
+每条规则都可能对某一段不适用。三个指令可以声明这一点，其中的内容一律不动：
+
+### 保证
+
+- **最小改动。** 一次修改只产生很小的编辑范围，保存时格式化不会重写整个文件，也不会打乱光标
+  和撤销历史。
+- **语义保持。** 有一道守卫会把结果与原文对比，遇到解析结果不同的文档就拒绝返回；它一旦触发，
+  你拿回的是原封不动的文档。
+- **幂等。** 再跑一次不会产生任何改动。
+- **无依赖。** 引擎没有任何运行时依赖，也从不 import VS Code 的 API。
+
+### 链接
+
+- [仓库与规范](https://github.com/Fux-i/fuxi-fmt)
+- [完整更新日志](https://github.com/Fux-i/fuxi-fmt/blob/main/CHANGELOG.md)
+- [问题反馈](https://github.com/Fux-i/fuxi-fmt/issues)
+
+### 许可证
+
+MIT
+
+---
+
+## English
+
+
 **A Markdown formatter for Chinese technical writing.**
 
 VS Code runs exactly one formatter per language per save, so formatters cannot be composed.
