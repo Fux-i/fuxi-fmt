@@ -84,6 +84,16 @@ export function normalizeFullwidthAlphanumerics(
  * protected region, or contains another opener is left exactly as written
  * rather than guessed at - a wrong parenthesis is worse than a wide one.
  */
+/** The first non-blank character before `i` on the same line, or ''. */
+function previousNonBlank(text: string, i: number): string {
+  for (let j = i - 1; j >= 0; j--) {
+    const c = text.charAt(j);
+    if (c === '\n') return '';
+    if (c !== ' ' && c !== '\t' && c !== '\r') return c;
+  }
+  return '';
+}
+
 export function normalizeParens(
   text: string,
   options: TypographyOptions,
@@ -106,12 +116,24 @@ export function normalizeParens(
       j++;
     }
     if (bail || j >= text.length) continue;
-    const full =
-      options.parenStyle === 'fullwidth'
-        ? true
-        : options.parenStyle === 'halfwidth'
-          ? false
-          : containsCjk(text.slice(i + 1, j), options.cjkClasses);
+    // 'mixed' decides from the text the parenthesis sits in, not from what it
+    // encloses. A Chinese sentence quoting an English term was having its
+    // full-width parens rewritten to half-width, which is the opposite of what
+    // the sentence wants. Both parens of a pair take the opening one's width, so
+    // they can never come out mismatched; when nothing precedes the opener on the
+    // line there is no context to read, so the contents decide as before.
+    let full: boolean;
+    if (options.parenStyle === 'fullwidth') {
+      full = true;
+    } else if (options.parenStyle === 'halfwidth') {
+      full = false;
+    } else {
+      const before = previousNonBlank(text, i);
+      full =
+        before.length === 0
+          ? containsCjk(text.slice(i + 1, j), options.cjkClasses)
+          : isCjk(before, options.cjkClasses);
+    }
     chars[i] = full ? '\uff08' : '(';
     chars[j] = full ? '\uff09' : ')';
     i = j;

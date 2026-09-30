@@ -195,7 +195,14 @@ Half-width punctuation adjacent to CJK converts to full-width. `punctuationStyle
 
 Full-width punctuation (`，。！？；：、（）【】「」《》""''`) is a **boundary**, never a spacing target, and is never separated from its neighbours on either side.
 
-**TYPO-08 — Parenthesis width** · default `mixed`
+**TYPO-08 — Parenthesis width follows the surrounding text** · default `mixed`
+
+A pair takes the width of the text it sits in, decided by the first non-blank character before the
+opening parenthesis; both parens of a pair take that one decision, so they never come out
+mismatched. Deciding from the *contents* rewrote the full-width parens of a Chinese sentence whenever
+the bracketed term happened to be English — `中文（English）文` became `中文(English)文`. When nothing
+precedes the opener on its line there is no context to read and the contents decide. `preserve`
+leaves both parens as written; `fullwidth` and `halfwidth` override the decision entirely.
 
 `parenStyle: "mixed" | "fullwidth" | "halfwidth"` (default `mixed`). Full-width `（）` when the enclosed content contains CJK; half-width `()` when it is pure Latin or digits. This matches the Guidelines and `textlint-zh`, and deliberately diverges from zhlint's default.
 

@@ -9,6 +9,13 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
+### Changed
+
+- **Parenthesis width now follows the surrounding text, not the contents.** `中文（English）文` was
+  being rewritten to `中文(English)文`, because the rule read only what sat between the parens. A
+  pair now takes the width of the text before its opening parenthesis, and both parens of a pair take
+  that one decision. `English（中文）English` narrows symmetrically as a result (TYPO-08).
+
 ### Fixed
 
 - **An ellipsis is no longer turned into a full stop and two stray dots.** `等等...` became

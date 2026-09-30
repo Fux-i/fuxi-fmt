@@ -26,15 +26,18 @@ describe('cjkClasses selects which scripts count as CJK', () => {
   });
 });
 
-describe('TYPO-08 parenthesis width follows the script of the contents', () => {
-  test('half-width when the contents are Latin', () => {
-    assert.equal(out('中文（NMRI）后续\n'), '中文(NMRI)后续\n');
+describe('TYPO-08 parenthesis width follows the surrounding text', () => {
+  test('full-width in a Chinese sentence, whatever the contents', () => {
+    // This test used to assert the opposite, and the opposite was the bug: a
+    // Chinese sentence quoting an English term had its parens narrowed.
+    assert.equal(out('中文（NMRI）后续\n'), '中文（NMRI）后续\n');
+    assert.equal(out('中文(NMRI)后续\n'), '中文（NMRI）后续\n');
   });
   test('full-width when the contents contain Han', () => {
     assert.equal(out('中文(中文内容)后续\n'), '中文（中文内容）后续\n');
   });
-  test('digits alone count as non-CJK', () => {
-    assert.equal(out('见（1）与（二）\n'), '见(1)与（二）\n');
+  test('what sits inside no longer decides, so digits are irrelevant', () => {
+    assert.equal(out('见（1）与（二）\n'), '见（1）与（二）\n');
   });
   test('preserve leaves both alone', () => {
     assert.equal(
