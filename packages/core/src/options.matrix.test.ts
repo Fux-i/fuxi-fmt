@@ -48,7 +48,6 @@ function variant(n: number): FormatOptionsInput {
       punctuationStyle: take(PUNCT),
       parenStyle: take(PAREN),
       hashtag: take(FLAGS),
-      semicolon: take(FLAGS),
     },
   };
 }

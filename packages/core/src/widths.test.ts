@@ -106,11 +106,22 @@ describe('TYPO-05 punctuation width follows CJK adjacency', () => {
   test('never converts inside inline code', () => {
     assert.equal(out('中文`a,b`中文\n'), '中文 `a,b` 中文\n');
   });
-  test('the semicolon is left alone by default', () => {
-    assert.equal(out('中文;中文\n'), '中文;中文\n');
+  test('the semicolon converts by default, since it is in the change list', () => {
+    assert.equal(out('中文;中文\n'), '中文；中文\n');
   });
-  test('the semicolon converts when asked for', () => {
-    assert.equal(out('中文;中文\n', { typography: { semicolon: true } }), '中文；中文\n');
+
+  test('removing it from the change list leaves it alone', () => {
+    assert.equal(
+      out('中文;中文\n', { typography: { punctuationChangeList: [','] } }),
+      '中文;中文\n',
+    );
+  });
+
+  test('the flag that used to gate it is gone, leaving the list as the only control', () => {
+    assert.equal(
+      out('中文;中文\n', { typography: { punctuationChangeList: [',', ';'] } }),
+      '中文；中文\n',
+    );
   });
   test('can be turned off', () => {
     assert.equal(out('中文,中文\n', { typography: { punctuationStyle: 'off' } }), '中文,中文\n');

@@ -190,7 +190,7 @@ Half-width punctuation adjacent to CJK converts to full-width. `punctuationStyle
 
 - Allowlist-driven. Default: `,` → `，`, `.` → `。`, `:` → `：`, `!` → `！`, `?` → `？`, plus paired quotes.
 - **A `.` converts only when it stands alone and follows CJK** — no dot on either side, and the character before it CJK. A dot is three different things in Markdown (sentence end, decimal point, ellipsis), and adjacency on either side is not enough to tell them apart: `等等...` used to become `等等。..`. Standing alone is the test rather than the end of the line, so `中文.后面还有字` still converts, while `1.5`, `a.b`, `e.g.` and every ellipsis are left alone.
-- Semicolon is **excluded** from the default allowlist. AutoCorrect excludes it deliberately, annotating the decision "danger"; the risk is list/item separators in prose. Available as an opt-in.
+- Semicolon is **included** in the default change list. AutoCorrect excludes it deliberately, annotating the decision "danger", because in prose it separates list items and a wrong full-width semicolon is hard to spot. It is a default rather than a rule: remove `;` from `punctuationChangeList` to keep it half-width.
 - Never converts a character that is Markdown syntax in that position (see INL-02).
 
 **TYPO-06 — Full-width alphanumerics to half-width** · default on
@@ -387,8 +387,7 @@ typography:
   cjkSpacing: true
   collapseBoundarySpaces: true
   punctuationStyle: fullwidth     # fullwidth | halfwidth | mixed | off
-  punctuationAllowlist: [",", ".", ":", "!", "?"]
-  semicolon: false                # opt-in, see TYPO-05
+  punctuationChangeList: [",", ".", ":", "!", "?", ";"]
   parenStyle: mixed               # mixed | fullwidth | halfwidth
   halfwidthAlphanumerics: true
   ideographicSpace: true
@@ -437,7 +436,7 @@ option that once appeared in the config block has been **removed rather than imp
 protection off would mean formatting YAML as Markdown, which is worse than either protecting it (as
 now) or formatting it properly (as this item contemplates). A config key that only makes the output
 worse is not worth keeping as an unimplemented promise. The original goal was "format the YAML". Formatting it safely requires a YAML-significant-character audit and a parse-equality guard, because `:`, `#`, `&`, `*`, `|`, `>`, `@`, quotes and `-` are all significant at some position. Revisit after v1 if comment- and key-order-preserving YAML formatting proves worth the risk.
-3. **Punctuation allowlist contents.** Semicolon is excluded from the default allowlist but reachable through `typography.semicolon` (TYPO-05, implemented in 0.12.0). Whether `、` and the paired quotes belong in the default allowlist is still not settled.
+3. **Punctuation change list contents.** Semicolon is **included** by default (TYPO-05); `typography.semicolon` was removed in favour of the list, so there is one control rather than two. Whether `、` and the paired quotes belong in the list is still not settled.
 4. **`……` and `——` normalization.** Not in v1. If added, they are opt-in rules, and no existing tool converts `--` to `——`.
 5. **Range-formatting semantics.** GRT-06 requires minimal edits. The adapter answers this narrowly: it computes the whole document's edits and keeps only those whose line span intersects the selection, so a partial selection never receives an edit outside it. It does not reason about block-level rules reaching across the boundary — a selection covering half a list is given the half it covers. That is a deliberate simplification, and it should be revisited if it proves surprising in an editor rather than left as an open question.
 

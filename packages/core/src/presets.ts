@@ -34,7 +34,6 @@ export const PRESETS: Readonly<Record<string, FormatOptionsInput>> = {
       parenStyle: 'preserve',
       halfwidthAlphanumerics: false,
       ideographicSpace: false,
-      semicolon: false,
       hashtag: false,
     },
   },

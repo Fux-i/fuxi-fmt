@@ -11,6 +11,10 @@ with release candidates suffixed `-rcN`.
 
 ### Changed
 
+- **`typography.punctuationAllowlist` became `typography.punctuationChangeList`**, and `;` is
+  now in it by default. `typography.semicolon` is deleted: it could only ever append `;` to the list,
+  so once `;` is a default it does nothing, and two controls for one decision is one too many. The
+  list is still the escape hatch — remove `;` from it to keep semicolons half-width (TYPO-05).
 - **`list.indentWidth` became `list.orderedIndent` and `list.unorderedIndent`.** The old name
   described neither of the two jobs the option was doing. Each is `aligned` (the default) or an
   explicit width; `aligned` puts a nested item's marker at its parent's content column, and an

@@ -20,8 +20,8 @@ describe('CFG-01 parsing a configuration document', () => {
   });
   test('does not treat a comment marker inside a string as a comment', () => {
     assert.deepEqual(
-      parseConfig('{"typography": {"punctuationAllowlist": ["//", "/*"]}}'),
-      { typography: { punctuationAllowlist: ['//', '/*'] } },
+      parseConfig('{"typography": {"punctuationChangeList": ["//", "/*"]}}'),
+      { typography: { punctuationChangeList: ['//', '/*'] } },
     );
   });
   test('rejects a malformed document', () => {

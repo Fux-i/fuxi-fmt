@@ -259,12 +259,11 @@ function readSections(raw: Raw): FormatOptionsInput {
     const to: {
       cjkSpacing?: boolean;
       punctuationStyle?: 'fullwidth' | 'halfwidth' | 'mixed' | 'off';
-      punctuationAllowlist?: readonly string[];
+      punctuationChangeList?: readonly string[];
       halfwidthAlphanumerics?: boolean;
       ideographicSpace?: boolean;
       hashtag?: boolean;
       parenStyle?: 'mixed' | 'fullwidth' | 'halfwidth' | 'preserve';
-      semicolon?: boolean;
       cjkClasses?: readonly CjkClass[];
       symbolWhitelist?: readonly string[];
     } = {};
@@ -277,8 +276,11 @@ function readSections(raw: Raw): FormatOptionsInput {
         'off',
       ]);
     }
-    if (from.punctuationAllowlist !== undefined) {
-      to.punctuationAllowlist = strings(from.punctuationAllowlist, 'typography.punctuationAllowlist');
+    if (from.punctuationChangeList !== undefined) {
+      to.punctuationChangeList = strings(
+        from.punctuationChangeList,
+        'typography.punctuationChangeList',
+      );
     }
     if (from.halfwidthAlphanumerics !== undefined) {
       to.halfwidthAlphanumerics = bool(from.halfwidthAlphanumerics, 'typography.halfwidthAlphanumerics');
@@ -296,9 +298,6 @@ function readSections(raw: Raw): FormatOptionsInput {
         'halfwidth',
         'preserve',
       ]);
-    }
-    if (from.semicolon !== undefined) {
-      to.semicolon = bool(from.semicolon, 'typography.semicolon');
     }
     if (from.cjkClasses !== undefined) {
       const names = strings(from.cjkClasses, 'typography.cjkClasses');

@@ -20,7 +20,7 @@ export interface TypographyOptions {
   /** Direction of punctuation width normalisation (TYPO-05). */
   readonly punctuationStyle: PunctuationStyle;
   /** Half-width marks eligible for conversion (TYPO-05). */
-  readonly punctuationAllowlist: readonly string[];
+  readonly punctuationChangeList: readonly string[];
   /** Full-width alphanumerics become half-width (TYPO-06). */
   readonly halfwidthAlphanumerics: boolean;
   /** U+3000 becomes a normal space (TYPO-06). */
@@ -29,8 +29,6 @@ export interface TypographyOptions {
   readonly hashtag: boolean;
   /** Parenthesis width, by the script of the contents (TYPO-08). */
   readonly parenStyle: ParenStyle;
-  /** Also convert ';' beside CJK; off by default (TYPO-05). */
-  readonly semicolon: boolean;
   /** Which scripts count as CJK. Defaults to Han alone. */
   readonly cjkClasses: readonly CjkClass[];
   /** Symbols CJK spacing treats as word characters (TYPO-01). */
@@ -116,12 +114,11 @@ export interface BlankLinesInput {
 export interface TypographyInput {
   readonly cjkSpacing?: boolean;
   readonly punctuationStyle?: PunctuationStyle;
-  readonly punctuationAllowlist?: readonly string[];
+  readonly punctuationChangeList?: readonly string[];
   readonly halfwidthAlphanumerics?: boolean;
   readonly ideographicSpace?: boolean;
   readonly hashtag?: boolean;
   readonly parenStyle?: ParenStyle;
-  readonly semicolon?: boolean;
   readonly cjkClasses?: readonly CjkClass[];
   readonly symbolWhitelist?: readonly string[];
 }
@@ -149,12 +146,11 @@ export const defaultOptions: FormatOptions = {
   typography: {
     cjkSpacing: true,
     punctuationStyle: 'fullwidth',
-    punctuationAllowlist: [',', '.', ':', '!', '?'],
+    punctuationChangeList: [',', '.', ':', '!', '?', ';'],
     halfwidthAlphanumerics: true,
     ideographicSpace: true,
     hashtag: false,
     parenStyle: 'mixed',
-    semicolon: false,
     cjkClasses: DEFAULT_CJK_CLASSES,
     symbolWhitelist: new Set(DEFAULT_SPACING_SYMBOLS),
   },
@@ -189,8 +185,9 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
       cjkSpacing: input?.typography?.cjkSpacing ?? defaultOptions.typography.cjkSpacing,
       punctuationStyle:
         input?.typography?.punctuationStyle ?? defaultOptions.typography.punctuationStyle,
-      punctuationAllowlist:
-        input?.typography?.punctuationAllowlist ?? defaultOptions.typography.punctuationAllowlist,
+      punctuationChangeList:
+        input?.typography?.punctuationChangeList ??
+        defaultOptions.typography.punctuationChangeList,
       halfwidthAlphanumerics:
         input?.typography?.halfwidthAlphanumerics ??
         defaultOptions.typography.halfwidthAlphanumerics,
@@ -198,7 +195,6 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
         input?.typography?.ideographicSpace ?? defaultOptions.typography.ideographicSpace,
       hashtag: input?.typography?.hashtag ?? defaultOptions.typography.hashtag,
       parenStyle: input?.typography?.parenStyle ?? defaultOptions.typography.parenStyle,
-      semicolon: input?.typography?.semicolon ?? defaultOptions.typography.semicolon,
       cjkClasses: input?.typography?.cjkClasses ?? defaultOptions.typography.cjkClasses,
       symbolWhitelist: new Set(
         input?.typography?.symbolWhitelist ?? defaultOptions.typography.symbolWhitelist,

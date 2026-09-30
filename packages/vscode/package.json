@@ -118,20 +118,21 @@
           ],
           "markdownDescription": "%fuxiFmt.typography.punctuationStyle.description%"
         },
-        "fuxiFmt.typography.punctuationAllowlist": {
+        "fuxiFmt.typography.punctuationChangeList": {
           "type": "array",
+          "items": {
+            "type": "string"
+          },
           "default": [
             ",",
             ".",
             ":",
             "!",
-            "?"
+            "?",
+            ";"
           ],
           "scope": "resource",
-          "items": {
-            "type": "string"
-          },
-          "markdownDescription": "%fuxiFmt.typography.punctuationAllowlist.description%"
+          "markdownDescription": "%fuxiFmt.typography.punctuationChangeList.description%"
         },
         "fuxiFmt.typography.halfwidthAlphanumerics": {
           "type": "boolean",
@@ -168,12 +169,6 @@
             "%fuxiFmt.typography.parenStyle.enum.3%"
           ],
           "markdownDescription": "%fuxiFmt.typography.parenStyle.description%"
-        },
-        "fuxiFmt.typography.semicolon": {
-          "type": "boolean",
-          "default": false,
-          "scope": "resource",
-          "markdownDescription": "%fuxiFmt.typography.semicolon.description%"
         },
         "fuxiFmt.typography.cjkClasses": {
           "type": "array",

@@ -166,13 +166,7 @@ export function normalizePunctuation(
 ): string {
   if (options.punctuationStyle === 'off') return text;
 
-  // The semicolon is dangerous enough that AutoCorrect excludes it with the
-  // annotation "danger": in prose it separates list items, and a wrong
-  // full-width semicolon is hard to spot. It is off unless asked for.
-  const effective = options.semicolon
-    ? [...options.punctuationAllowlist, ';']
-    : options.punctuationAllowlist;
-  const allowed = new Set(effective);
+  const allowed = new Set(options.punctuationChangeList);
   const toFull = new Map<string, string>();
   const toHalf = new Map<string, string>();
   for (const [half, full] of HALF_TO_FULL) {

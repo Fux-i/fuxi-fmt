@@ -64,7 +64,7 @@ project on purpose.
 ```json
 {
   "fuxiFmt.enable": true,
-  "fuxiFmt.typography.semicolon": true,
+  "fuxiFmt.typography.punctuationChangeList": [",", ".", ":", "!", "?", ";"],
   "fuxiFmt.config": { "blankLines": { "aroundBlocks": "atLeast" } }
 }
 ```
