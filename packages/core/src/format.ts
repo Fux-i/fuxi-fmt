@@ -133,12 +133,37 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
 
   const blocks = segment(reindented, ranges);
 
+  // BLK-03. A blank line between list items decides how the list renders, so the
+  // policy is explicit. Removing one is only safe between items of the *same*
+  // list: a blank between different markers separates two lists, and collapsing
+  // it would merge them.
+  const listBlanks = options.blankLines.insideLists;
+  const isItem = (line: number): boolean => itemLines.has(line) && protectedLine[line] !== true;
+  const listMarkOf = (index: number): string | null => {
+    const block = blocks[index];
+    if (block === undefined) return null;
+    for (let j = block.start; j < block.end; j++) {
+      if (!isItem(j)) continue;
+      const item = listItems.find((candidate) => candidate.line === j);
+      return item === undefined ? null : item.marker;
+    }
+    return null;
+  };
+  const sameList = (a: number, b: number): boolean => {
+    const left = listMarkOf(a);
+    const right = listMarkOf(b);
+    return left !== null && left === right;
+  };
+
   const parts: string[] = [];
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i];
     if (block === undefined) continue;
     if (i > 0) {
-      const blanks = blankCount(block.blanksBefore, options);
+      let blanks = blankCount(block.blanksBefore, options);
+      if (listBlanks !== 'preserve' && sameList(i - 1, i)) {
+        blanks = listBlanks === 'remove' ? 0 : 1;
+      }
       for (let k = 0; k < blanks; k++) parts.push('');
     }
     for (let j = block.start; j < block.end; j++) {
@@ -146,14 +171,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
       // so it never happens unless asked for. The j > block.start guard is what
       // keeps this idempotent - on a second pass each item is already its own
       // block with its own blank before it.
-      if (
-        options.blankLines.insideLists &&
-        j > block.start &&
-        itemLines.has(j) &&
-        protectedLine[j] !== true
-      ) {
-        parts.push('');
-      }
+      if (listBlanks === 'one' && j > block.start && isItem(j)) parts.push('');
       parts.push(reindented[j] ?? texts[j] ?? '');
     }
   }

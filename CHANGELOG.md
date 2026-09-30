@@ -11,6 +11,13 @@ with release candidates suffixed `-rcN`.
 
 ### Changed
 
+- **BREAKING: `blankLines.insideLists` is now `remove` | `one` | `preserve` and defaults
+  to `remove`.** It was a boolean that could only ever insert a blank, so a tight list could be
+  made loose but never the reverse; and a blank between list items decides how the list renders,
+  which is not a thing to leave half-controlled. `remove` collapses a loose list to tight, `one`
+  expands a tight list to loose, and `preserve` leaves the author's spacing alone. It applies only
+  between items of the same list — a blank between different markers separates two lists, and
+  merging them would change the document (BLK-03).
 - **`typography.punctuationAllowlist` became `typography.punctuationChangeList`**, and `;` is
   now in it by default. `typography.semicolon` is deleted: it could only ever append `;` to the list,
   so once `;` is a default it does nothing, and two controls for one decision is one too many. The

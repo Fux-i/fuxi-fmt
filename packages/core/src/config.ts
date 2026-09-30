@@ -174,7 +174,11 @@ function readSections(raw: Raw): FormatOptionsInput {
 
   if (raw.blankLines !== undefined) {
     const from = section(raw.blankLines, 'blankLines');
-    const to: { aroundBlocks?: 'exact' | 'atLeast'; maxConsecutive?: number | null } = {};
+    const to: {
+      aroundBlocks?: 'exact' | 'atLeast';
+      maxConsecutive?: number | null;
+      insideLists?: 'remove' | 'one' | 'preserve';
+    } = {};
     if (from.aroundBlocks !== undefined) {
       to.aroundBlocks = oneOf(from.aroundBlocks, 'blankLines.aroundBlocks', ['exact', 'atLeast']);
     }
@@ -184,6 +188,13 @@ function readSections(raw: Raw): FormatOptionsInput {
         throw new Error('config: blankLines.maxConsecutive must be a positive integer or null');
       }
       to.maxConsecutive = cap as number | null;
+    }
+    if (from.insideLists !== undefined) {
+      to.insideLists = oneOf(from.insideLists, 'blankLines.insideLists', [
+        'remove',
+        'one',
+        'preserve',
+      ]);
     }
     out.blankLines = to;
   }

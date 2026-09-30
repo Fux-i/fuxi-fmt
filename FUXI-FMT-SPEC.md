@@ -85,7 +85,7 @@ Insert blank lines around top-level blocks: paragraphs, headings, lists, fenced 
 
 **BLK-03 — Preserve list tightness** · always on
 
-Never insert a blank line that flips a tight list to loose, or vice versa. A tight list renders to different HTML than a loose one, so this is a **semantic** constraint, not a stylistic one. Blank-line insertion inside lists and blockquotes is opt-in (`blankLines.insideLists`, `blankLines.insideBlockquotes`, both default off) and documented as rendering-affecting.
+A blank line between list items decides whether the list renders tight or loose, and those are different HTML. The policy is therefore explicit rather than incidental: `blankLines.insideLists` is `remove` (default), `one` or `preserve`, and it applies only between items of the *same* list — a blank between different markers separates two lists, and collapsing it would merge them. `blankLines.insideBlockquotes` was withdrawn rather than implemented (section 7, item 0).
 
 **BLK-04 — One space after list markers**
 
@@ -368,7 +368,7 @@ preset: default          # default | strict-commonmark
 blankLines:
   aroundBlocks: exact    # exact | atLeast
   maxConsecutive: 1      # number | null
-  insideLists: false
+  insideLists: remove       # remove | one | preserve
 
 list:
   unorderedMarker: dashes   # dashes | asterisks | preserve

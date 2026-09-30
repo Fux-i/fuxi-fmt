@@ -1,14 +1,16 @@
 import { DEFAULT_CJK_CLASSES, DEFAULT_SPACING_SYMBOLS, type CjkClass } from './chars.ts';
 
 export type AroundBlocks = 'exact' | 'atLeast';
+export type ListBlankLines = 'remove' | 'one' | 'preserve';
 
 export interface BlankLinesOptions {
   /** Whether blocks are separated by exactly one blank line, or at least one. */
   readonly aroundBlocks: AroundBlocks;
   /** Cap on consecutive blank lines; null means unbounded. */
   readonly maxConsecutive: number | null;
-  /** Blank line between list items. Flips a tight list to loose (BLK-03). */
-  readonly insideLists: boolean;
+  /** Blank lines between list items (BLK-03). `remove` flips a loose list to
+   * tight, `one` flips a tight list to loose, and `preserve` does neither. */
+  readonly insideLists: ListBlankLines;
 }
 
 export type PunctuationStyle = 'fullwidth' | 'halfwidth' | 'mixed' | 'off';
@@ -108,7 +110,7 @@ export interface FormatOptions {
 export interface BlankLinesInput {
   readonly aroundBlocks?: AroundBlocks;
   readonly maxConsecutive?: number | null;
-  readonly insideLists?: boolean;
+  readonly insideLists?: ListBlankLines;
 }
 
 export interface TypographyInput {
@@ -142,7 +144,7 @@ export interface FormatOptionsInput {
 }
 
 export const defaultOptions: FormatOptions = {
-  blankLines: { aroundBlocks: 'exact', maxConsecutive: 1, insideLists: false },
+  blankLines: { aroundBlocks: 'exact', maxConsecutive: 1, insideLists: 'remove' },
   typography: {
     cjkSpacing: true,
     punctuationStyle: 'fullwidth',

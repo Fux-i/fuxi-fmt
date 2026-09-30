@@ -89,9 +89,18 @@
           "markdownDescription": "%fuxiFmt.blankLines.maxConsecutive.description%"
         },
         "fuxiFmt.blankLines.insideLists": {
-          "type": "boolean",
-          "default": false,
+          "enum": [
+            "remove",
+            "one",
+            "preserve"
+          ],
+          "default": "remove",
           "scope": "resource",
+          "enumDescriptions": [
+            "%fuxiFmt.blankLines.insideLists.enum.0%",
+            "%fuxiFmt.blankLines.insideLists.enum.1%",
+            "%fuxiFmt.blankLines.insideLists.enum.2%"
+          ],
           "markdownDescription": "%fuxiFmt.blankLines.insideLists.description%"
         },
         "fuxiFmt.typography.cjkSpacing": {
