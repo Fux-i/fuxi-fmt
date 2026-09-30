@@ -121,22 +121,20 @@ export function normalizeParens(
 
 /** TYPO-05: half-width punctuation becomes full-width beside CJK, and vice versa. */
 /**
- * Is this '.' the lone full stop ending its line?
+ * Is this '.' a lone full stop following CJK?
  *
- * A '.' in Markdown is three different things: a sentence end, a decimal point,
- * an ellipsis. Converting on adjacency alone turned '等等...' into '等等。..',
- * because the first dot's left neighbour is CJK. Requiring the dot to be the last
- * non-blank character on its line, and to not follow another dot, leaves decimals
- * and ellipses alone while still converting a real full stop.
+ * A '.' in Markdown is three different things: a sentence end, a decimal point
+ * and an ellipsis, and adjacency on either side was not enough to tell them
+ * apart - '等等...' became '等等。..' because the first dot's left neighbour is
+ * CJK. The dot must stand alone, with no dot on either side, and follow CJK.
+ *
+ * Standing alone is the test, not the end of the line: '中文.后面还有字' is a
+ * sentence boundary and converts, while an ellipsis anywhere does not.
  */
-function isLoneTrailingDot(text: string, i: number): boolean {
-  if (text.charAt(i - 1) === '.') return false;
-  for (let j = i + 1; j < text.length; j++) {
-    const c = text.charAt(j);
-    if (c === '\n') return true;
-    if (c !== ' ' && c !== '\t' && c !== '\r') return false;
-  }
-  return true;
+function isLoneDotAfterCjk(text: string, i: number, classes: readonly CjkClass[]): boolean {
+  if (text.charAt(i - 1) === '.' || text.charAt(i + 1) === '.') return false;
+  const previous = text.charAt(i - 1);
+  return previous.length > 0 && isCjk(previous, classes);
 }
 
 export function normalizePunctuation(
@@ -178,7 +176,7 @@ export function normalizePunctuation(
     const right = i + 1 < text.length ? text.charAt(i + 1) : '';
 
     const full = toFull.get(ch);
-    if (ch === '.' && !isLoneTrailingDot(text, i)) {
+    if (ch === '.' && !isLoneDotAfterCjk(text, i, classes)) {
       out += ch;
       continue;
     }

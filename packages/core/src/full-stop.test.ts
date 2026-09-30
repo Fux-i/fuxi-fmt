@@ -3,16 +3,17 @@ import assert from 'node:assert/strict';
 import { format } from './format.ts';
 
 /**
- * A '.' is a full stop, a decimal point or an ellipsis. Only the first converts,
- * and only when it is the lone full stop ending its line.
+ * A '.' is a full stop, a decimal point or an ellipsis. Only a lone dot standing
+ * after CJK converts, wherever it sits on the line.
  */
 describe('the full stop', () => {
-  test('converts a lone dot at the end of a line', () => {
+  test('converts a lone dot after CJK at the end of a line', () => {
     assert.equal(format('中文.\n').output, '中文。\n');
   });
 
-  test('converts one followed only by spaces', () => {
-    assert.equal(format('中文.  \n').output, '中文。\n');
+  test('converts a lone dot after CJK in the middle of a line', () => {
+    assert.equal(format('中文.后面还有字\n').output, '中文。后面还有字\n');
+    assert.equal(format('中文.中文\n').output, '中文。中文\n');
   });
 
   test('leaves an ellipsis alone', () => {
@@ -21,13 +22,11 @@ describe('the full stop', () => {
     assert.equal(format('等等……\n').output, '等等……\n');
   });
 
-  test('leaves a mid-line dot alone, because it may not be a full stop', () => {
-    assert.equal(format('中文.后面还有字\n').output, '中文.后面还有字\n');
-  });
-
-  test('leaves decimals and abbreviations alone', () => {
+  test('leaves a dot that does not follow CJK alone', () => {
     assert.equal(format('1.5\n').output, '1.5\n');
     assert.equal(format('a.b\n').output, 'a.b\n');
+    assert.equal(format('e.g.\n').output, 'e.g.\n');
+    assert.equal(format('abc.中文\n').output, 'abc.中文\n');
   });
 
   test('an already full-width stop is untouched', () => {

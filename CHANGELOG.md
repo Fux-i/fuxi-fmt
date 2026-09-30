@@ -11,10 +11,11 @@ with release candidates suffixed `-rcN`.
 
 ### Fixed
 
-- **A full stop is no longer converted mid-sentence or inside an ellipsis.** `等等...` became
-  `等等。..` and `中文.后面还有字` became `中文。后面还有字`, because the rule converted any
-  allowlisted mark with a CJK neighbour on either side. A `.` now converts only when it is the lone
-  full stop ending its line (TYPO-05).
+- **An ellipsis is no longer turned into a full stop and two stray dots.** `等等...` became
+  `等等。..`, because the rule converted any allowlisted mark with a CJK neighbour on either side
+  and the first dot of an ellipsis follows CJK. A `.` now converts only when it stands alone - no dot
+  on either side - and follows CJK. `1.5`, `a.b` and `e.g.` are untouched, and `中文.后面还有字`
+  still converts to `中文。后面还有字` (TYPO-05).
 - **`ignore.*` and `typography.symbolWhitelist` could not be set in a `fuxi-fmt.json`.**
   `readSections` had no branch for either, and `mergeOptions` dropped `ignore` outright - so the
   editor's own settings layer lost it too, at the merge step. Four directive names and one symbol

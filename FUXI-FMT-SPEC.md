@@ -183,7 +183,7 @@ A single principle resolves every disputed case: **number↔unit tightness is no
 Half-width punctuation adjacent to CJK converts to full-width. `punctuationStyle: "fullwidth" | "halfwidth" | "mixed"` (default `fullwidth`).
 
 - Allowlist-driven. Default: `,` → `，`, `.` → `。`, `:` → `：`, `!` → `！`, `?` → `？`, plus paired quotes.
-- **A `.` converts only when it is the lone full stop ending its line** — the last non-blank character, not preceded by another `.`. A dot is three different things in Markdown (sentence end, decimal point, ellipsis), and adjacency alone is not enough to tell them apart: `等等...` used to become `等等。..`. `1.5`, `a.b` and a mid-line `中文.后面` are all left alone.
+- **A `.` converts only when it stands alone and follows CJK** — no dot on either side, and the character before it CJK. A dot is three different things in Markdown (sentence end, decimal point, ellipsis), and adjacency on either side is not enough to tell them apart: `等等...` used to become `等等。..`. Standing alone is the test rather than the end of the line, so `中文.后面还有字` still converts, while `1.5`, `a.b`, `e.g.` and every ellipsis are left alone.
 - Semicolon is **excluded** from the default allowlist. AutoCorrect excludes it deliberately, annotating the decision "danger"; the risk is list/item separators in prose. Available as an opt-in.
 - Never converts a character that is Markdown syntax in that position (see INL-02).
 
