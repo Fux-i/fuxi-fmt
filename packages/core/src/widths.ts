@@ -120,6 +120,25 @@ export function normalizeParens(
 }
 
 /** TYPO-05: half-width punctuation becomes full-width beside CJK, and vice versa. */
+/**
+ * Is this '.' the lone full stop ending its line?
+ *
+ * A '.' in Markdown is three different things: a sentence end, a decimal point,
+ * an ellipsis. Converting on adjacency alone turned '等等...' into '等等。..',
+ * because the first dot's left neighbour is CJK. Requiring the dot to be the last
+ * non-blank character on its line, and to not follow another dot, leaves decimals
+ * and ellipses alone while still converting a real full stop.
+ */
+function isLoneTrailingDot(text: string, i: number): boolean {
+  if (text.charAt(i - 1) === '.') return false;
+  for (let j = i + 1; j < text.length; j++) {
+    const c = text.charAt(j);
+    if (c === '\n') return true;
+    if (c !== ' ' && c !== '\t' && c !== '\r') return false;
+  }
+  return true;
+}
+
 export function normalizePunctuation(
   text: string,
   options: TypographyOptions,
@@ -159,6 +178,10 @@ export function normalizePunctuation(
     const right = i + 1 < text.length ? text.charAt(i + 1) : '';
 
     const full = toFull.get(ch);
+    if (ch === '.' && !isLoneTrailingDot(text, i)) {
+      out += ch;
+      continue;
+    }
     if (doFull && full !== undefined && (isCjk(left, classes) || isCjk(right, classes))) {
       out += full;
       continue;
