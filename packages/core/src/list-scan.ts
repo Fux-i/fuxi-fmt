@@ -191,15 +191,9 @@ export function planListIndent(
 
     const parentIndex = parents[i] ?? -1;
     const parent = items[parentIndex];
-    // A child sits at the parent's content column, or at the configured indent
-    // width when that is wider. The max matters: a long ordered marker such as
-    // '10. ' has a content column of 4, and honouring an indentWidth of 2 there
-    // would place the child shallower than its parent's content and break the
-    // nesting it exists to keep. At the default width of 2 the max always
-    // selects the content column, so nothing changes by default.
-    // 'aligned' passes 0 and therefore selects the parent's content column; an
-    // explicit width is a floor. The max is what keeps nesting: a '10. ' parent
-    // has a content column of 4, and a narrower setting must not place the child
+    // 'aligned' passes 0, so the parent's content column is selected; an explicit
+    // width is a floor. The max is what keeps nesting: a '10. ' parent has a
+    // content column of 4, and a narrower setting must not place the child
     // shallower than the parent's content.
     const minFor = item.ordered ? orderedMin : unorderedMin;
     const width = parent === undefined ? 0 : Math.max(minFor, parent.contentColumn - parent.indent);

@@ -116,7 +116,7 @@ git-diff-friendly style; `preserve` changes no number at all.
 
 **BLK-08 — List indentation width** · default `2`
 
-`list.indentWidth: 2 | 4 | "tab"`. Applies to nested list content and continuation lines. **Interacts with SAFE-02**: a list containing a protected block is excluded from reindentation, and a diagnostic is reported. See §7 open item 1. **Implemented** — the width is a floor under the parent's content column, so a long ordered marker keeps its own column and an explicit width of 4 widens nesting.
+`list.orderedIndent: "aligned" | 4` and `list.unorderedIndent: "aligned" | 3 | 4`. Applies to nested list content and continuation lines. **Interacts with SAFE-02**: a list containing a protected block is excluded from reindentation. See §7 open item 1. **Implemented** — `aligned` puts a nested item's marker at its parent's content column, and an explicit width is a floor under that column, so a long ordered marker keeps its own column and nesting is never broken.
 
 **BLK-09 — Blockquote marker spacing**
 
@@ -406,7 +406,7 @@ ignore:
 ```
 
 **Implementation status.** **Not implemented at all:** `typography.collapseBoundarySpaces`.
-**Partially implemented:** `list.indentWidth`, which today only controls how
+**Partially implemented:** `list.orderedIndent` / `list.unorderedIndent`, which today only controls how
 hard tabs are expanded, and also sets the minimum indent width that list reindentation targets. Everything else in this
 block is implemented.
 
@@ -429,7 +429,7 @@ Everything in this block is implemented.
 indentation normalization, and a diagnostic is reported when that happens. Option (a) — letting
 the fence follow the list — would move code the author wrote at a fixed indentation, and moving
 code is precisely what SAFE-02 exists to prevent. Excluding the list keeps both promises.
-**Implemented.** `list.indentWidth` sets the minimum indent width used by list reindentation, and
+**Implemented.** `list.orderedIndent` / `list.unorderedIndent` sets the minimum indent width used by list reindentation, and
 `list.tabWidth` the width hard tabs are expanded to — two jobs that one option used to conflate:
 reindentation is driven by the parent's content column, not by that option.
 2. **YAML front matter format** (FM-01) is currently "protect entirely". The `frontMatter.enabled`
