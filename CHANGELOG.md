@@ -9,6 +9,10 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.23.0] - 2026-09-30
+
 ### Changed
 
 - **BREAKING: `blankLines.insideLists` is now `remove` | `one` | `preserve` and defaults
