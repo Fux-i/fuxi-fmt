@@ -22,9 +22,9 @@ int main(){}
 1. 00
 1. 333
    - yes  (bad!)
-  - ok
-    1) fine
-    2) 33
+- ok
+  1) fine
+  2) 33
 - what?
   - why?
   - eee

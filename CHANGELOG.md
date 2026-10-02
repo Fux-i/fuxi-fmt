@@ -9,6 +9,17 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
+### Added
+
+- **A byte-exact fixture corpus, which the repository has claimed to have since its first draft.**
+  `packages/core/test/fixtures/corpus/` holds two documents: the author's own stress file — the one
+  this round's reports came from — and a zoo containing every one of the ten protected region kinds
+  the scanner knows. Each is compared byte for byte, checked for idempotence, and checked for
+  protection by comparing the regions themselves rather than trusting the golden file. A test fails
+  if any region kind is uncovered, so the corpus cannot quietly stop being a corpus (GRT-01, GRT-02).
+  Building it immediately paid for itself: it showed that the list-indent bug below was still
+  unfixed after four rounds of believing otherwise.
+
 ### Fixed
 
 - **An item that falls out of a list is dedented to the level it actually occupies.** `1. 333` with

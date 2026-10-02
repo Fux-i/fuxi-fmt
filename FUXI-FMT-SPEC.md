@@ -277,7 +277,7 @@ These are the general form of "don't touch code blocks". Every one is byte-verba
 
 ### F. Guarantees
 
-**GRT-01 — Semantic preservation.** `format(x)` parses to the same tree as `x`, except for an exhaustive, documented list of intentional differences (full-width punctuation conversion changes text; list-tightness flips are forbidden by BLK-03 and therefore appear nowhere). Enforced mechanically by comparing a parse of the input with a parse of the output and **refusing to write on mismatch** — the pattern mdformat calls `validate`.
+**GRT-01 — Semantic preservation.** `format(x)` parses to the same tree as `x`, except for an exhaustive, documented list of intentional differences: full-width punctuation conversion changes text; BLK-12 removes blank lines at the edges of a code block, which is the one rule that changes protected bytes and the one exception the guard grants; a paragraph may be promoted to a heading when the only difference is a space after the hash run (BLK-05). List-tightness flips are forbidden by BLK-03 and therefore appear nowhere. Enforced mechanically by comparing a parse of the input with a parse of the output and **refusing to write on mismatch** — the pattern mdformat calls `validate`.
 
 **GRT-02 — Idempotence.** `format(format(x)) === format(x)` for every file in the corpus.
 

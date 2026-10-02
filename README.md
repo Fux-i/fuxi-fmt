@@ -306,7 +306,7 @@ rather than implied by a config key.
 | `blankLines.insideLists` | **Shipped.** Three-way: `remove` / `one` / `preserve`, default `remove`. The escape hatch for an author who wants the loose form exists, and BLK-03 stops the formatter doing it unasked. |
 | `typography.spacingSymbols` (was `symbolWhitelist`) | **Shipped.** The symbol set is configurable; `cjkClasses` set the precedent and a Japanese or Korean user can now ask for a different one. |
 | **Extension host** | The bundle runs against a stubbed `vscode` module in tests. It has never been loaded by a real editor. |
-| **Real documents** | Everything is verified against generated fixtures, a synthetic article, and this repository's own Markdown. The formatter has never seen a real Chinese technical article. |
+| **The corpus** | `packages/core/test/fixtures/corpus/` is a byte-exact corpus: the author's own stress document and a zoo of every protected region the scanner knows, with the region comparison verified rather than assumed and a test that fails if any region kind goes uncovered. It is still not a real Chinese technical article. |
 
 **Not implemented at all:** `typography.collapseBoundarySpaces`. The specification declares the
 same set, and a test asserts the two lists agree.
