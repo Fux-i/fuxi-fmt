@@ -123,6 +123,9 @@ git-diff-friendly style; `preserve` changes no number at all.
 
 `list.orderedIndent: "aligned" | 4` and `list.unorderedIndent: "aligned" | 3 | 4`. Applies to nested list content and continuation lines. **Interacts with SAFE-02**: a list containing a protected block is excluded from reindentation. See §7 open item 1. **Implemented** — `aligned` puts a nested item's marker at its parent's content column, and an explicit width is a floor under that column, so a long ordered marker keeps its own column and nesting is never broken.
 
+- **A top-level item keeps the offset it was written with**, because snapping an already-indented fragment to column 0 is the bug this scanner was written to replace. "Top-level" means the item opened the list.
+- **An item that falls out of an open ancestor is dedented to its container.** An item written shallower than the item above it cannot be that item's child, so it ends the list - and it used to keep the indent that made it look like a child anyway, which is how `1. 333` / `  - ok` stayed looking nested when it was not. Falling out means closing an item *shallower* than itself: closing a sibling at the same indent is ordinary list structure and changes nothing. The two situations look alike in the parent array and are not the same.
+
 **BLK-09 — Blockquote marker spacing**
 
 `>text` becomes `> text`; extra spaces after `>` collapse to one.

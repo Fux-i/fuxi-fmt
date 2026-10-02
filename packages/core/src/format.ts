@@ -129,7 +129,8 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   // Lists containing a protected block are excluded from the plan (option b).
   const listItems = scanListItems(texts);
   const itemLines = new Set(listItems.map((item) => item.line));
-  const listParents = assignParents(listItems);
+  const listBrokeOut: boolean[] = [];
+  const listParents = assignParents(listItems, listBrokeOut);
   const excludedLists = new Set(
     findExcludedLists(texts, listItems, listParents, protectedLine),
   );
@@ -144,6 +145,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     excludedLists,
     orderedMin,
     unorderedMin,
+    listBrokeOut,
   )) {
     reindented[change.line] = change.text;
   }

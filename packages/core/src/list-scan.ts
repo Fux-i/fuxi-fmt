@@ -63,7 +63,11 @@ export function scanListItems(lines: readonly string[]): ListItem[] {
  * items keep the indentation they were written with: snapping them to column 0
  * is precisely the bug that dedented an already-indented fragment.
  */
-export function assignParents(items: readonly ListItem[]): number[] {
+/**
+ * @param brokeOut Filled with one flag per item: true when the item closed an
+ * ancestor on its way in, which is a different situation from opening the list.
+ */
+export function assignParents(items: readonly ListItem[], brokeOut?: boolean[]): number[] {
   const parents: number[] = [];
   const open: number[] = [];
 
@@ -71,13 +75,20 @@ export function assignParents(items: readonly ListItem[]): number[] {
     const item = items[i];
     if (item === undefined) continue;
 
+    // Closing a *sibling* is ordinary list structure: the previous item at the same
+    // indent leaves the parent stack on the way to this one. Closing something
+    // shallower than this item is the item falling out of a list that cannot hold
+    // it, which is the case that has an indent worth removing.
+    let closedOuter = false;
     while (open.length > 0) {
       const top = items[open[open.length - 1] ?? 0];
       if (top === undefined || top.contentColumn <= item.indent) break;
+      if (top.indent < item.indent) closedOuter = true;
       open.pop();
     }
 
     parents.push(open.length > 0 ? (open[open.length - 1] ?? -1) : -1);
+    brokeOut?.push(closedOuter);
     open.push(i);
   }
 
@@ -180,6 +191,7 @@ export function planListIndent(
   excluded: ReadonlySet<number> = new Set(),
   orderedMin = 0,
   unorderedMin = 0,
+  brokeOut: readonly boolean[] = [],
 ): Reindent[] {
   const isItemLine = new Set(items.map((item) => item.line));
   const planned = new Map<number, string>();
@@ -191,13 +203,23 @@ export function planListIndent(
 
     const parentIndex = parents[i] ?? -1;
     const parent = items[parentIndex];
+    // Two ways to have no parent, and they are not the same. Opening the list is a
+    // fragment, and a fragment keeps the offset it was written at. Closing an
+    // ancestor means the item fell out of a list it cannot belong to, and the
+    // indent that made it look like a child is the indent to remove.
+    const fellOut = parent === undefined && brokeOut[i] === true;
     // 'aligned' passes 0, so the parent's content column is selected; an explicit
     // width is a floor. The max is what keeps nesting: a '10. ' parent has a
     // content column of 4, and a narrower setting must not place the child
     // shallower than the parent's content.
     const minFor = item.ordered ? orderedMin : unorderedMin;
     const width = parent === undefined ? 0 : Math.max(minFor, parent.contentColumn - parent.indent);
-    const target = parent === undefined ? item.indent : (placed[parentIndex] ?? parent.indent) + width;
+    const target =
+      parent === undefined
+        ? fellOut
+          ? 0
+          : item.indent
+        : (placed[parentIndex] ?? parent.indent) + width;
     // Pushed before the exclusion test so that placed stays aligned with the
     // item indices; a skipped item still has to occupy its slot.
     placed.push(target);

@@ -9,6 +9,16 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **An item that falls out of a list is dedented to the level it actually occupies.** `1. 333` with
+  `   - yes` under it and `  - ok` written shallower than both used to come out untouched: the item
+  was correctly read as belonging to no parent, and every parentless item kept the offset it was
+  written with. That policy exists so an already-indented *fragment* is not snapped to column 0, and
+  it was being applied to a different situation. Falling out means closing an item shallower than
+  itself — closing a sibling is ordinary structure — and the two are now told apart, so the snippet
+  becomes the tree it already had: `- ok` at column 0 and its children under it (BLK-08).
+
 ### Changed
 
 - **Punctuation and parenthesis width now share one rule, and the default is the whole line
