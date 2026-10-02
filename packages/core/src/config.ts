@@ -275,6 +275,7 @@ function readSections(raw: Raw): FormatOptionsInput {
       ideographicSpace?: boolean;
       hashtag?: boolean;
       parenStyle?: 'mixed' | 'fullwidth' | 'halfwidth' | 'preserve';
+      context?: 'line' | 'adjacent';
       cjkClasses?: readonly CjkClass[];
       symbolWhitelist?: readonly string[];
     } = {};
@@ -309,6 +310,9 @@ function readSections(raw: Raw): FormatOptionsInput {
         'halfwidth',
         'preserve',
       ]);
+    }
+    if (from.context !== undefined) {
+      to.context = oneOf(from.context, 'typography.context', ['line', 'adjacent']);
     }
     if (from.cjkClasses !== undefined) {
       const names = strings(from.cjkClasses, 'typography.cjkClasses');

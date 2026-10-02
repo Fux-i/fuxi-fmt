@@ -9,6 +9,22 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
+### Changed
+
+- **Punctuation and parenthesis width now share one rule, and the default is the whole line
+  rather than the character next to the mark.** New `typography.context: "line" | "adjacent"`,
+  default `line`. `这就是**自信**(confidence)的体现` kept half-width parentheses because the
+  character before `(` was `*`, while the identical sentence without the asterisks converted —
+  each rule answered the same question its own way and each got a different case wrong.
+  Two bounds keep the wider rule honest. A quoted span is its own scope, so an English sentence
+  inside Chinese quotation marks keeps English punctuation, and the rule stays idempotent once
+  those quotes are curly. A mark written tight against a Latin letter or digit belongs to that
+  word, which is what keeps `1,000`, `3.14`, `10:30`, `e.g.` and `foo(bar)` intact with no
+  exception list for any of them. CJK directly beside a mark still wins, so `abc,中文` converts.
+  Spaces no longer hide a mark either: `中文 , 后面` becomes `中文，后面`. Parentheses read only
+  the character outside the pair, never the bracketed term, so `English(中文)English` keeps
+  half-width parens while `中文(English)文` does not. `adjacent` is the narrower rule for anyone
+  who wants it, and now looks through emphasis markers as well (TYPO-05, TYPO-08).
 ### Fixed
 
 - **A closing fence indented more than three columns past the opener no longer suppresses

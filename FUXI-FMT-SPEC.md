@@ -193,7 +193,9 @@ A single principle resolves every disputed case: **number↔unit tightness is no
 
 **TYPO-05 — Punctuation width, CJK-adjacent** · default `fullwidth`
 
-Half-width punctuation adjacent to CJK converts to full-width. `punctuationStyle: "fullwidth" | "halfwidth" | "mixed"` (default `fullwidth`).
+Half-width punctuation in Chinese context converts to full-width. `punctuationStyle: "fullwidth" | "halfwidth" | "mixed"` (default `fullwidth`).
+
+- **What counts as Chinese context is one decision, shared with TYPO-08.** By default the whole line decides, so a Chinese sentence quoting an English term gets Chinese punctuation around it. Two bounds apply. A quoted span is its own scope, so an English sentence inside Chinese quotation marks keeps English punctuation; and a mark written tight against a Latin letter or digit belongs to that word, which is what keeps `1,000`, `3.14`, `10:30` and `foo(bar)` intact without an exception list for any of them. CJK directly beside the mark always wins, so `abc,中文` converts. `typography.context: "line" | "adjacent"` (default `line`); `adjacent` reads only the nearest significant character on either side, which is the older, narrower rule.
 
 - Allowlist-driven. Default: `,` → `，`, `.` → `。`, `:` → `：`, `!` → `！`, `?` → `？`, plus paired quotes.
 - **A `.` converts only when it stands alone and follows CJK** — no dot on either side, and the character before it CJK. A dot is three different things in Markdown (sentence end, decimal point, ellipsis), and adjacency on either side is not enough to tell them apart: `等等...` used to become `等等。..`. Standing alone is the test rather than the end of the line, so `中文.后面还有字` still converts, while `1.5`, `a.b`, `e.g.` and every ellipsis are left alone.
@@ -217,7 +219,7 @@ the bracketed term happened to be English — `中文（English）文` became `�
 precedes the opener on its line there is no context to read and the contents decide. `preserve`
 leaves both parens as written; `fullwidth` and `halfwidth` override the decision entirely.
 
-`parenStyle: "mixed" | "fullwidth" | "halfwidth"` (default `mixed`). Full-width `（）` when the enclosed content contains CJK; half-width `()` when it is pure Latin or digits. This matches the Guidelines and `textlint-zh`, and deliberately diverges from zhlint's default.
+`parenStyle: "mixed" | "fullwidth" | "halfwidth" | "preserve"` (default `mixed`). Only the character outside the opening parenthesis is read — never the bracketed term, which is why `English(中文)English` keeps half-width parens while `中文(English)文` does not. This follows the Guidelines' preference for full-width parentheses in Chinese text and deliberately diverges from zhlint's default.
 
 **TYPO-09 — Hashtag and anchor protection** · always on
 
@@ -395,7 +397,8 @@ typography:
   collapseBoundarySpaces: true
   punctuationStyle: fullwidth     # fullwidth | halfwidth | mixed | off
   punctuationChangeList: [",", ".", ":", "!", "?", ";"]
-  parenStyle: mixed               # mixed | fullwidth | halfwidth
+  parenStyle: mixed               # mixed | fullwidth | halfwidth | preserve
+  context: line                   # line | adjacent
   halfwidthAlphanumerics: true
   ideographicSpace: true
   hashtag: false                  # opt-in, see TYPO-09

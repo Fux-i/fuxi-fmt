@@ -15,6 +15,16 @@ export interface BlankLinesOptions {
 
 export type PunctuationStyle = 'fullwidth' | 'halfwidth' | 'mixed' | 'off';
 export type ParenStyle = 'mixed' | 'fullwidth' | 'halfwidth' | 'preserve';
+/**
+ * How "Chinese context" is decided.
+ *
+ * 'line' (the default) reads the whole line the mark sits on: a Chinese sentence
+ * quoting an English term wants Chinese punctuation around it. 'adjacent' reads
+ * only the nearest significant characters beside the mark, which keeps a mark
+ * inside a Latin run half-width but cannot see a CJK character that a space or
+ * an emphasis marker put out of reach.
+ */
+export type ContextMode = 'line' | 'adjacent';
 
 export interface TypographyOptions {
   /** Insert one space at every CJK to non-CJK boundary (TYPO-01). */
@@ -31,6 +41,8 @@ export interface TypographyOptions {
   readonly hashtag: boolean;
   /** Parenthesis width, by the script of the contents (TYPO-08). */
   readonly parenStyle: ParenStyle;
+  /** How Chinese context is decided for every width rule (TYPO-05, TYPO-08). */
+  readonly context: ContextMode;
   /** Which scripts count as CJK. Defaults to Han alone. */
   readonly cjkClasses: readonly CjkClass[];
   /** Symbols CJK spacing treats as word characters (TYPO-01). */
@@ -121,6 +133,7 @@ export interface TypographyInput {
   readonly ideographicSpace?: boolean;
   readonly hashtag?: boolean;
   readonly parenStyle?: ParenStyle;
+  readonly context?: ContextMode;
   readonly cjkClasses?: readonly CjkClass[];
   readonly symbolWhitelist?: readonly string[];
 }
@@ -153,6 +166,7 @@ export const defaultOptions: FormatOptions = {
     ideographicSpace: true,
     hashtag: false,
     parenStyle: 'mixed',
+    context: 'line',
     cjkClasses: DEFAULT_CJK_CLASSES,
     symbolWhitelist: new Set(DEFAULT_SPACING_SYMBOLS),
   },
@@ -197,6 +211,7 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
         input?.typography?.ideographicSpace ?? defaultOptions.typography.ideographicSpace,
       hashtag: input?.typography?.hashtag ?? defaultOptions.typography.hashtag,
       parenStyle: input?.typography?.parenStyle ?? defaultOptions.typography.parenStyle,
+      context: input?.typography?.context ?? defaultOptions.typography.context,
       cjkClasses: input?.typography?.cjkClasses ?? defaultOptions.typography.cjkClasses,
       symbolWhitelist: new Set(
         input?.typography?.symbolWhitelist ?? defaultOptions.typography.symbolWhitelist,

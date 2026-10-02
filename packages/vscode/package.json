@@ -222,6 +222,20 @@
           },
           "markdownDescription": "%fuxiFmt.typography.symbolWhitelist.description%"
         },
+        "fuxiFmt.typography.context": {
+          "type": "string",
+          "default": "line",
+          "scope": "resource",
+          "enum": [
+            "line",
+            "adjacent"
+          ],
+          "enumDescriptions": [
+            "%fuxiFmt.typography.context.enum.0%",
+            "%fuxiFmt.typography.context.enum.1%"
+          ],
+          "markdownDescription": "%fuxiFmt.typography.context.description%"
+        },
         "fuxiFmt.list.orderedStyle": {
           "type": "string",
           "default": "keep-all-ones",
