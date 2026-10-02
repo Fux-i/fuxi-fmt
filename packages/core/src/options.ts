@@ -104,11 +104,18 @@ export interface CodeBlockOptions {
    * that is `trimBlankLines`, a different job on different bytes.
    */
   readonly fenceLength: boolean;
+  /**
+   * Drop blank lines at the edges of a fence body (BLK-12). The only rule in the
+   * tool that changes protected bytes, and therefore the only entry in the
+   * specification's intentional-differences list.
+   */
+  readonly trimBlankLines: boolean;
 }
 
 export interface CodeBlockInput {
   readonly fenceChar?: FenceChar;
   readonly fenceLength?: boolean;
+  readonly trimBlankLines?: boolean;
 }
 
 export interface IgnoreOptions {
@@ -199,7 +206,7 @@ export const defaultOptions: FormatOptions = {
     tabWidth: 2,
     unorderedMarker: 'dashes',
   },
-  codeBlock: { fenceChar: 'backticks', fenceLength: true },
+  codeBlock: { fenceChar: 'backticks', fenceLength: true, trimBlankLines: true },
   endOfLine: 'lf',
   ignore: {
     file: 'fuxi-fmt-ignore-file',
@@ -251,6 +258,8 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
       fenceChar: input?.codeBlock?.fenceChar ?? defaultOptions.codeBlock.fenceChar,
       fenceLength:
         input?.codeBlock?.fenceLength ?? defaultOptions.codeBlock.fenceLength,
+      trimBlankLines:
+        input?.codeBlock?.trimBlankLines ?? defaultOptions.codeBlock.trimBlankLines,
     },
     endOfLine: input?.endOfLine ?? defaultOptions.endOfLine,
     ignore: {

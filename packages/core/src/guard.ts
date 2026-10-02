@@ -7,7 +7,9 @@
  *
  *  1. The protected regions of the output are the protected regions of the
  *     input: same kinds, same bytes, same order. Nothing inside a code block,
- *     front matter, inline span, URL or MDX fragment can have moved.
+ *     front matter, inline span, URL or MDX fragment can have moved. The single
+ *     exception is BLK-12, which removes blank lines at the edges of a fence
+ *     body, and it is granted only when that option is on.
  *  2. The sequence of non-blank line kinds is unchanged, with exactly one
  *     documented exception: a paragraph may be promoted to a heading when the
  *     only difference is an inserted space after the hash run (BLK-05).
@@ -41,10 +43,17 @@ function isHeadingPromotion(before: string, after: string): boolean {
  * BLK-10 may legitimately change its character and length; the info string and
  * the body are compared exactly.
  */
-function regionSignature(text: string, region: Region): string {
+function regionSignature(text: string, region: Region, trimBlankLines: boolean): string {
   const raw = text.slice(region.start, region.end);
   if (region.kind !== 'fencedCode') return region.kind + ':' + raw;
-  const body = raw.replace(/^[ \t]*[`~]{3,}/, '').replace(/[`~]{3,}[ \t]*$/, '');
+  let body = raw.replace(/^[ \t]*[`~]{3,}/, '').replace(/[`~]{3,}[ \t]*$/, '');
+  // BLK-12, the one intentional difference to SAFE-01: blank lines at the edges of
+  // a code block are not code, so they are stripped from both sides before the
+  // comparison. Conditional on the option rather than unconditional, so a bug that
+  // deleted fence bytes is still a violation when the rule is off.
+  if (trimBlankLines) {
+    body = body.replace(/^(?:[ \t]*\n)+/, '').replace(/(?:\n[ \t]*)+$/, '');
+  }
   return region.kind + ':' + body + '\u0000' + (region.info ?? '');
 }
 
@@ -52,7 +61,11 @@ function nonBlankLines(text: string): string[] {
   return text.split('\n').filter((line) => line.trim().length > 0);
 }
 
-export function checkSemantics(before: string, after: string): Violation[] {
+export function checkSemantics(
+  before: string,
+  after: string,
+  trimBlankLines = false,
+): Violation[] {
   const violations: Violation[] = [];
 
   const beforeRegions = scanRegions(before);
@@ -72,8 +85,8 @@ export function checkSemantics(before: string, after: string): Violation[] {
       const a = beforeRegions[i];
       const b = afterRegions[i];
       if (a === undefined || b === undefined) continue;
-      const signatureA = regionSignature(before, a);
-      const signatureB = regionSignature(after, b);
+      const signatureA = regionSignature(before, a, trimBlankLines);
+      const signatureB = regionSignature(after, b, trimBlankLines);
       if (signatureA !== signatureB) {
         violations.push({
           ruleId: 'SAFE-01',

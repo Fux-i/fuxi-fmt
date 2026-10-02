@@ -8,6 +8,7 @@
  */
 
 import type { AtomicRange } from './blocks.ts';
+import { scanRegions } from './scan.ts';
 import type { CodeBlockOptions } from './options.ts';
 
 const FENCE = /^([ \t]*)([`~]{3,})([\s\S]*)$/;
@@ -87,6 +88,39 @@ export function normalizeFences(
 
     out[openIndex] = indent + target.repeat(length) + rest;
     out[closeIndex] = (close[1] ?? '') + target.repeat(length) + (close[3] ?? '');
+  }
+  return out;
+}
+
+/**
+ * BLK-12: drop blank lines at the edges of a fence body.
+ *
+ * This runs on the finished document rather than in the line-array pass above,
+ * because it is the only rule in the tool that removes lines and every pass
+ * before it indexes by line. Regions are walked last-first, so the offsets of the
+ * ones still to come stay valid.
+ *
+ * The closing delimiter is verified rather than assumed. An unterminated fence
+ * runs to the end of the file, so its last line is code - trimming it because it
+ * looked like a body edge would delete the author's code.
+ */
+export function trimFenceBlanks(text: string): string {
+  const regions = scanRegions(text);
+  let out = text;
+  for (let r = regions.length - 1; r >= 0; r--) {
+    const region = regions[r];
+    if (region === undefined || region.kind !== 'fencedCode') continue;
+    const lines = text.slice(region.start, region.end).split('\n');
+    if (lines.length < 3) continue;
+    const closer = lines[lines.length - 1] ?? '';
+    if (!/^[ \t]*[`~]{3,}[ \t]*$/.test(closer)) continue;
+    let first = 1;
+    let last = lines.length - 2;
+    while (first <= last && (lines[first] ?? '').trim() === '') first++;
+    while (last >= first && (lines[last] ?? '').trim() === '') last--;
+    if (first === 1 && last === lines.length - 2) continue;
+    const rebuilt = [lines[0] ?? '', ...lines.slice(first, last + 1), closer].join('\n');
+    out = out.slice(0, region.start) + rebuilt + out.slice(region.end);
   }
   return out;
 }

@@ -42,6 +42,11 @@ with release candidates suffixed `-rcN`.
   that invites that reading is a defect in the name. `typography.symbolWhitelist` becomes
   `typography.spacingSymbols`, which says what the set is for rather than what it is. Setting either
   old name still works and produces a notice until the next release (CFG-04).
+- **New `codeBlock.trimBlankLines`, default on.** Blank lines at the start and end of a fenced
+  code block are removed; blank lines inside it are kept, because those are code. This is what
+  `normalizeLength` was expected to do and never did. It is the only rule in the tool that changes
+  protected bytes, so it is declared as BLK-12 in the specification and named in the guard where
+  the guarantee is checked - and the exception is granted only while the option is on (BLK-12).
 ### Fixed
 
 - **A closing fence indented more than three columns past the opener no longer suppresses

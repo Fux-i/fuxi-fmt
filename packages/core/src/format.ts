@@ -3,7 +3,7 @@ import { checkSemantics } from './guard.ts';
 import { hasIgnoreFile, ignoreLines, ignoreRanges, type CharRange } from './ignores.ts';
 import { applyEndOfLine, normalizeInput, trimTrailingWhitespace, type Eol } from './hygiene.ts';
 import { renumberOrderedLists } from './lists.ts';
-import { normalizeFences } from './fences.ts';
+import { normalizeFences, trimFenceBlanks } from './fences.ts';
 import { normalizeMarkers, normalizeUnorderedMarker } from './markers.ts';
 import { resolveOptions, type FormatOptions, type FormatOptionsInput } from './options.ts';
 import { assignParents, findExcludedLists, planListIndent, scanListItems } from './list-scan.ts';
@@ -199,11 +199,17 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   const parens = normalizeParens(punctuation, options.typography, widthMask);
   const quoted = normalizeQuotes(parens, options.typography, widthMask);
   const spaced = applyTypography(quoted.text, options.typography, ignoreRanges(quoted.text, options.ignore));
-  const candidate = trimTrailingWhitespace(spaced, ignoreRanges(spaced, options.ignore));
+  // BLK-12 runs last of the content rules and before the guard, and it is the only
+  // one that removes lines - which is why it is here rather than among the passes
+  // that index by line. It is also the only rule the guard has an exception for,
+  // passed to the guard explicitly so the exception is readable where the
+  // guarantee is checked.
+  const edged = options.codeBlock.trimBlankLines ? trimFenceBlanks(spaced) : spaced;
+  const candidate = trimTrailingWhitespace(edged, ignoreRanges(edged, options.ignore));
 
   // GRT-01: never hand back a document that parses differently. If the guard
   // trips we return the input untouched and say why (GRT-04).
-  const violations = checkSemantics(base, candidate);
+  const violations = checkSemantics(base, candidate, options.codeBlock.trimBlankLines);
   if (violations.length > 0) {
     return {
       output: source,

@@ -47,6 +47,7 @@
   "fuxiFmt.list.unorderedMarker.description": "Bullet character for unordered lists (BLK-05).",
   "fuxiFmt.codeBlock.fenceChar.description": "Fence character for code blocks (BLK-10).",
   "fuxiFmt.codeBlock.fenceLength.description": "Make a fence as long as its contents require (BLK-10).",
+  "fuxiFmt.codeBlock.trimBlankLines.description": "Remove blank lines at the start and end of a code block, keeping the ones inside it (BLK-12).",
   "fuxiFmt.endOfLine.description": "Line ending to write. `auto` keeps whatever the file already used (BLK-11).",
   "fuxiFmt.ignore.file.description": "Comment text that makes the formatter skip a whole document (CFG-03).",
   "fuxiFmt.ignore.start.description": "Comment text that opens a range the formatter leaves alone (CFG-03).",

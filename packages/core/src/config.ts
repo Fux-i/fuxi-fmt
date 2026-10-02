@@ -255,12 +255,19 @@ function readSections(raw: Raw): FormatOptionsInput {
 
   if (raw.codeBlock !== undefined) {
     const from = section(raw.codeBlock, 'codeBlock');
-    const to: { fenceChar?: 'backticks' | 'tildes' | 'preserve'; fenceLength?: boolean } = {};
+    const to: {
+      fenceChar?: 'backticks' | 'tildes' | 'preserve';
+      fenceLength?: boolean;
+      trimBlankLines?: boolean;
+    } = {};
     if (from.fenceChar !== undefined) {
       to.fenceChar = oneOf(from.fenceChar, 'codeBlock.fenceChar', ['backticks', 'tildes', 'preserve']);
     }
     if (from.fenceLength !== undefined) {
       to.fenceLength = bool(from.fenceLength, 'codeBlock.fenceLength');
+    }
+    if (from.trimBlankLines !== undefined) {
+      to.trimBlankLines = bool(from.trimBlankLines, 'codeBlock.trimBlankLines');
     }
     out.codeBlock = to;
   }

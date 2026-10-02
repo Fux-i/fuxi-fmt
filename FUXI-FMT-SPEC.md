@@ -143,6 +143,12 @@ A line indented more than three columns past the opener is not a closing fence, 
 | BOM stripped | on |
 | Line endings per `endOfLine: "lf" \| "crlf" \| "auto"` | `lf` |
 
+**BLK-12 — Blank lines at the edges of a code block** · default on
+
+`codeBlock.trimBlankLines: true | false` (default `true`). Blank lines immediately after the opening delimiter and immediately before the closing one are removed, because they are not code: they are the space the author left around it. Blank lines *inside* the block are untouched, since those are part of the code.
+
+**This is the one intentional difference to SAFE-01 in the whole tool.** It has to be declared rather than inferred from a config key, so the specification says it here and the guard names it where the guarantee is checked: the exception is granted only when this option is on, so a bug that deleted fence bytes is still a violation when it is off. A fence with no closing delimiter is never trimmed — its last line is code, and trimming it because it looked like a body edge would delete what the author wrote.
+
 ### B. Inline structure
 
 **INL-01 — Inline code spacing** (see TYPO-01 for the mechanism)
@@ -399,6 +405,7 @@ list:
 codeBlock:
   fenceChar: backticks      # backticks | tildes | preserve
   fenceLength: true
+  trimBlankLines: true
   # body, indentation and info string are always verbatim (SAFE-01, SAFE-02)
 
 typography:

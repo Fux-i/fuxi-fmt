@@ -348,6 +348,12 @@
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.codeBlock.fenceLength.description%"
         },
+        "fuxiFmt.codeBlock.trimBlankLines": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "markdownDescription": "%fuxiFmt.codeBlock.trimBlankLines.description%"
+        },
         "fuxiFmt.endOfLine": {
           "type": "string",
           "default": "lf",
