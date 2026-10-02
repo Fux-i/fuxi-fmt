@@ -25,6 +25,13 @@ export interface Diagnostic {
   readonly ruleId: string;
   readonly message: string;
   readonly line: number;
+  /**
+   * 'error' means the document was refused and the input is the output.
+   * 'warning' means the document was formatted and something in it wants a look,
+   * so a caller that fails a build on 'error' must not fail it on 'warning' - the
+   * difference between the two is the whole point of having them.
+   */
+  readonly severity: 'error' | 'warning';
 }
 
 export interface FormatResult {
@@ -218,6 +225,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
         ruleId: violation.ruleId,
         message: violation.message,
         line: 0,
+        severity: 'error' as const,
       })),
     };
   }
@@ -231,8 +239,9 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     message:
       'unpaired straight quote on line ' +
       (lineOf(structural, offset) + 1) +
-      ': this line has an odd number of them, so none were converted',
+      ': this paragraph has an odd number of them, so none were converted',
     line: lineOf(structural, offset),
+    severity: 'warning' as const,
   }));
   return { output, changed: output !== source, diagnostics };
 }

@@ -41,7 +41,15 @@ with release candidates suffixed `-rcN`.
   different job on different bytes, and the user duly reported that it seems not to work. A name
   that invites that reading is a defect in the name. `typography.symbolWhitelist` becomes
   `typography.spacingSymbols`, which says what the set is for rather than what it is. Setting either
-  old name still works and produces a notice until the next release (CFG-04).
+  old name still works and produces a notice until the next release (CFG-07).
+- **A retired option name is now reported instead of silently ignored.** Every name this project
+  has retired is still read for one release, and the configuration reader says which old name it saw
+  and what it became: `symbolWhitelist`, `punctuationAllowlist`, `normalizeLength`, plus three whose
+  shape changed — `blankLines.insideLists` (boolean → three-way), `typography.semicolon` (folded
+  into the change list) and `list.indentWidth` (split into two indents). A key that is not an option
+  at all is reported too, while still being ignored so a newer configuration loads. This is the
+  failure mode the round started from: a config file that quietly does less than its author asked
+  for (CFG-07).
 - **New `codeBlock.trimBlankLines`, default on.** Blank lines at the start and end of a fenced
   code block are removed; blank lines inside it are kept, because those are code. This is what
   `normalizeLength` was expected to do and never did. It is the only rule in the tool that changes

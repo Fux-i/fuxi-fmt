@@ -109,7 +109,14 @@ There is now a command line interface:
 node packages/cli/src/main.ts --check docs/   # exit 1 if anything would change
 node packages/cli/src/main.ts --diff  docs/   # show the lines that would change
 node packages/cli/src/main.ts --write docs/   # rewrite in place
+node packages/cli/src/main.ts --explain a.md    # say what was found and what was done
 ```
+
+`--explain` is a modifier rather than a mode, so it composes with the others. It writes its report
+to stderr: where the configuration came from, whether the document changed, and what was warned
+about. Warnings are reported and do not fail the run; only the guard refusing a document does.
+A configuration key that is not an option, or a retired one, is reported the same way — the one
+thing a silently ignored key can never say is that it was ignored.
 
 `--diff` resynchronises line by line. The alignment lives in `core/diff.ts` and the CLI
 formats its result. It is greedy rather than LCS or Myers, so a document full of repeated lines

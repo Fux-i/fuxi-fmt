@@ -6,11 +6,16 @@
  * a configuration file that cannot explain itself is a configuration file
  * nobody maintains.
  *
- * Unknown keys are ignored rather than rejected, so a config written for a
- * later version still loads. A known key with an unknown value is an error,
- * because silently ignoring it would hide a typo for the life of the project.
+ * Unknown keys are ignored rather than rejected, so a config written for a later
+ * version still loads - but they are reported now, because ignoring a typo in
+ * silence is how an option comes to look broken for the life of a project. A known
+ * key with an unknown value is still an error.
+ *
+ * Retired names are read for one release and reported; see aliases.ts, which owns
+ * that list and the reason each entry exists.
  */
 
+import { applyAliases, type ConfigNotice } from './aliases.ts';
 import type { CjkClass } from './chars.ts';
 import { presetOptions } from './presets.ts';
 import { existsSync, readFileSync } from 'node:fs';
@@ -148,7 +153,20 @@ function stripTrailingCommas(text: string): string {
   return out;
 }
 
-export function parseConfig(text: string): FormatOptionsInput {
+export interface ParsedConfig {
+  readonly options: FormatOptionsInput;
+  /** Retired names that were rewritten, and keys that are not options at all. */
+  readonly notices: readonly ConfigNotice[];
+}
+
+/**
+ * Parse a configuration, keeping the notices.
+ *
+ * Anything that loads a configuration for a human to see should use this: a
+ * renamed key and a typo both produce a configuration that quietly does less than
+ * its author asked for, and only the notices say so.
+ */
+export function parseConfigDetailed(text: string): ParsedConfig {
   let raw: unknown;
   try {
     raw = JSON.parse(stripTrailingCommas(stripComments(text)));
@@ -158,11 +176,20 @@ export function parseConfig(text: string): FormatOptionsInput {
   }
   if (!isRecord(raw)) throw new Error('config: the document must be an object');
 
-  const stated = readSections(raw);
+  const aliased = applyAliases(raw);
+  const stated = readSections(aliased.raw);
   // A preset supplies values; anything the config states explicitly wins.
-  if (raw.preset === undefined) return stated;
-  if (typeof raw.preset !== 'string') throw new Error('config: preset must be a string');
-  return mergeOptions(presetOptions(raw.preset), stated);
+  const preset = aliased.raw.preset;
+  if (preset === undefined) return { options: stated, notices: aliased.notices };
+  if (typeof preset !== 'string') throw new Error('config: preset must be a string');
+  return {
+    options: mergeOptions(presetOptions(preset), stated),
+    notices: aliased.notices,
+  };
+}
+
+export function parseConfig(text: string): FormatOptionsInput {
+  return parseConfigDetailed(text).options;
 }
 
 function readSections(raw: Raw): FormatOptionsInput {
@@ -400,14 +427,20 @@ export function findConfigFile(startDir: string, stopDir?: string): string | nul
 export interface LoadedConfig {
   readonly options: FormatOptionsInput;
   readonly configPath: string | null;
+  readonly notices: readonly ConfigNotice[];
 }
 
 export function readConfigFile(path: string): FormatOptionsInput {
   return parseConfig(readFileSync(path, 'utf8'));
 }
 
+export function readConfigFileDetailed(path: string): ParsedConfig {
+  return parseConfigDetailed(readFileSync(path, 'utf8'));
+}
+
 export function loadOptionsFor(filePath: string): LoadedConfig {
   const configPath = findConfigFile(dirname(resolve(filePath)));
-  if (configPath === null) return { options: {}, configPath: null };
-  return { options: readConfigFile(configPath), configPath };
+  if (configPath === null) return { options: {}, configPath: null, notices: [] };
+  const parsed = readConfigFileDetailed(configPath);
+  return { options: parsed.options, configPath, notices: parsed.notices };
 }

@@ -294,11 +294,18 @@ These are the general form of "don't touch code blocks". Every one is byte-verba
 
 **CFG-03 — In-document ignore directives**: file-level, range-level, and next-line, following dprint's four-directive shape.
 
-**CFG-04 — `--check` and `--diff` modes** with a stable exit code, for CI.
+**CFG-04 — `--check` and `--diff` modes** with a stable exit code, for CI. `--explain` is a modifier rather than a mode: it adds a report on stderr saying where the configuration came from, whether the document changed, and what was warned about — so a formatter that correctly changed nothing can say so instead of saying nothing.
 
 **CFG-05 — Compatibility mapping and config import** for `.markdownlint.json`, `.autocorrectrc` and `.prettierrc`.
 
 **CFG-06 — Pipeline position.** fuxi-fmt registers a real formatting provider **and** a range provider, so it can be `editor.defaultFormatter` and so Format Selection works. An independent save hook is offered as an option for authors who keep another formatter, with the precedence contract documented.
+
+**CFG-07 — Retired option names are read, and reported.** A renamed key that silently stops working produces no error, no change and no clue, so every name this project retires is read for one release and reported with both names.
+
+- Moved unchanged: `typography.symbolWhitelist` → `typography.spacingSymbols`, `typography.punctuationAllowlist` → `typography.punctuationChangeList`, `codeBlock.normalizeLength` → `codeBlock.fenceLength`.
+- Converted, because the shape changed: `blankLines.insideLists` (a boolean that could only insert a blank → `remove` / `one` / `preserve`), `typography.semicolon` (folded into `punctuationChangeList`), `list.indentWidth` (split into `orderedIndent` and `unorderedIndent`). Each conversion is the one that means what the old value meant, and the notice says what it became.
+- A key that is not an option at all is reported and still ignored, so a configuration written for a later version loads.
+- The list is finite and closed: each entry exists to be deleted, and a name is removed from it the release after it is retired.
 
 ---
 

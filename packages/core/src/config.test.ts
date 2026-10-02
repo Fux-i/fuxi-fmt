@@ -101,6 +101,6 @@ describe('CFG-01 discovering a configuration file', () => {
   });
   test('a file with no config gets the defaults', () => {
     const loaded = loadOptionsFor(fixture('noconfig/doc.md'));
-    assert.deepEqual(loaded, { options: {}, configPath: null });
+    assert.deepEqual(loaded, { options: {}, configPath: null, notices: [] });
   });
 });

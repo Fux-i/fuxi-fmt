@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { diffEdits, format, loadOptionsFor } from '../../core/src/index.ts';
-import type { FormatOptionsInput } from '../../core/src/index.ts';
+import type { FormatOptionsInput, LoadedConfig } from '../../core/src/index.ts';
 import { parseArgs } from './args.ts';
 
 /** Everything the command needs from the outside world, injected for testing. */
@@ -10,6 +10,11 @@ export interface Io {
   out(text: string): void;
   err(text: string): void;
   optionsFor(path: string): FormatOptionsInput;
+  /**
+   * Where the configuration came from and what it said. Optional, so a host that
+   * only knows the resolved options still works.
+   */
+  configFor?(path: string): LoadedConfig;
 }
 
 export const EXIT_OK = 0;
@@ -25,6 +30,7 @@ export const USAGE = [
   '  --check   exit 1 if any file would change; write nothing',
   '  --diff    print the lines that would change, approximately; write nothing',
   '  --write   rewrite the files in place',
+  '  --explain say what was found and what was done, on stderr',
   '  --help    print this message',
   '',
   'With no option the formatted document is written to stdout.',
@@ -61,10 +67,12 @@ function diffSide(prefix: string, text: string): string {
 export function run(argv: readonly string[], io: Io): number {
   let mode;
   let files;
+  let explain = false;
   try {
     const parsed = parseArgs(argv);
     mode = parsed.mode;
     files = parsed.files;
+    explain = parsed.explain;
   } catch (error) {
     io.err(messageOf(error) + '\n');
     return EXIT_ERROR;
@@ -90,14 +98,39 @@ export function run(argv: readonly string[], io: Io): number {
       return EXIT_ERROR;
     }
 
-    const result = format(source, io.optionsFor(file));
+    const loaded = io.configFor?.(file);
+    const result = format(source, loaded?.options ?? io.optionsFor(file));
 
-    // The guard tripped: the file is reported rather than silently left alone.
-    if (result.diagnostics.length > 0) {
-      for (const diagnostic of result.diagnostics) {
+    // A configuration notice is not a failure. The file still formats; the author
+    // is told that a key they wrote did less than they asked for, which is the one
+    // thing a silently ignored key can never say.
+    for (const notice of loaded?.notices ?? []) {
+      io.err('fuxi-fmt: ' + file + ': ' + notice.key + ': ' + notice.message + '\n');
+    }
+
+    // Errors refuse the document, warnings do not. Failing a build on a warning is
+    // how a useful warning becomes a reason to switch the rule off.
+    for (const diagnostic of result.diagnostics) {
+      if (diagnostic.severity !== 'warning') continue;
+      io.err(
+        'fuxi-fmt: ' + file + ': warning: ' + diagnostic.ruleId + ' ' + diagnostic.message + '\n',
+      );
+    }
+    const errors = result.diagnostics.filter((d) => d.severity === 'error');
+    if (errors.length > 0) {
+      for (const diagnostic of errors) {
         io.err('fuxi-fmt: ' + file + ': ' + diagnostic.ruleId + ' ' + diagnostic.message + '\n');
       }
       return EXIT_ERROR;
+    }
+
+    if (explain) {
+      io.err(
+        'fuxi-fmt: ' + file + '\n' +
+          '  config: ' + (loaded?.configPath ?? 'none, using the defaults') + '\n' +
+          '  changed: ' + (result.changed ? 'yes' : 'no') + '\n' +
+          '  warnings: ' + String(result.diagnostics.length) + '\n',
+      );
     }
 
     if (!result.changed) {
@@ -122,4 +155,5 @@ export const fileIo: Io = {
   out: (text) => void process.stdout.write(text),
   err: (text) => void process.stderr.write(text),
   optionsFor: (path) => loadOptionsFor(path).options,
+  configFor: (path) => loadOptionsFor(path),
 };

@@ -31,14 +31,61 @@ function fakeIo(files: Record<string, string>): FakeIo {
   };
 }
 
+describe('CLI warnings and notices', () => {
+  test('a warning is reported but does not fail the run', () => {
+    // stdout mode, not --check: --check exits 1 for a file that would change, and
+    // the point here is that the warning itself does not add to that.
+    const io = fakeIo({ 'a.md': '#  Title\n\n他说 "你好 了\n' });
+    const code = run(['a.md'], io);
+    assert.equal(code, 0, 'a warning is not a failure');
+    assert.match(io.errText(), /TYPO-11/);
+    assert.match(io.errText(), /warning/);
+  });
+  test('an error still fails the run', () => {
+    // An opening fence longer than the closing one is not a fence pair, and the
+    // guard refuses the document rather than guessing.
+    const io = fakeIo({ 'a.md': '\u0060\u0060\u0060\u0060js\ncode\n\u0060\u0060\u0060\n' });
+    const code = run(['--check', 'a.md'], io);
+    assert.equal(code, 2);
+  });
+  test('--explain says where the configuration came from and what changed', () => {
+    const io = fakeIo({ 'a.md': '#  Title\n' });
+    const code = run(['--explain', 'a.md'], io);
+    assert.equal(code, 0);
+    assert.match(io.errText(), /config: none, using the defaults/);
+    assert.match(io.errText(), /changed: yes/);
+  });
+  test('a configuration notice is printed for the file it affects', () => {
+    const io = {
+      ...fakeIo({ 'a.md': '#  Title\n' }),
+      configFor: () => ({
+        options: {},
+        configPath: '/tmp/fuxi-fmt.json',
+        notices: [
+          { kind: 'unknown' as const, key: 'typo', message: 'typo is not a fuxi-fmt option' },
+        ],
+      }),
+    };
+    const code = run(['a.md'], io);
+    assert.equal(code, 0);
+    assert.match(io.errText(), /typo is not a fuxi-fmt option/);
+  });
+});
+
 describe('CLI argument parsing', () => {
   test('defaults to printing the formatted document', () => {
-    assert.deepEqual(parseArgs(['a.md']), { mode: 'stdout', files: ['a.md'] });
+    assert.deepEqual(parseArgs(['a.md']), { mode: 'stdout', files: ['a.md'], explain: false });
   });
   test('recognises check, write and diff', () => {
     assert.equal(parseArgs(['--check', 'a.md']).mode, 'check');
     assert.equal(parseArgs(['--write', 'a.md']).mode, 'write');
     assert.equal(parseArgs(['--diff', 'a.md']).mode, 'diff');
+  });
+  test('--explain is a modifier, not a mode', () => {
+    const parsed = parseArgs(['--explain', '--check', 'a.md']);
+    assert.equal(parsed.mode, 'check');
+    assert.equal(parsed.explain, true);
+    assert.deepEqual(parsed.files, ['a.md']);
   });
   test('collects several files', () => {
     assert.deepEqual(parseArgs(['--check', 'a.md', 'b.md']).files, ['a.md', 'b.md']);
