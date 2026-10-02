@@ -55,8 +55,12 @@ export interface TypographyOptions {
   readonly quotes: QuoteStyle;
   /** Which scripts count as CJK. Defaults to Han alone. */
   readonly cjkClasses: readonly CjkClass[];
-  /** Symbols CJK spacing treats as word characters (TYPO-01). */
-  readonly symbolWhitelist: ReadonlySet<string>;
+  /**
+   * Symbols CJK spacing treats as word characters (TYPO-01). Named for what they
+   * do rather than for what they are: the old name, `symbolWhitelist`, said
+   * nothing about spacing and had to be read twice.
+   */
+  readonly spacingSymbols: ReadonlySet<string>;
 }
 
 export type EndOfLine = 'lf' | 'crlf' | 'auto';
@@ -93,13 +97,18 @@ export interface ListOptions {
 export interface CodeBlockOptions {
   /** Fence character to use (BLK-10). */
   readonly fenceChar: FenceChar;
-  /** Lengthen the fence past the longest run in its body (BLK-10). */
-  readonly normalizeLength: boolean;
+  /**
+   * How many delimiter characters the fence is written with: as many as its body
+   * requires, and no more (BLK-10). The old name, `normalizeLength`, read as
+   * "tidy the block up" and a user reasonably expected it to trim blank lines -
+   * that is `trimBlankLines`, a different job on different bytes.
+   */
+  readonly fenceLength: boolean;
 }
 
 export interface CodeBlockInput {
   readonly fenceChar?: FenceChar;
-  readonly normalizeLength?: boolean;
+  readonly fenceLength?: boolean;
 }
 
 export interface IgnoreOptions {
@@ -146,7 +155,7 @@ export interface TypographyInput {
   readonly context?: ContextMode;
   readonly quotes?: QuoteStyle;
   readonly cjkClasses?: readonly CjkClass[];
-  readonly symbolWhitelist?: readonly string[];
+  readonly spacingSymbols?: readonly string[];
 }
 
 export interface ListInput {
@@ -180,7 +189,7 @@ export const defaultOptions: FormatOptions = {
     context: 'line',
     quotes: 'paired',
     cjkClasses: DEFAULT_CJK_CLASSES,
-    symbolWhitelist: new Set(DEFAULT_SPACING_SYMBOLS),
+    spacingSymbols: new Set(DEFAULT_SPACING_SYMBOLS),
   },
   list: {
     orderedStyle: 'keep-all-ones',
@@ -190,7 +199,7 @@ export const defaultOptions: FormatOptions = {
     tabWidth: 2,
     unorderedMarker: 'dashes',
   },
-  codeBlock: { fenceChar: 'backticks', normalizeLength: true },
+  codeBlock: { fenceChar: 'backticks', fenceLength: true },
   endOfLine: 'lf',
   ignore: {
     file: 'fuxi-fmt-ignore-file',
@@ -226,8 +235,8 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
       context: input?.typography?.context ?? defaultOptions.typography.context,
       quotes: input?.typography?.quotes ?? defaultOptions.typography.quotes,
       cjkClasses: input?.typography?.cjkClasses ?? defaultOptions.typography.cjkClasses,
-      symbolWhitelist: new Set(
-        input?.typography?.symbolWhitelist ?? defaultOptions.typography.symbolWhitelist,
+      spacingSymbols: new Set(
+        input?.typography?.spacingSymbols ?? defaultOptions.typography.spacingSymbols,
       ),
     },
     list: {
@@ -240,8 +249,8 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
     },
     codeBlock: {
       fenceChar: input?.codeBlock?.fenceChar ?? defaultOptions.codeBlock.fenceChar,
-      normalizeLength:
-        input?.codeBlock?.normalizeLength ?? defaultOptions.codeBlock.normalizeLength,
+      fenceLength:
+        input?.codeBlock?.fenceLength ?? defaultOptions.codeBlock.fenceLength,
     },
     endOfLine: input?.endOfLine ?? defaultOptions.endOfLine,
     ignore: {

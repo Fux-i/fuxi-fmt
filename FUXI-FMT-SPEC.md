@@ -368,7 +368,7 @@ Y = covers, P = partial or conditional, N = does not cover.
 | (i) all options tunable | P | P | P | P | P | P | **P** (see note below) |
 
 Row (i) is **P** rather than Y because four documented options are unimplemented: `blankLines.insideLists`,
-`blankLines.insideBlockquotes`, `typography.collapseBoundarySpaces` and `typography.symbolWhitelist`.
+`blankLines.insideBlockquotes`, `typography.collapseBoundarySpaces` and `typography.spacingSymbols`.
 Setting any of them produces silence. Every other requirement in this table is fully covered. The
 implementation-status note in section 6 is the authoritative list, and the readme carries the same
 list, which a test keeps in agreement.
@@ -398,7 +398,7 @@ list:
 
 codeBlock:
   fenceChar: backticks      # backticks | tildes | preserve
-  normalizeLength: true
+  fenceLength: true
   # body, indentation and info string are always verbatim (SAFE-01, SAFE-02)
 
 typography:
@@ -413,7 +413,7 @@ typography:
   ideographicSpace: true
   hashtag: false                  # opt-in, see TYPO-09
   cjkClasses: [han]               # han | kana | hangul | bopomofo | enclosed
-  symbolWhitelist: ["+", "-", "=", "<", ">", "%", "°", "℃", "℉"]
+  spacingSymbols: ["+", "-", "=", "<", ">", "%", "°", "℃", "℉"]
 
 
 endOfLine: lf

@@ -255,12 +255,12 @@ function readSections(raw: Raw): FormatOptionsInput {
 
   if (raw.codeBlock !== undefined) {
     const from = section(raw.codeBlock, 'codeBlock');
-    const to: { fenceChar?: 'backticks' | 'tildes' | 'preserve'; normalizeLength?: boolean } = {};
+    const to: { fenceChar?: 'backticks' | 'tildes' | 'preserve'; fenceLength?: boolean } = {};
     if (from.fenceChar !== undefined) {
       to.fenceChar = oneOf(from.fenceChar, 'codeBlock.fenceChar', ['backticks', 'tildes', 'preserve']);
     }
-    if (from.normalizeLength !== undefined) {
-      to.normalizeLength = bool(from.normalizeLength, 'codeBlock.normalizeLength');
+    if (from.fenceLength !== undefined) {
+      to.fenceLength = bool(from.fenceLength, 'codeBlock.fenceLength');
     }
     out.codeBlock = to;
   }
@@ -278,7 +278,7 @@ function readSections(raw: Raw): FormatOptionsInput {
       context?: 'line' | 'adjacent';
       quotes?: 'preserve' | 'paired';
       cjkClasses?: readonly CjkClass[];
-      symbolWhitelist?: readonly string[];
+      spacingSymbols?: readonly string[];
     } = {};
     if (from.cjkSpacing !== undefined) to.cjkSpacing = bool(from.cjkSpacing, 'typography.cjkSpacing');
     if (from.punctuationStyle !== undefined) {
@@ -328,8 +328,8 @@ function readSections(raw: Raw): FormatOptionsInput {
       }
       to.cjkClasses = names as readonly CjkClass[];
     }
-    if (from.symbolWhitelist !== undefined) {
-      to.symbolWhitelist = strings(from.symbolWhitelist, 'typography.symbolWhitelist');
+    if (from.spacingSymbols !== undefined) {
+      to.spacingSymbols = strings(from.spacingSymbols, 'typography.spacingSymbols');
     }
     out.typography = to;
   }

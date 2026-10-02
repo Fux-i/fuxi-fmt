@@ -34,6 +34,13 @@ with release candidates suffixed `-rcN`.
   odd number of straight quotes is left exactly as written and reported as a warning naming the
   line, which does not stop the format from succeeding. An inch mark is not a quotation:
   `12" x 8"` is untouched (TYPO-11).
+- **Two options are renamed, and the old names keep working for one release.**
+  `codeBlock.normalizeLength` becomes `codeBlock.fenceLength`, because it controls the number of
+  delimiter characters and nothing else. The old name read as "tidy the block up", which is a
+  different job on different bytes, and the user duly reported that it seems not to work. A name
+  that invites that reading is a defect in the name. `typography.symbolWhitelist` becomes
+  `typography.spacingSymbols`, which says what the set is for rather than what it is. Setting either
+  old name still works and produces a notice until the next release (CFG-04).
 ### Fixed
 
 - **A closing fence indented more than three columns past the opener no longer suppresses

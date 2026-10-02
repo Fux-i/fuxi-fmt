@@ -41,9 +41,9 @@ describe('the ignore section is configurable', () => {
     assert.notEqual(format(source, {}).output, source);
   });
 
-  test('typography.symbolWhitelist is readable from a config file too', () => {
+  test('typography.spacingSymbols is readable from a config file too', () => {
     // Added in 0.21.0 and equally absent from readSections.
-    const parsed = parseConfig('{"typography":{"symbolWhitelist":["+","§"]}}');
-    assert.deepEqual(parsed.typography?.symbolWhitelist, ['+', '§']);
+    const parsed = parseConfig('{"typography":{"spacingSymbols":["+","§"]}}');
+    assert.deepEqual(parsed.typography?.spacingSymbols, ['+', '§']);
   });
 });

@@ -61,7 +61,7 @@ describe('BLK-10 code fence delimiter normalisation', () => {
   });
   test('keeps the original length when length normalisation is off', () => {
     assert.equal(
-      out('~~~js\nx\n~~~\n', { codeBlock: { fenceChar: 'backticks', normalizeLength: false } }),
+      out('~~~js\nx\n~~~\n', { codeBlock: { fenceChar: 'backticks', fenceLength: false } }),
       '```js\nx\n```\n',
     );
   });

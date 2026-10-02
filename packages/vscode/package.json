@@ -203,7 +203,7 @@
           },
           "markdownDescription": "%fuxiFmt.typography.cjkClasses.description%"
         },
-        "fuxiFmt.typography.symbolWhitelist": {
+        "fuxiFmt.typography.spacingSymbols": {
           "type": "array",
           "default": [
             "+",
@@ -220,7 +220,7 @@
           "items": {
             "type": "string"
           },
-          "markdownDescription": "%fuxiFmt.typography.symbolWhitelist.description%"
+          "markdownDescription": "%fuxiFmt.typography.spacingSymbols.description%"
         },
         "fuxiFmt.typography.context": {
           "type": "string",
@@ -342,11 +342,11 @@
           ],
           "markdownDescription": "%fuxiFmt.codeBlock.fenceChar.description%"
         },
-        "fuxiFmt.codeBlock.normalizeLength": {
+        "fuxiFmt.codeBlock.fenceLength": {
           "type": "boolean",
           "default": true,
           "scope": "resource",
-          "markdownDescription": "%fuxiFmt.codeBlock.normalizeLength.description%"
+          "markdownDescription": "%fuxiFmt.codeBlock.fenceLength.description%"
         },
         "fuxiFmt.endOfLine": {
           "type": "string",

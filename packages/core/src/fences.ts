@@ -77,7 +77,7 @@ export function normalizeFences(
     if (target === '`' && rest.includes('`')) continue;
 
     let length = run.length;
-    if (options.normalizeLength) {
+    if (options.fenceLength) {
       let longest = 0;
       for (let i = openIndex + 1; i < closeIndex; i++) {
         longest = Math.max(longest, longestRun(out[i] ?? '', target));
