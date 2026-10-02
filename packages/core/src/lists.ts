@@ -15,7 +15,19 @@ import type { ListOptions } from './options.ts';
 
 const ORDERED = /^(\s*)(\d{1,9})([.)])([ \t]+)([\s\S]*)$/;
 
+/**
+ * The blockquote marker run, split off before the list grammar is applied.
+ *
+ * ORDERED anchors at the start of the line, so a quoted list was invisible to
+ * this pass: '> 1. a' matched nothing, and a broken sequence inside a quote was
+ * never renumbered. BLK-09 has already collapsed the marker spacing by the time
+ * this runs, so each '>' is followed by at most one space.
+ */
+const QUOTE = /^(\s*(?:>+[ \t]*)+)([\s\S]*)$/;
+
 interface Frame {
+  /** The blockquote prefix this frame belongs to; '' at the top level. */
+  readonly prefix: string;
   readonly indent: number;
   readonly start: number;
   seen: number;
@@ -38,12 +50,20 @@ export function renumberOrderedLists(
       previousBlank = false;
       continue;
     }
-    if (text.trim().length === 0) {
+    const quote = QUOTE.exec(text);
+    const prefix = quote === null ? '' : (quote[1] ?? '');
+    const body = quote === null ? text : (quote[2] ?? '');
+    // A bare '>' is how a blockquote spells a blank line. Its text is not empty,
+    // so the plain blank test would miss it and a quoted list separated by a
+    // quoted paragraph would be numbered as though the paragraph were not there.
+    if (body.trim().length === 0) {
       previousBlank = true;
       continue;
     }
 
-    const kind = classifyContent(text);
+    // Classify the content inside the quote: a heading in a blockquote is still a
+    // heading, and it ends the list exactly as a bare one does.
+    const kind = classifyContent(body);
     if (kind === 'heading' || kind === 'break' || kind === 'table') {
       stack.length = 0;
       previousBlank = false;
@@ -54,7 +74,7 @@ export function renumberOrderedLists(
     if (kind === 'paragraph' && previousBlank) stack.length = 0;
     previousBlank = false;
 
-    const match = ORDERED.exec(text);
+    const match = ORDERED.exec(body);
     if (match === null) continue;
 
     const indentText = match[1] ?? '';
@@ -64,11 +84,14 @@ export function renumberOrderedLists(
     const gap = match[4] ?? ' ';
     const rest = match[5] ?? '';
 
+    // A frame from another quote depth belongs to a different list and can never
+    // supply a number: '> > 1. a' and '> 1. b' are two lists, not a sequence.
+    while (stack.length > 0 && stack[stack.length - 1]?.prefix !== prefix) stack.pop();
     while (stack.length > 0 && (stack[stack.length - 1]?.indent ?? -1) > indent) stack.pop();
 
     let frame = stack[stack.length - 1];
     if (frame === undefined || frame.indent < indent) {
-      frame = { indent, start: value, seen: 0, lazy: false };
+      frame = { prefix, indent, start: value, seen: 0, lazy: false };
       stack.push(frame);
     }
     frame.seen++;
@@ -81,7 +104,7 @@ export function renumberOrderedLists(
           ? 1
           : frame.start + frame.seen - 1;
     const mark = options.orderedDelimiter === 'preserve' ? delimiter : options.orderedDelimiter;
-    out[i] = indentText + String(number) + mark + gap + rest;
+    out[i] = prefix + indentText + String(number) + mark + gap + rest;
   }
 
   return out;

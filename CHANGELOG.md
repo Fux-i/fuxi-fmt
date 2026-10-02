@@ -18,6 +18,12 @@ with release candidates suffixed `-rcN`.
   fence silently left every block *before* it unformatted. With a blank line after the same line
   there was no rewrite and no diagnostic at all: the same input, two outcomes, neither of them
   intended. The normalizer now applies the scanner's own indentation test (BLK-10, SAFE-01).
+- **Ordered lists inside a blockquote are renumbered.** The list grammar anchors at the start of the
+  line, so `> 1. a` matched nothing and a broken sequence in a quote kept its wrong numbers
+  forever. The blockquote prefix is now split off, matched against and put back, and the prefix is
+  part of the list's identity: each quote depth is its own list, a quoted paragraph ends the list
+  above it, and a heading in a quote ends it as well. A bare `>` is treated as the blank line it
+  is (BLK-06).
 
 ## [0.23.0] - 2026-09-30
 

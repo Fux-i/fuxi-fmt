@@ -109,6 +109,11 @@ git-diff-friendly style; `preserve` changes no number at all.
 - Honour a declared start on the first item (`3. / 4. / 5.` keeps starting at 3).
 - **Auto-detect the lazy all-`1.` style** and preserve it (matches Prettier and dprint; also the minimal-diff default in mdformat). `list.orderedStyle: "keep-all-ones"`.
 - `orderedList.delimiter: "preserve" | "." | ")"`, default `preserve`.
+- **A blockquote prefix is part of the list's identity, not a blank wall in front of it.** A quoted
+  list is renumbered like any other, and each quote depth is a separate list — `> > 1. a` and
+  `> 1. b` are two lists, not a sequence. A bare `>` counts as a blank line inside the quote, so a
+  quoted paragraph ends the list it follows; and a heading inside a quote ends it too, exactly as a
+  bare heading does.
 
 **BLK-07 — Unordered list marker normalization** · default `-`
 

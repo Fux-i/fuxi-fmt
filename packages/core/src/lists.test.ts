@@ -59,4 +59,45 @@ describe('BLK-06 ordered list renumbering', () => {
   test('does not disturb unordered lists', () => {
     assert.equal(out('- a\n- b\n'), '- a\n- b\n');
   });
+
+  // A blockquote prefix hid the whole list from this pass: ORDERED anchors at
+  // the start of the line, so '> 1. a' matched nothing and a broken sequence
+  // inside a quote was never renumbered. The prefix is now split off, matched
+  // against, and put back.
+  describe('inside a blockquote', () => {
+    test('renumbers a broken sequence', () => {
+      assert.equal(out('> 1. a\n> 3. b\n'), '> 1. a\n> 2. b\n');
+    });
+    test('keeps the lazy all-ones style', () => {
+      assert.equal(out('> 1. a\n> 1. b\n'), '> 1. a\n> 1. b\n');
+    });
+    test('honours a declared start', () => {
+      assert.equal(out('> 5. a\n> 9. b\n'), '> 5. a\n> 6. b\n');
+    });
+    test('keeps an indented quote marker', () => {
+      assert.equal(out('  > 1. a\n  > 3. b\n'), '  > 1. a\n  > 2. b\n');
+    });
+    test('a quoted list and a top-level list are different lists', () => {
+      assert.equal(
+        out('> 1. a\n> 3. b\n\n1. c\n3. d\n'),
+        '> 1. a\n> 2. b\n\n1. c\n2. d\n',
+      );
+    });
+    test('each quote depth is its own list', () => {
+      assert.equal(
+        out('> > 1. a\n> > 3. b\n> 1. c\n> 3. d\n'),
+        '> > 1. a\n> > 2. b\n> 1. c\n> 2. d\n',
+      );
+    });
+    test('a quoted paragraph ends the list', () => {
+      assert.equal(
+        out('> 1. a\n> 3. b\n>\n> text\n>\n> 1. c\n> 3. d\n'),
+        '> 1. a\n> 2. b\n>\n> text\n>\n> 1. c\n> 2. d\n',
+      );
+    });
+    test('is idempotent', () => {
+      const once = out('> 1. a\n> 3. b\n');
+      assert.equal(out(once), once);
+    });
+  });
 });
