@@ -126,6 +126,8 @@ git-diff-friendly style; `preserve` changes no number at all.
 
 Fence character and length only. Length is `max(3, longest run of the fence character in the body + 1)`. **The info string is never modified** (SAFE-02).
 
+A line indented more than three columns past the opener is not a closing fence, so a block "closed" that way is unterminated: its delimiters are left exactly as written. The normalizer applies the scanner's own indentation test rather than a looser one, because a line the scanner does not count as a closer is inside the protected region, and rewriting it is a SAFE-01 breach that refuses the whole document.
+
 **BLK-11 — File hygiene**
 
 | Rule | Default |

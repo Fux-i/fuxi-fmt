@@ -9,7 +9,15 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- **A closing fence indented more than three columns past the opener no longer suppresses
+  formatting for the whole document.** The scanner never accepted such a line as a closer and
+  left the block unterminated, but the fence normalizer rewrote it anyway. That changed protected
+  bytes, which trips SAFE-01, and a guard failure refuses the entire document — so one malformed
+  fence silently left every block *before* it unformatted. With a blank line after the same line
+  there was no rewrite and no diagnostic at all: the same input, two outcomes, neither of them
+  intended. The normalizer now applies the scanner's own indentation test (BLK-10, SAFE-01).
 
 ## [0.23.0] - 2026-09-30
 

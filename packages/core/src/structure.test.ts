@@ -69,4 +69,31 @@ describe('BLK-10 code fence delimiter normalisation', () => {
     const src = '~~~js\nnever closed\n';
     assert.equal(out(src), src);
   });
+  // A closing fence indented more than three columns past the opener is not a
+  // closer to the scanner (scan.ts), so this pass must not treat it as one. The
+  // two disagreed: the rewrite tripped SAFE-01, and a guard failure refuses the
+  // whole document, so one malformed fence silently unformatted every other
+  // block around it. Adding a blank line after the same line removed the
+  // rewrite entirely. Same input, two outcomes, neither of them the right one.
+  test('does not treat an over-indented line as a closing fence', () => {
+    const src = '```js\na ``` b\n    ```\n';
+    const result = format(src);
+    assert.equal(result.output, src);
+    assert.deepEqual(result.diagnostics, []);
+  });
+  // An unterminated fence swallows every line after it, so what the guard
+  // failure damaged was the content BEFORE it: a heading with no connection to
+  // the fence came out unformatted because the refusal is document-wide.
+  test('an over-indented closer does not suppress the rest of the document', () => {
+    assert.equal(
+      out('#  heading\n\n```js\na ``` b\n    ```\n'),
+      '# heading\n\n```js\na ``` b\n    ```\n',
+    );
+  });
+  test('a trailing blank line does not change the outcome', () => {
+    const src = '```js\na ``` b\n    ```\n\n';
+    const result = format(src);
+    assert.equal(result.output, src);
+    assert.deepEqual(result.diagnostics, []);
+  });
 });

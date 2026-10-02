@@ -61,6 +61,13 @@ export function normalizeFences(
 
     const close = FENCE.exec(out[closeIndex] ?? '');
     if (close === null) continue;
+    // A closing fence indented more than three columns past the opener is not a
+    // closing fence to the scanner, which skips such a line and leaves the region
+    // unterminated. Rewriting it anyway changes protected bytes, and the guard
+    // answers a SAFE-01 breach by refusing the whole document - so one malformed
+    // fence silently stopped every block before it from being formatted. The
+    // scanner owns the region boundary; this pass has to stay inside it.
+    if ((close[1] ?? '').length > indent.length + 3) continue;
     if ((close[2] ?? '').charAt(0) !== char) continue;
     if ((close[3] ?? '').trim() !== '') continue;
 
