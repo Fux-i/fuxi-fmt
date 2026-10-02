@@ -63,7 +63,11 @@ describe('documentation stays true to the code', () => {
     // The specification was checked from the start; the readme was not, and it
     // drifted: it listed four typography options as outstanding long after each
     // had shipped, and still claimed 173 tests at 254.
-    const lines = readme.split('\n').filter((line) => /outstanding/i.test(line));
+    //
+    // Narrow by construction: it only sees lines that use the word, and only option
+    // names on them. A table headed "Not implemented" and a claim naming rule IDs
+    // both slipped past it for two releases, so the rule-ID half is checked here too.
+    const lines = readme.split('\n').filter((line) => /outstanding|still to do/i.test(line));
     assert.ok(lines.length > 0, 'expected the readme to state what is outstanding');
 
     for (const line of lines) {
@@ -78,6 +82,16 @@ describe('documentation stays true to the code', () => {
           'the readme calls ' + section + '.' + name + ' outstanding, but it is implemented',
         );
       }
+      // A rule ID on such a line is the same claim in a form this test could not
+      // read. Every rule the specification declares is implemented, so an ID here
+      // means the sentence is stale - and if a rule is ever genuinely withdrawn,
+      // this assertion is where that has to be said out loud.
+      const rules = [...line.matchAll(/\b([A-Z]{2,4}-\d{2})\b/g)].map((m) => m[1] ?? '');
+      assert.deepEqual(
+        rules,
+        [],
+        'the readme calls ' + rules.join(', ') + ' outstanding; if a rule really is unfinished, say so in the specification first',
+      );
     }
   });
 

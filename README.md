@@ -133,8 +133,11 @@ with the core inlined, and the manifest declares `onLanguage:markdown` activatio
 `untrustedWorkspaces: supported`, and the `fuxiFmt.enable` setting. Loading it in a real
 extension host has not been verified.
 
-Also outstanding: in-document ignore directives (CFG-03), list reindentation (BLK-08),
-and loading the extension in a real editor.
+Also outstanding: loading the extension in a real editor.
+
+This paragraph used to name in-document ignore directives (CFG-03) and list reindentation (BLK-08)
+as well, both of which had shipped. The check could not see them: it looks for option names on lines
+that use that word, and these were rule IDs — which is why it reads rule IDs now too.
 
 The normative behavioural contract is [FUXI-FMT-SPEC.md](FUXI-FMT-SPEC.md) — read that
 first. The prior-art survey is
@@ -279,27 +282,7 @@ is the authority; this is the shortest accurate summary of the gap.
 
 | Item | State |
 |---|---|
-| **Five documented options** | **Not implemented**, and not equally worth doing. See below. Setting any of them produces silence. |
-
-### `typography.symbolWhitelist`: the shape, now that the refactor is done
-
-The signature refactor (`3d19468`) removed the obstacle. What is left is mechanical:
-
-1. `chars.ts` — export the current `SPACING_SYMBOLS` list as `DEFAULT_SPACING_SYMBOLS` (a plain
-   array), and give `isSpacingChar(ch, symbols = SPACING_SYMBOLS)` a `Set` parameter.
-2. `options.ts` — `symbolWhitelist?: readonly string[]` on the input, `ReadonlySet<string>` on the
-   resolved options, defaulted to `DEFAULT_SPACING_SYMBOLS`. Build the Set once at resolve time,
-   not once per character.
-3. `typography.ts` — `classOf` passes `options.symbolWhitelist` to `isSpacingChar`. This is the
-   single line the refactor existed to make possible.
-4. Remove `typography.symbolWhitelist` from **both** "not implemented at all" lists in the same
-   commit, or the cross-document check fails.
-5. Tests — a custom set that adds a character, one that removes a default such as `%`, and one
-   asserting the default set is unchanged.
-
-**Do not land 1 to 3 without 4, and do not land any of them without a test.** An option sitting in
-the defaults that nothing reads is precisely the defect `list.indentWidth` carried for twenty
-releases, and this option is one careless commit away from repeating it.
+| **Two options shipped since this section was written** | `blankLines.insideLists` and `typography.spacingSymbols` (then called `symbolWhitelist`) are implemented and tested. The build plan that used to sit here described work that had already landed, and it read as unfinished to everyone who saw it — including to me, two rounds ago. |
 
 ### `blankLines.insideBlockquotes`: withdrawn, not built
 
@@ -320,10 +303,8 @@ rather than implied by a config key.
 ### The remaining options
 
 | Option | Judgment |
-|---|---|
-| `blankLines.insideLists`, `blankLines.insideBlockquotes` | **Worth doing, carefully.** The only two that change rendering: inserting a blank line between list items flips a tight list to loose. The option is the escape hatch for an author who wants the loose form, and BLK-03 exists precisely to stop the formatter doing it unasked. Any implementation must leave the default off. |
-| `typography.symbolWhitelist` | **Worth doing, cheaply.** The symbol set is hardcoded in `chars.ts`; exposing it is mostly threading. A Japanese or Korean user will want a different set, and `cjkClasses` already set the precedent for making a character class configurable. |
-| `typography.collapseBoundarySpaces` | **Marginal.** TYPO-02 is implemented and always on. Exposing it means threading a flag through `separator` and `formatLine` for a behaviour nobody has asked to turn off. Do it only if someone does. |
+| `blankLines.insideLists` | **Shipped.** Three-way: `remove` / `one` / `preserve`, default `remove`. The escape hatch for an author who wants the loose form exists, and BLK-03 stops the formatter doing it unasked. |
+| `typography.spacingSymbols` (was `symbolWhitelist`) | **Shipped.** The symbol set is configurable; `cjkClasses` set the precedent and a Japanese or Korean user can now ask for a different one. |
 | **Extension host** | The bundle runs against a stubbed `vscode` module in tests. It has never been loaded by a real editor. |
 | **Real documents** | Everything is verified against generated fixtures, a synthetic article, and this repository's own Markdown. The formatter has never seen a real Chinese technical article. |
 

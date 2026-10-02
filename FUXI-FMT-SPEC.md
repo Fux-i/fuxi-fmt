@@ -380,12 +380,11 @@ Y = covers, P = partial or conditional, N = does not cover.
 | (h) never touch fenced code | P (opt-out) | P (opt-out) | Y | Y | P (opt-out) | Y | **Y (default)** |
 | (i) all options tunable | P | P | P | P | P | P | **P** (see note below) |
 
-Row (i) is **P** rather than Y because four documented options are unimplemented: `blankLines.insideLists`,
-`blankLines.insideBlockquotes`, `typography.collapseBoundarySpaces` and `typography.spacingSymbols`.
-Setting any of them produces silence. Every other requirement in this table is fully covered. The
-implementation-status note in section 6 is the authoritative list, and the readme carries the same
-list, which a test keeps in agreement.
-
+Row (i) is **P** rather than Y because some documented options are unimplemented or withdrawn.
+Setting one produces silence. The authoritative list is the status note at the end of section 7, and
+the readme carries the same list, which a test keeps in agreement — so this paragraph does not repeat
+it. It used to repeat it, and this copy was wrong for two releases while the checked copy was right,
+which is the whole argument against writing one fact down twice.
 **Closest single tool:** Prettier — covers (a)(b)(c) and can be made code-safe for (h), but misses (e)(f)(g) entirely and its default for (h) is the opposite of the requirement. **Closest for the CJK half:** AutoCorrect or CJK Text Formatter — cover (f)(g) and part of (e), but neither has any of (a)(b)(c) as a formatter, and AutoCorrect is not a formatting provider at all.
 
 ---

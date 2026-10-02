@@ -58,6 +58,14 @@ with release candidates suffixed `-rcN`.
   the guarantee is checked - and the exception is granted only while the option is on (BLK-12).
 ### Fixed
 
+- **Three documents claimed shipped work was unfinished, and the check that should have caught it
+  could only read one kind of sentence.** The specification's comparison table listed four
+  unimplemented options when two had shipped and one had been withdrawn; the readme carried a 25-line
+  build plan for `symbolWhitelist` describing work that had already landed, and named in-document
+  ignore directives and list reindentation as outstanding. The same fact was written down in four
+  places and checked in one. The duplicates are gone — each document now points at the authoritative
+  status note instead of restating it — and the readme check reads rule IDs as well as option names,
+  which is the form the two oldest of those claims were written in (GRT-04).
 - **A closing fence indented more than three columns past the opener no longer suppresses
   formatting for the whole document.** The scanner never accepted such a line as a closer and
   left the block unterminated, but the fence normalizer rewrote it anyway. That changed protected
