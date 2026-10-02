@@ -47,6 +47,26 @@ describe('the extension bundle against a stubbed host', () => {
   const context = { subscriptions: [] };
   extension.activate(context);
 
+  interface PublishedDiagnostic {
+    readonly message: string;
+    readonly severity: number;
+    readonly range: { readonly start: { readonly line: number } };
+  }
+  interface Host {
+    publishedDiagnostics: Array<{ uri: unknown; diagnostics: PublishedDiagnostic[] }>;
+    outputLines: string[];
+    revealed: number;
+  }
+  const host = vscode as unknown as Host;
+  function clean(target: Host): void {
+    target.publishedDiagnostics.length = 0;
+    target.outputLines.length = 0;
+    target.revealed = 0;
+  }
+  function lastPublished(target: Host) {
+    return target.publishedDiagnostics[target.publishedDiagnostics.length - 1];
+  }
+
   interface Provider {
     provideDocumentFormattingEdits(document: unknown): unknown[];
     provideDocumentRangeFormattingEdits(document: unknown, range: unknown): unknown[];
@@ -62,7 +82,8 @@ describe('the extension bundle against a stubbed host', () => {
 
   test('activate registers both providers and nothing is left undisposed', () => {
     assert.equal(registrations.length, 2);
-    assert.equal(context.subscriptions.length, 2);
+    // Two providers, the diagnostic collection and the output channel.
+    assert.equal(context.subscriptions.length, 4);
   });
 
   test('a range provider is registered, because Format Selection needs one', () => {
@@ -161,11 +182,58 @@ describe('the extension bundle against a stubbed host', () => {
     }
   });
 
-  test('disposing the context releases both registrations', () => {
+  test('a warning is published at its line and does not stop the formatting', () => {
+    assert.ok(documentProvider);
+    clean(vscode);
+    const warned = {
+      getText: () => '#  标题\n\n他说 "你好 了\n',
+      uri: { fsPath: join(dist, 'warning.md') },
+    };
+    const edits = documentProvider.provider.provideDocumentFormattingEdits(warned);
+
+    assert.ok((edits as unknown[]).length > 0, 'a warning withheld the edits');
+    const published = lastPublished(vscode);
+    assert.equal(published?.diagnostics.length, 1);
+    assert.equal(published?.diagnostics[0]?.severity, vscode.DiagnosticSeverity.Warning);
+    assert.equal(published?.diagnostics[0]?.range.start.line, 2);
+    assert.match(String(published?.diagnostics[0]?.message), /TYPO-11/);
+    assert.equal(vscode.revealed, 1, 'the output panel was not revealed for a warning');
+  });
+
+  test('a refused document publishes an error and withholds the edits', () => {
+    assert.ok(documentProvider);
+    clean(vscode);
+    const refused = {
+      getText: () => '\u0060\u0060\u0060\u0060js\ncode\n\u0060\u0060\u0060\n',
+      uri: { fsPath: join(dist, 'refused.md') },
+    };
+    const edits = documentProvider.provider.provideDocumentFormattingEdits(refused);
+
+    assert.deepEqual(edits, []);
+    const published = lastPublished(vscode);
+    assert.equal(published?.diagnostics[0]?.severity, vscode.DiagnosticSeverity.Error);
+    assert.equal(vscode.revealed, 1);
+  });
+
+  test('a clean document publishes nothing and stays quiet', () => {
+    assert.ok(documentProvider);
+    clean(vscode);
+    const clean1 = {
+      getText: () => '# Title\n\nSome text.\n',
+      uri: { fsPath: join(dist, 'clean.md') },
+    };
+    documentProvider.provider.provideDocumentFormattingEdits(clean1);
+
+    assert.equal(lastPublished(vscode)?.diagnostics.length, 0);
+    assert.equal(vscode.revealed, 0, 'the output panel was revealed for a clean document');
+    assert.deepEqual(vscode.outputLines, []);
+  });
+
+  test('disposing the context releases every registration', () => {
     for (const subscription of context.subscriptions as Array<{ dispose(): void }>) {
       subscription.dispose();
     }
-    assert.deepEqual(vscode.disposed, ['document', 'range']);
+    assert.deepEqual(vscode.disposed, ['document', 'range', 'diagnostics', 'output']);
   });
 
   after(() => rmSync(join(dist, 'node_modules'), { recursive: true, force: true }));

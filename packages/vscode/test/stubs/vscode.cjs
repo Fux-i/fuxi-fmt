@@ -23,7 +23,46 @@ module.exports = {
    */
   settings: {},
 
+  /** Diagnostics the extension published, keyed by the document uri. */
+  publishedDiagnostics: [],
+
+  /** Lines the extension wrote to its output channel. */
+  outputLines: [],
+
+  /** How many times the output channel was revealed. */
+  revealed: 0,
+
+  DiagnosticSeverity: { Error: 0, Warning: 1, Information: 2, Hint: 3 },
+
+  Diagnostic: class Diagnostic {
+    constructor(range, message, severity) {
+      this.range = range;
+      this.message = message;
+      this.severity = severity;
+    }
+  },
+
+  window: {
+    createOutputChannel(name) {
+      module.exports.outputName = name;
+      return {
+        name,
+        appendLine: (line) => void module.exports.outputLines.push(line),
+        show: () => void (module.exports.revealed += 1),
+        dispose: () => void disposed.push('output'),
+      };
+    },
+  },
+
   languages: {
+    createDiagnosticCollection(name) {
+      module.exports.collectionName = name;
+      return {
+        name,
+        set: (uri, diagnostics) => void module.exports.publishedDiagnostics.push({ uri, diagnostics }),
+        dispose: () => void disposed.push('diagnostics'),
+      };
+    },
     registerDocumentFormattingEditProvider(selector, provider) {
       registrations.push({ kind: 'document', selector, provider });
       return { dispose: () => disposed.push('document') };

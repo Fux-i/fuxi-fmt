@@ -42,6 +42,7 @@ with release candidates suffixed `-rcN`.
   that invites that reading is a defect in the name. `typography.symbolWhitelist` becomes
   `typography.spacingSymbols`, which says what the set is for rather than what it is. Setting either
   old name still works and produces a notice until the next release (CFG-07).
+- **The editor now says what happened.** Diagnostics from the core become editor diagnostics at their line — a squiggle and a Problems entry — and a configuration notice or warning is written to a `Fuxi Fmt` output channel, which is revealed only when something was refused or warned about. Until now the adapter computed diagnostics and threw them away, so a refused document simply did not format and nothing explained it. Related: the adapter used to withhold the edits for *any* diagnostic, so the first warning this tool produced would have stopped the editor formatting any document containing an unpaired quote; only an error withholds them now (CFG-06).
 - **A retired option name is now reported instead of silently ignored.** Every name this project
   has retired is still read for one release, and the configuration reader says which old name it saw
   and what it became: `symbolWhitelist`, `punctuationAllowlist`, `normalizeLength`, plus three whose

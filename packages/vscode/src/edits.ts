@@ -21,7 +21,7 @@
  */
 
 import { diffEdits, format, splitSourceLines } from '../../core/src/index.ts';
-import type { FormatOptionsInput, SourceLine } from '../../core/src/index.ts';
+import type { Diagnostic, FormatOptionsInput, SourceLine } from '../../core/src/index.ts';
 
 export interface Edit {
   /** Inclusive character offset in the original document. */
@@ -96,11 +96,35 @@ export function applyEdits(text: string, edits: readonly Edit[]): string {
   return out + text.slice(cursor);
 }
 
+export interface FormatOutcome {
+  readonly edits: readonly Edit[];
+  /**
+   * What the formatter wants the author to know. An error means the guard
+   * withheld the document and `edits` is empty; a warning means the document was
+   * formatted and something in it wants a look.
+   */
+  readonly diagnostics: readonly Diagnostic[];
+}
+
+/**
+ * The edits to apply for a whole document, and what to tell the author.
+ *
+ * Only an error withholds the edits. A warning used to withhold them too, because
+ * the adapter could not tell the two apart - so the first non-fatal diagnostic
+ * this tool produced would have stopped the editor formatting any document that
+ * contained an unpaired quote.
+ */
+export function documentFormat(text: string, options: FormatOptionsInput): FormatOutcome {
+  const result = format(text, options);
+  if (result.diagnostics.some((diagnostic) => diagnostic.severity === 'error')) {
+    return { edits: [], diagnostics: result.diagnostics };
+  }
+  return { edits: computeEdits(text, result.output), diagnostics: result.diagnostics };
+}
+
 /** The edits to apply for a whole document, or none if the guard withheld one. */
 export function documentEdits(text: string, options: FormatOptionsInput): Edit[] {
-  const result = format(text, options);
-  if (result.diagnostics.length > 0) return [];
-  return computeEdits(text, result.output);
+  return [...documentFormat(text, options).edits];
 }
 
 /** Keep only the edits that fall inside a selection, by line. */

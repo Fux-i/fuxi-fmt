@@ -298,7 +298,7 @@ These are the general form of "don't touch code blocks". Every one is byte-verba
 
 **CFG-05 — Compatibility mapping and config import** for `.markdownlint.json`, `.autocorrectrc` and `.prettierrc`.
 
-**CFG-06 — Pipeline position.** fuxi-fmt registers a real formatting provider **and** a range provider, so it can be `editor.defaultFormatter` and so Format Selection works. An independent save hook is offered as an option for authors who keep another formatter, with the precedence contract documented.
+**CFG-06 — Pipeline position.** fuxi-fmt registers a real formatting provider **and** a range provider, so it can be `editor.defaultFormatter` and so Format Selection works. An independent save hook is offered as an option for authors who keep another formatter, with the precedence contract documented. The adapter also **reports**: diagnostics from the core become editor diagnostics at their line, a configuration notice is written to the extension's output channel, and that channel is revealed only when something was refused or warned about. Before this, the adapter computed diagnostics and discarded them, so a document the guard refused simply did not format and nothing said why — which is how two of this round's five reports arrived as "it does nothing".
 
 **CFG-07 — Retired option names are read, and reported.** A renamed key that silently stops working produces no error, no change and no clue, so every name this project retires is read for one release and reported with both names.
 

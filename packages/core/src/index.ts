@@ -35,9 +35,13 @@ export {
   loadOptionsFor,
   mergeOptions,
   parseConfig,
+  parseConfigDetailed,
   readConfigFile,
+  readConfigFileDetailed,
 } from './config.ts';
-export type { LoadedConfig } from './config.ts';
+export type { LoadedConfig, ParsedConfig } from './config.ts';
+export { applyAliases } from './aliases.ts';
+export type { ConfigNotice } from './aliases.ts';
 export type { Violation } from './guard.ts';
 export { applyTypography } from './typography.ts';
 export { isBlockRegionKind, protectedMask, scanRegions, splitSourceLines } from './scan.ts';

@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { defaultOptions, loadOptionsFor } from '../../core/src/index.ts';
-import type { FormatOptionsInput } from '../../core/src/index.ts';
+import type { ConfigNotice, Diagnostic, FormatOptionsInput } from '../../core/src/index.ts';
 import { mergeOptions } from '../../core/src/config.ts';
-import { documentEdits, editsInRange, type Edit } from './edits.ts';
+import { documentFormat, editsInRange, type Edit } from './edits.ts';
 import { offsetToPosition } from './positions.ts';
 
 const SELECTOR: vscode.DocumentSelector = [{ language: 'markdown' }];
@@ -67,10 +67,25 @@ function fromIndividualSettings(document: vscode.TextDocument): FormatOptionsInp
   return out as FormatOptionsInput;
 }
 
-function optionsFor(document: vscode.TextDocument): FormatOptionsInput {
+interface EffectiveOptions {
+  readonly options: FormatOptionsInput;
+  readonly notices: readonly ConfigNotice[];
+}
+
+/**
+ * The options for a document, and what its configuration had to say.
+ *
+ * The notices are the reason this returns a pair: a renamed key or a typo
+ * produces a configuration that quietly does less than its author asked for, and
+ * the editor is the one place that can say so while they are looking at the file.
+ */
+function loadOptions(document: vscode.TextDocument): EffectiveOptions {
   let fromFile: FormatOptionsInput = {};
+  let notices: readonly ConfigNotice[] = [];
   try {
-    fromFile = loadOptionsFor(document.uri.fsPath).options;
+    const loaded = loadOptionsFor(document.uri.fsPath);
+    fromFile = loaded.options;
+    notices = loaded.notices;
   } catch {
     // An unreadable config must not stop the formatter from working.
     fromFile = {};
@@ -82,7 +97,10 @@ function optionsFor(document: vscode.TextDocument): FormatOptionsInput {
   const override = vscode.workspace
     .getConfiguration('fuxiFmt')
     .get<FormatOptionsInput>('config', {});
-  return mergeOptions(mergeOptions(fromIndividualSettings(document), fromFile), override ?? {});
+  return {
+    options: mergeOptions(mergeOptions(fromIndividualSettings(document), fromFile), override ?? {}),
+    notices,
+  };
 }
 
 function toTextEdits(document: vscode.TextDocument, edits: readonly Edit[]): vscode.TextEdit[] {
@@ -104,11 +122,63 @@ function enabled(): boolean {
   return vscode.workspace.getConfiguration('fuxiFmt').get<boolean>('enable', true);
 }
 
+/** Map a core diagnostic to the editor's, at its line. */
+function toDiagnostic(diagnostic: Diagnostic): vscode.Diagnostic {
+  const severity =
+    diagnostic.severity === 'error'
+      ? vscode.DiagnosticSeverity.Error
+      : vscode.DiagnosticSeverity.Warning;
+  return new vscode.Diagnostic(
+    new vscode.Range(
+      new vscode.Position(diagnostic.line, 0),
+      new vscode.Position(diagnostic.line, Number.MAX_SAFE_INTEGER),
+    ),
+    diagnostic.ruleId + ': ' + diagnostic.message,
+    severity,
+  );
+}
+
+/**
+ * Format, then tell the author what happened.
+ *
+ * Before this existed the adapter computed diagnostics and threw them away, so a
+ * document the guard refused simply did not format and nothing said why - which is
+ * how two of this round's five reports arrived as "it does nothing".
+ *
+ * The output panel is revealed only when something was refused or warned about.
+ * Popping it open on every save would be a reason to uninstall the extension.
+ */
+function formatAndReport(
+  document: vscode.TextDocument,
+  collection: vscode.DiagnosticCollection,
+  output: vscode.OutputChannel,
+): readonly Edit[] {
+  const loaded = loadOptions(document);
+  const outcome = documentFormat(document.getText(), loaded.options);
+  collection.set(document.uri, outcome.diagnostics.map(toDiagnostic));
+
+  for (const notice of loaded.notices) {
+    output.appendLine('config: ' + notice.message);
+  }
+  for (const diagnostic of outcome.diagnostics) {
+    output.appendLine(
+      diagnostic.severity + ': line ' + String(diagnostic.line + 1) + ': ' +
+        diagnostic.ruleId + ' ' + diagnostic.message,
+    );
+  }
+  const tripped = outcome.diagnostics.length > 0 || loaded.notices.length > 0;
+  if (tripped) output.show(true);
+  return outcome.edits;
+}
+
 export function activate(context: vscode.ExtensionContext): void {
+  const collection = vscode.languages.createDiagnosticCollection('fuxi-fmt');
+  const output = vscode.window.createOutputChannel('Fuxi Fmt');
+
   const formatting: vscode.DocumentFormattingEditProvider = {
     provideDocumentFormattingEdits(document) {
       if (!enabled()) return [];
-      return toTextEdits(document, documentEdits(document.getText(), optionsFor(document)));
+      return toTextEdits(document, formatAndReport(document, collection, output));
     },
   };
 
@@ -118,7 +188,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const rangeFormatting: vscode.DocumentRangeFormattingEditProvider = {
     provideDocumentRangeFormattingEdits(document, range) {
       if (!enabled()) return [];
-      const edits = documentEdits(document.getText(), optionsFor(document));
+      const edits = formatAndReport(document, collection, output);
       return toTextEdits(document, editsInRange(edits, range.start.line, range.end.line));
     },
   };
@@ -126,6 +196,8 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.languages.registerDocumentFormattingEditProvider(SELECTOR, formatting),
     vscode.languages.registerDocumentRangeFormattingEditProvider(SELECTOR, rangeFormatting),
+    collection,
+    output,
   );
 }
 
