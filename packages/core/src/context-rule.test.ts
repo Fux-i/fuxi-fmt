@@ -53,10 +53,12 @@ describe('TYPO-05/08 one context rule', () => {
     settles('中文 .后面还有字\n', '中文。后面还有字\n');
   });
 
-  test('a quoted span is its own scope, and a straight one at that', () => {
+  test('a quoted span is its own scope, even before the quotes are curly', () => {
     // The line is Chinese, the quotation is not, and the comma between two spaces
-    // is loose enough that only the scope can protect it.
-    settles('他说 "a , b" 这句话\n', '他说 "a , b" 这句话\n');
+    // is loose enough that only the scope can protect it. TYPO-11 pairs the quotes
+    // on the way through and TYPO-07 takes the spaces the wider marks leave behind;
+    // the comma inside is the point here, and it stays half-width.
+    settles('他说 "a , b" 这句话\n', '他说“a , b”这句话\n');
   });
 
   test('a curly span is a scope too, or the rule is not idempotent', () => {

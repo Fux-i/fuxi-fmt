@@ -58,6 +58,7 @@ const SAMPLES: Record<string, unknown> = {
   'typography.hashtag': true,
   'typography.parenStyle': 'preserve',
   'typography.context': 'adjacent',
+  'typography.quotes': 'preserve',
   'typography.cjkClasses': ['han', 'kana'],
   'typography.symbolWhitelist': ['%', '\u00a7'],
   'list.orderedStyle': 'renumber',

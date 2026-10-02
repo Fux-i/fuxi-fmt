@@ -236,6 +236,20 @@
           ],
           "markdownDescription": "%fuxiFmt.typography.context.description%"
         },
+        "fuxiFmt.typography.quotes": {
+          "type": "string",
+          "default": "paired",
+          "scope": "resource",
+          "enum": [
+            "paired",
+            "preserve"
+          ],
+          "enumDescriptions": [
+            "%fuxiFmt.typography.quotes.enum.0%",
+            "%fuxiFmt.typography.quotes.enum.1%"
+          ],
+          "markdownDescription": "%fuxiFmt.typography.quotes.description%"
+        },
         "fuxiFmt.list.orderedStyle": {
           "type": "string",
           "default": "keep-all-ones",

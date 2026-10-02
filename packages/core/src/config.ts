@@ -276,6 +276,7 @@ function readSections(raw: Raw): FormatOptionsInput {
       hashtag?: boolean;
       parenStyle?: 'mixed' | 'fullwidth' | 'halfwidth' | 'preserve';
       context?: 'line' | 'adjacent';
+      quotes?: 'preserve' | 'paired';
       cjkClasses?: readonly CjkClass[];
       symbolWhitelist?: readonly string[];
     } = {};
@@ -313,6 +314,9 @@ function readSections(raw: Raw): FormatOptionsInput {
     }
     if (from.context !== undefined) {
       to.context = oneOf(from.context, 'typography.context', ['line', 'adjacent']);
+    }
+    if (from.quotes !== undefined) {
+      to.quotes = oneOf(from.quotes, 'typography.quotes', ['paired', 'preserve']);
     }
     if (from.cjkClasses !== undefined) {
       const names = strings(from.cjkClasses, 'typography.cjkClasses');

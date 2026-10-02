@@ -25,6 +25,15 @@ with release candidates suffixed `-rcN`.
   the character outside the pair, never the bracketed term, so `English(中文)English` keeps
   half-width parens while `中文(English)文` does not. `adjacent` is the narrower rule for anyone
   who wants it, and now looks through emphasis markers as well (TYPO-05, TYPO-08).
+- **Straight double quotes become paired Chinese quotation marks.** New
+  `typography.quotes: "paired" | "preserve"`, default `paired`. `这就是"自信"的体现` becomes
+  `这就是“自信”的体现`, and `他说 "hello, world" 这句话` becomes `他说“hello, world”这句话` — the
+  quotation is a context scope, so the English sentence inside keeps its own comma. Only the
+  double quote is converted; the apostrophe is never touched, because `don't` cannot be told from
+  an opening single quote without guessing. Pairing is per line and all-or-nothing: a line with an
+  odd number of straight quotes is left exactly as written and reported as a warning naming the
+  line, which does not stop the format from succeeding. An inch mark is not a quotation:
+  `12" x 8"` is untouched (TYPO-11).
 ### Fixed
 
 - **A closing fence indented more than three columns past the opener no longer suppresses

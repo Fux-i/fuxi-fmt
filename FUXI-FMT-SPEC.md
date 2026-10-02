@@ -229,6 +229,15 @@ Mid-text `#` is a hashtag/anchor token and is **never spaced**, because `中文#
 
 `[A-Za-z0-9][+#]+` followed by CJK is spaced as a unit: `C++中文` → `C++ 中文`, `A+评分` → `A+ 评分`.
 
+**TYPO-11 — Straight double quotes become paired Chinese marks** · default `paired`
+
+`typography.quotes: "paired" | "preserve"` (default `paired`). `"text"` becomes `“text”` when the quotation is in Chinese context.
+
+- **Only the double quote is converted.** The apostrophe is never touched: `'` and the single quotation mark share a codepoint family, `don't` is indistinguishable from an opening quote without guessing, and a rule that guesses will one day eat a contraction.
+- **Pairing is per line and all-or-nothing.** A line with an odd number of straight quotes has one whose partner is on another line, so the line is left exactly as written and TYPO-11 reports a warning naming the line. The format still succeeds: a warning is not a failure.
+- A quote written tight against a word is an inch mark rather than a quotation, so `12" x 8"` is untouched.
+- A quotation is a context scope for TYPO-05 and TYPO-08, which is why `他说 "hello, world" 这句话` becomes `他说“hello, world”这句话` with the comma still half-width.
+
 ### D. Front matter
 
 **FM-01 — Front matter is a fully protected region** · always on
@@ -399,6 +408,7 @@ typography:
   punctuationChangeList: [",", ".", ":", "!", "?", ";"]
   parenStyle: mixed               # mixed | fullwidth | halfwidth | preserve
   context: line                   # line | adjacent
+  quotes: paired                  # paired | preserve
   halfwidthAlphanumerics: true
   ideographicSpace: true
   hashtag: false                  # opt-in, see TYPO-09

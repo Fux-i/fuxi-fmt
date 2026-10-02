@@ -8,8 +8,18 @@ import { normalizeMarkers, normalizeUnorderedMarker } from './markers.ts';
 import { resolveOptions, type FormatOptions, type FormatOptionsInput } from './options.ts';
 import { assignParents, findExcludedLists, planListIndent, scanListItems } from './list-scan.ts';
 import { protectedMask, scanRegions, splitSourceLines, type Region, type SourceLine } from './scan.ts';
+import { normalizeQuotes } from './quotes.ts';
 import { applyTypography } from './typography.ts';
 import { normalizeFullwidthAlphanumerics, normalizeParens, normalizePunctuation } from './widths.ts';
+
+/** 0-based line number containing `offset`. */
+function lineOf(text: string, offset: number): number {
+  let line = 0;
+  for (let i = 0; i < offset && i < text.length; i++) {
+    if (text.charAt(i) === '\n') line++;
+  }
+  return line;
+}
 
 export interface Diagnostic {
   readonly ruleId: string;
@@ -187,7 +197,8 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   const widths = normalizeFullwidthAlphanumerics(structural, options.typography, widthMask);
   const punctuation = normalizePunctuation(widths, options.typography, widthMask);
   const parens = normalizeParens(punctuation, options.typography, widthMask);
-  const spaced = applyTypography(parens, options.typography, ignoreRanges(parens, options.ignore));
+  const quoted = normalizeQuotes(parens, options.typography, widthMask);
+  const spaced = applyTypography(quoted.text, options.typography, ignoreRanges(quoted.text, options.ignore));
   const candidate = trimTrailingWhitespace(spaced, ignoreRanges(spaced, options.ignore));
 
   // GRT-01: never hand back a document that parses differently. If the guard
@@ -207,5 +218,15 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
 
   const eol: Eol = options.endOfLine === 'auto' ? normalized.eol : options.endOfLine;
   const output = applyEndOfLine(candidate, eol);
-  return { output, changed: output !== source, diagnostics: [] };
+  // TYPO-11: an unpaired quote is a warning, never a failure. The line keeps what
+  // the author wrote, and the author is told which line to look at.
+  const diagnostics: Diagnostic[] = quoted.unpaired.map((offset) => ({
+    ruleId: 'TYPO-11',
+    message:
+      'unpaired straight quote on line ' +
+      (lineOf(structural, offset) + 1) +
+      ': this line has an odd number of them, so none were converted',
+    line: lineOf(structural, offset),
+  }));
+  return { output, changed: output !== source, diagnostics };
 }

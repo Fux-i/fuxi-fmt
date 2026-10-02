@@ -25,6 +25,14 @@ export type ParenStyle = 'mixed' | 'fullwidth' | 'halfwidth' | 'preserve';
  * an emphasis marker put out of reach.
  */
 export type ContextMode = 'line' | 'adjacent';
+/**
+ * Straight double quotes become paired Chinese quotation marks.
+ *
+ * Only '"' is converted. The apostrophe is never touched: ' and ’ are the same
+ * codepoint family and no rule can tell "don't" from an opening single quote
+ * without guessing, so nothing is guessed.
+ */
+export type QuoteStyle = 'preserve' | 'paired';
 
 export interface TypographyOptions {
   /** Insert one space at every CJK to non-CJK boundary (TYPO-01). */
@@ -43,6 +51,8 @@ export interface TypographyOptions {
   readonly parenStyle: ParenStyle;
   /** How Chinese context is decided for every width rule (TYPO-05, TYPO-08). */
   readonly context: ContextMode;
+  /** Straight double quotes to paired Chinese marks (TYPO-11). */
+  readonly quotes: QuoteStyle;
   /** Which scripts count as CJK. Defaults to Han alone. */
   readonly cjkClasses: readonly CjkClass[];
   /** Symbols CJK spacing treats as word characters (TYPO-01). */
@@ -134,6 +144,7 @@ export interface TypographyInput {
   readonly hashtag?: boolean;
   readonly parenStyle?: ParenStyle;
   readonly context?: ContextMode;
+  readonly quotes?: QuoteStyle;
   readonly cjkClasses?: readonly CjkClass[];
   readonly symbolWhitelist?: readonly string[];
 }
@@ -167,6 +178,7 @@ export const defaultOptions: FormatOptions = {
     hashtag: false,
     parenStyle: 'mixed',
     context: 'line',
+    quotes: 'paired',
     cjkClasses: DEFAULT_CJK_CLASSES,
     symbolWhitelist: new Set(DEFAULT_SPACING_SYMBOLS),
   },
@@ -212,6 +224,7 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
       hashtag: input?.typography?.hashtag ?? defaultOptions.typography.hashtag,
       parenStyle: input?.typography?.parenStyle ?? defaultOptions.typography.parenStyle,
       context: input?.typography?.context ?? defaultOptions.typography.context,
+      quotes: input?.typography?.quotes ?? defaultOptions.typography.quotes,
       cjkClasses: input?.typography?.cjkClasses ?? defaultOptions.typography.cjkClasses,
       symbolWhitelist: new Set(
         input?.typography?.symbolWhitelist ?? defaultOptions.typography.symbolWhitelist,
