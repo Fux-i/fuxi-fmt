@@ -6,17 +6,18 @@
  * indistinguishable from an opening quote without guessing, and a rule that
  * guesses will one day eat a contraction.
  *
- * Pairing is per line and all-or-nothing. A line with an odd number of straight
- * quotes has one whose partner is somewhere else, so the line is left exactly as
- * written and the caller reports it - converting the ones that happen to pair
- * would leave the author with a document that is neither what they wrote nor what
- * they meant.
+ * Pairing is per paragraph and all-or-nothing. A paragraph with an odd number of
+ * straight quotes has one whose partner is somewhere else, so it is left exactly
+ * as written and the caller reports it once - converting the ones that happen to
+ * pair would leave the author with a document that is neither what they wrote nor
+ * what they meant. The paragraph rather than the line, because a quotation may
+ * wrap and a hard-wrapped document would otherwise warn on every wrapped quote.
  *
  * Spec references: TYPO-11.
  */
 
 import { isAlphanumeric } from './chars.ts';
-import { inChineseContext } from './context.ts';
+import { inChineseContext, paragraphAround } from './context.ts';
 import type { TypographyOptions } from './options.ts';
 
 const OPEN = '\u201c';
@@ -25,7 +26,7 @@ const STRAIGHT = '"';
 
 export interface QuoteResult {
   readonly text: string;
-  /** Offsets of straight quotes that had no partner on their line. */
+  /** Offset of the first straight quote in each paragraph that could not pair. */
   readonly unpaired: readonly number[];
 }
 
@@ -39,18 +40,20 @@ export function normalizeQuotes(
   const chars = text.split('');
   const unpaired: number[] = [];
 
-  let from = 0;
-  while (from < text.length) {
-    let to = text.indexOf('\n', from);
-    if (to === -1) to = text.length;
+  let at = 0;
+  while (at < text.length) {
+    const paragraph = paragraphAround(text, at);
 
     const marks: number[] = [];
-    for (let i = from; i < to; i++) {
+    for (let i = paragraph.start; i < paragraph.end; i++) {
       if (mask[i] !== 1 && text.charAt(i) === STRAIGHT) marks.push(i);
     }
 
     if (marks.length % 2 !== 0) {
-      for (const mark of marks) unpaired.push(mark);
+      // One report per paragraph, at its first straight quote: a wrapped paragraph
+      // with three marks is one problem, not three.
+      const first = marks[0];
+      if (first !== undefined) unpaired.push(first);
     } else {
       for (let k = 0; k + 1 < marks.length; k += 2) {
         const open = marks[k] ?? 0;
@@ -64,7 +67,8 @@ export function normalizeQuotes(
       }
     }
 
-    from = to + 1;
+    if (paragraph.end >= text.length) break;
+    at = paragraph.end + 1;
   }
 
   return { text: chars.join(''), unpaired };

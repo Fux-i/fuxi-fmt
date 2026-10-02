@@ -30,9 +30,10 @@ with release candidates suffixed `-rcN`.
   `这就是“自信”的体现`, and `他说 "hello, world" 这句话` becomes `他说“hello, world”这句话` — the
   quotation is a context scope, so the English sentence inside keeps its own comma. Only the
   double quote is converted; the apostrophe is never touched, because `don't` cannot be told from
-  an opening single quote without guessing. Pairing is per line and all-or-nothing: a line with an
-  odd number of straight quotes is left exactly as written and reported as a warning naming the
-  line, which does not stop the format from succeeding. An inch mark is not a quotation:
+  an opening single quote without guessing. Pairing is per paragraph and all-or-nothing: a
+  paragraph with an odd number of straight quotes is left exactly as written and reported once, as
+  a warning naming the line, which does not stop the format from succeeding. The paragraph rather
+  than the line, because a quotation may wrap across a line break. An inch mark is not a quotation:
   `12" x 8"` is untouched (TYPO-11).
 - **Two options are renamed, and the old names keep working for one release.**
   `codeBlock.normalizeLength` becomes `codeBlock.fenceLength`, because it controls the number of

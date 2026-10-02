@@ -83,17 +83,57 @@ export function quoteSpans(text: string, mask: Uint8Array, from: number, to: num
   return spans.sort((a, b) => a.start - b.start);
 }
 
-/** The innermost quoted span containing `index`, or the whole line. */
+function isBlank(text: string, from: number, to: number): boolean {
+  for (let i = from; i < to; i++) {
+    const ch = text.charAt(i);
+    if (ch !== ' ' && ch !== '\t' && ch !== '\r') return false;
+  }
+  return true;
+}
+
+/**
+ * The run of non-blank lines containing `index` - one paragraph.
+ *
+ * A quotation may wrap across a line break, so it is not bounded by the line it
+ * opens on, and an author who hard-wraps prose has not written two unbalanced
+ * quotes. Pairing per line warns about every wrapped quotation in a document,
+ * which is a warning nobody reads twice.
+ */
+export function paragraphAround(text: string, index: number): Span {
+  let start = lineStart(text, index);
+  let end = lineEnd(text, index);
+  while (start > 0) {
+    const prevEnd = start - 1;
+    const prevStart = lineStart(text, prevEnd);
+    if (isBlank(text, prevStart, prevEnd)) break;
+    start = prevStart;
+  }
+  while (end < text.length) {
+    const nextStart = end + 1;
+    const nextEnd = lineEnd(text, nextStart);
+    if (isBlank(text, nextStart, nextEnd)) break;
+    end = nextEnd;
+  }
+  return { start, end };
+}
+
+/**
+ * The innermost quoted span containing `index`, or else the line.
+ *
+ * Quotations are found per paragraph, so a wrapped quotation is one scope for
+ * every mark inside it. The fallback stays the line rather than the paragraph: a
+ * mark with no quotation around it is judged by the line it is on, which is the
+ * rule TYPO-05 states.
+ */
 export function scopeOf(text: string, index: number, mask: Uint8Array): Span {
-  const from = lineStart(text, index);
-  const to = lineEnd(text, index);
-  let best: Span = { start: from, end: to };
-  for (const span of quoteSpans(text, mask, from, to)) {
-    if (index > span.start && index < span.end && span.end - span.start < best.end - best.start) {
-      best = span;
+  const paragraph = paragraphAround(text, index);
+  let best: Span | undefined;
+  for (const span of quoteSpans(text, mask, paragraph.start, paragraph.end)) {
+    if (index > span.start && index < span.end) {
+      if (best === undefined || span.end - span.start < best.end - best.start) best = span;
     }
   }
-  return best;
+  return best ?? { start: lineStart(text, index), end: lineEnd(text, index) };
 }
 
 /** Does this span contain CJK? Protected characters never count. */

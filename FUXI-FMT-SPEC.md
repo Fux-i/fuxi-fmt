@@ -234,7 +234,7 @@ Mid-text `#` is a hashtag/anchor token and is **never spaced**, because `中文#
 `typography.quotes: "paired" | "preserve"` (default `paired`). `"text"` becomes `“text”` when the quotation is in Chinese context.
 
 - **Only the double quote is converted.** The apostrophe is never touched: `'` and the single quotation mark share a codepoint family, `don't` is indistinguishable from an opening quote without guessing, and a rule that guesses will one day eat a contraction.
-- **Pairing is per line and all-or-nothing.** A line with an odd number of straight quotes has one whose partner is on another line, so the line is left exactly as written and TYPO-11 reports a warning naming the line. The format still succeeds: a warning is not a failure.
+- **Pairing is per paragraph and all-or-nothing.** A paragraph with an odd number of straight quotes has one whose partner is elsewhere, so it is left exactly as written and TYPO-11 reports one warning naming the line. The format still succeeds: a warning is not a failure. The paragraph rather than the line, because a quotation may wrap across a line break: pairing per line warns on every wrapped quotation, which is a warning nobody reads twice.
 - A quote written tight against a word is an inch mark rather than a quotation, so `12" x 8"` is untouched.
 - A quotation is a context scope for TYPO-05 and TYPO-08, which is why `他说 "hello, world" 这句话` becomes `他说“hello, world”这句话` with the comma still half-width.
 

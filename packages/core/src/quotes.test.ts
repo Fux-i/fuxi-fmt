@@ -54,6 +54,21 @@ describe('TYPO-11 paired quotation marks', () => {
     });
   });
 
+  test('a quotation wrapped across two lines is one quotation', () => {
+    // Found by the dogfood test, which formats this repository's own CHANGELOG:
+    // a hard-wrapped quotation produced a warning per wrapped quote, and a
+    // warning nobody reads twice is worse than none. An author wraps inside a
+    // paragraph, so a paragraph is the unit that pairs.
+    settles('他说 "hello\nworld" 这句话\n', '他说“hello\nworld”这句话\n');
+  });
+
+  test('a wrapped paragraph with an odd count warns once, not once per line', () => {
+    const result = format('中文 "a\nb\nc\n');
+    assert.equal(result.output, '中文 "a\nb\nc\n');
+    assert.equal(result.diagnostics.length, 1);
+    assert.equal(result.diagnostics[0]?.line, 0);
+  });
+
   test('an unpaired quote leaves the whole line alone and says so', () => {
     const result = format('他说 "你好 了\n');
     assert.equal(result.output, '他说 "你好 了\n');
