@@ -38,6 +38,7 @@ const ALL_KINDS: readonly RegionKind[] = [
   'htmlComment',
   'inlineCode',
   'inlineMath',
+  'mathBlock',
   'url',
   'wikilink',
   'mdx',

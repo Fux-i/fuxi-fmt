@@ -70,3 +70,31 @@ describe('DET-03 an unterminated HTML comment refuses the document', () => {
     assert.deepEqual(format(input).diagnostics, []);
   });
 });
+
+describe('DET-04 an unterminated display-math block refuses the document', () => {
+  const DOLLARS = '$$';
+
+  test('everything after the opener was read as display math', () => {
+    const input = DOLLARS + '\nf(x), 中文(零)\n';
+    const result = format(input);
+    assert.equal(result.output, input);
+    assert.equal(result.diagnostics[0]?.ruleId, 'DET-04');
+    assert.equal(result.diagnostics[0]?.severity, 'error');
+    assert.equal(result.diagnostics[0]?.line, 0);
+  });
+
+  test('a closed block is not a detection, and its body is protected', () => {
+    // The reason the region exists: the inline matcher used to claim the two
+    // dollar markers as separate spans and leave the body in prose, so every
+    // half-width mark inside a formula was converted.
+    const input = DOLLARS + '\nf(x), 中文(零)\n' + DOLLARS + '\n';
+    const result = format(input);
+    assert.equal(result.output, input);
+    assert.deepEqual(result.diagnostics, []);
+  });
+
+  test('one line of display math is protected too', () => {
+    const input = DOLLARS + 'f(x), 中文(零)' + DOLLARS + '\n';
+    assert.equal(format(input).output, input);
+  });
+});

@@ -133,6 +133,27 @@ describe('scan: verbatim link and markup destinations (SAFE-04, SAFE-05, SAFE-06
   });
 });
 
+describe('scan: display math (SAFE-03)', () => {
+  test('two dollar-sign-only lines delimit a block, trailing newline excluded', () => {
+    const src = '$$\nf(x), 中文(零)\n$$\n';
+    assert.deepEqual(slices(src), [['mathBlock', '$$\nf(x), 中文(零)\n$$']]);
+  });
+
+  test('one line beginning and ending with two dollars is display math', () => {
+    // One region covering the whole line, not two spans covering the markers.
+    assert.deepEqual(slices('$$x^2$$\n'), [['mathBlock', '$$x^2$$']]);
+  });
+
+  test('dollars in prose are not display math', () => {
+    assert.deepEqual(slices('价格 $5 元, 很贵\n'), []);
+  });
+
+  test('an opener with no closer runs to the end of the document', () => {
+    const regions = scanRegions('a\n$$\nx_1\n');
+    assert.deepEqual(regions.map((r) => [r.kind, r.closed]), [['mathBlock', false]]);
+  });
+});
+
 describe('scan: region contract', () => {
   test('regions are sorted by start offset and never overlap', () => {
     const src = '---\nt: 1\n---\n\n`code` 与文字\n\n```js\nx\n```\n\n<div>y</div>\n';

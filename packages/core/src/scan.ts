@@ -20,6 +20,7 @@ export type RegionKind =
   | 'htmlComment'
   | 'inlineCode'
   | 'inlineMath'
+  | 'mathBlock'
   | 'url'
   | 'wikilink'
   | 'mdx';
@@ -107,7 +108,13 @@ export function protectedMask(text: string, extra: readonly CharRange[] = []): U
 
 /** Region kinds that occupy whole lines and are never touched (SAFE-01, SAFE-04, FM-01). */
 export function isBlockRegionKind(kind: RegionKind): boolean {
-  return kind === 'frontMatter' || kind === 'fencedCode' || kind === 'indentedCode' || kind === 'htmlBlock';
+  return (
+    kind === 'frontMatter' ||
+    kind === 'fencedCode' ||
+    kind === 'indentedCode' ||
+    kind === 'htmlBlock' ||
+    kind === 'mathBlock'
+  );
 }
 
 const LIST_ITEM = /^\s*(?:[-*+]|\d{1,9}[.)])\s/;
@@ -196,6 +203,37 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
           i = next - 1;
           continue;
         }
+      }
+
+      // Display math occupies whole lines and belongs with code (SAFE-03). The
+      // inline matcher cannot do this job: it matches the two $$ markers as
+      // separate spans and leaves the body in prose, so every half-width mark
+      // inside a formula was converted and LaTeX does not survive that.
+      if (rest.trim() === '$$' || (rest.startsWith('$$') && rest.endsWith('$$') && rest.length > 4)) {
+        const single = rest.length > 4;
+        let end = line.end;
+        let next = i + 1;
+        let closed = single;
+        if (!single) {
+          for (let j = i + 1; j < lines.length; j++) {
+            const cand = lines[j];
+            if (cand === undefined) continue;
+            if (cand.text.trim() !== '$$') continue;
+            end = cand.end;
+            next = j + 1;
+            closed = true;
+            break;
+          }
+          if (!closed) {
+            end = source.length;
+            next = lines.length;
+          }
+        }
+        if (claim(mask, line.start, end)) {
+          regions.push({ kind: 'mathBlock', start: line.start, end, closed });
+        }
+        i = next - 1;
+        continue;
       }
 
       if (code === LT && /^<[A-Za-z][^>]*>/.test(rest) && !/^<(?:br|hr|img|input|meta|link)\b[^>]*\/?>\s*$/i.test(rest)) {

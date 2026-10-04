@@ -7,6 +7,10 @@ tags: [a, b]
 
 正文里的行内代码 `const a = 1`、数学 $x^2 + y^2$、链接 https://example.com/a_b?q=1 与 [[笔记 A|别名]]。
 
+$$
+f(x), 中文(零)
+$$
+
 <div class="a">
   <span>中文</span>
 </div>

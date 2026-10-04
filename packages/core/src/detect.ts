@@ -65,6 +65,11 @@ function claimedMask(
 
 /** A block region that reached end of file without its terminator. */
 const UNTERMINATED: Readonly<Record<string, { readonly ruleId: string; readonly message: string }>> = {
+  mathBlock: {
+    ruleId: 'DET-04',
+    message:
+      'unterminated math block: no closing line of dollar signs was found, so everything after it is display math and none of it was formatted',
+  },
   fencedCode: {
     ruleId: 'DET-01',
     message:

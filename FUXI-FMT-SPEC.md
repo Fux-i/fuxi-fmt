@@ -265,7 +265,7 @@ These are the general form of "don't touch code blocks". Every one is byte-verba
 
 **SAFE-02 — Fence delimiter line** · the fence's **indentation and info string are byte-verbatim**, including Pandoc-style attributes such as ` ~~~ c {3, 4}`. Only the fence character and length may change (BLK-10).
 
-**SAFE-03 — Inline code and inline math spans** · contents byte-verbatim.
+**SAFE-03 — Inline code, inline math and display math** · contents byte-verbatim. A line whose content is exactly `$$` opens display math and the next such line closes it; a single line that begins and ends with `$$` and has body between them is display math on one line.
 
 **SAFE-04 — HTML blocks, inline HTML and comments** · byte-verbatim. Not formatted as HTML.
 
@@ -319,6 +319,8 @@ fuxi-fmt formats a document by parsing it, and a parse can be a guess. Every rul
 An unclosed fenced block is **legal CommonMark** — the block simply runs to the end of the document — and this section says so out loud rather than pretending the rule is a parse error. The parse is well defined and the output for what was written is correct; the author has almost certainly forgotten a delimiter. Calling it an error is a deliberate over-reaction in favour of being told, because the alternative is the one two separate reports described: a document that formats everywhere except after the mistake, with nothing said about why.
 
 **DET-01 — Unterminated fenced code block** · error. No closing fence was found, so every line after the opener is code (SAFE-01). Reported at the opening fence.
+
+**DET-04 — Unterminated display math** · error. A `$$` line with no closing `$$` line, so every line after the opener was read as display math (SAFE-03). Reported at the opening line.
 
 **DET-03 — Unterminated HTML comment** · error. A `<!--` with no `-->` anywhere after it, outside a protected region (SAFE-04). Reported at the comment start. A comment start inside a code fence is code, not a comment, and is not reported.
 

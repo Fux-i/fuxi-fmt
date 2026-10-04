@@ -56,6 +56,7 @@ const ATOMIC_KINDS: Readonly<Record<string, BlockKind>> = {
   fencedCode: 'code',
   indentedCode: 'code',
   htmlBlock: 'html',
+  mathBlock: 'code',
 };
 
 function blankCount(existing: number, options: FormatOptions): number {

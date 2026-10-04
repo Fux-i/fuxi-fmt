@@ -13,8 +13,9 @@ with release candidates suffixed `-rcN`.
 
 - **Detection: the formatter now says when it had to guess.** fuxi-fmt protects a region by parsing
   the document, and a parse that goes wrong in a way the parse cannot see left the author with a
-  formatter that quietly did less than they asked. Two rules ship here. An unterminated code fence
-  (**DET-01**) and an HTML comment with no closing marker (**DET-03**) are **errors**: everything
+  formatter that quietly did less than they asked. Three rules ship here. An unterminated code
+  fence (**DET-01**), an HTML comment with no closing marker (**DET-03**) and a display-math block
+  that never closes (**DET-04**) are **errors**: everything
   after the mistake was read as part of it, so the document is refused whole — input returned
   unchanged, exit 2 from the CLI, no edits in the editor — and the refusal names the line. An
   unclosed fence is legal CommonMark, so this is a deliberate over-reaction in favour of being told;
@@ -35,6 +36,11 @@ with release candidates suffixed `-rcN`.
 
 ### Fixed
 
+- **Display math is protected, which it never was.** The inline matcher claimed the two `$$`
+  markers as separate spans and left the body in prose, so a display-math block containing
+  `f(x), 中文(零)` came out as `f(x)，中文（零）` — LaTeX does not survive that, and the
+  README has claimed since its first draft that math is a protected region. A `$$` line now
+  delimits a protected region (SAFE-03) and is formatted nowhere.
 - **Guard violations name the lines they are about.** A changed region reports its own line, and a
   changed non-blank line count reports the last line the two documents still agreed on — the line
   that went missing — instead of an index into the non-blank-filtered array, which was not a line
