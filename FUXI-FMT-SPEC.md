@@ -265,7 +265,7 @@ These are the general form of "don't touch code blocks". Every one is byte-verba
 
 **SAFE-02 — Fence delimiter line** · the fence's **indentation and info string are byte-verbatim**, including Pandoc-style attributes such as ` ~~~ c {3, 4}`. Only the fence character and length may change (BLK-10).
 
-**SAFE-03 — Inline code, inline math and display math** · contents byte-verbatim. A line whose content is exactly `$$` opens display math and the next such line closes it; a single line that begins and ends with `$$` and has body between them is display math on one line.
+**SAFE-03 — Inline code, inline math and display math** · contents byte-verbatim. Backslash escapes do not work inside a code span, so the closing backtick of a span whose content is a backslash still closes it. A line whose content is exactly `$$` opens display math and the next such line closes it; a single line that begins and ends with `$$` and has body between them is display math on one line.
 
 **SAFE-04 — HTML blocks, inline HTML and comments** · byte-verbatim. Not formatted as HTML.
 
@@ -323,6 +323,20 @@ An unclosed fenced block is **legal CommonMark** — the block simply runs to th
 **DET-02 — Unterminated front matter** · error. Line 1 is `---` and the first non-blank line after it is a YAML key, so the whole document was read as front matter (FM-01, FM-02). Reported at line 1.
 
 **DET-04 — Unterminated display math** · error. A `$$` line with no closing `$$` line, so every line after the opener was read as display math (SAFE-03). Reported at the opening line.
+
+**DET-06 — Unmatched backtick** · warning. A backtick no code span claims, outside a protected region and not backslash-escaped. CommonMark makes it literal text, which is why nobody notices: the file looks the same either way.
+
+**DET-07 — Unmatched dollar sign** · warning. The same, for a `$` that is not part of an inline math span. A price and an unclosed formula are indistinguishable, so this is the rule most likely to be switched off.
+
+**DET-08 — Unclosed wikilink** · warning. `[[` with no `]]` on the same line, so it stays literal text.
+
+**DET-09 — Unclosed link destination** · warning. `](` with no `)` on the same line, so this is not a link.
+
+**DET-10 — Ragged table row** · warning. A row whose cell count differs from its header's. An escaped `\|` is cell content, not a column separator.
+
+**DET-11 — Item indented as if nested, belonging to no parent** · warning. BLK-08 dedents it to the level it actually occupies, and that repair is invisible in the source, which is why the author is told.
+
+**Deliberately not reported.** A code span the author wrapped across a line break is correct Markdown and its contents are protected exactly as intended. The rule that would have flagged it was dropped after firing four times on this repository's own CHANGELOG and prior-art report. A detection that fires on correct input teaches people to ignore the panel, which is worse than not having it.
 
 **DET-03 — Unterminated HTML comment** · error. A `<!--` with no `-->` anywhere after it, outside a protected region (SAFE-04). Reported at the comment start. A comment start inside a code fence is code, not a comment, and is not reported.
 

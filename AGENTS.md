@@ -23,8 +23,9 @@ the commit message. Never silently diverge.
    finished.
 3. **Semantic preservation.** Output must parse to the same tree as input, except for the
    documented intentional differences. The parse-equality guard runs in the pipeline and refuses
-   to write on mismatch. A detection that the document was misread — an unterminated code fence or
-   HTML comment (DET-01, DET-03) — refuses it the same way, and names the line.
+   to write on mismatch. A detection that the document was misread — an unterminated code fence,
+   front matter, HTML comment or math block (DET-01 … DET-04) — refuses it the same way, and names
+   the line.
 4. **No CJK line breaking.** Never wrap, unwrap, join or split a line. CJK has no spaces to
    break at, so a wrapping printer has to split between characters — that is exactly what we
    refuse to do. (Spec: NG-01.)

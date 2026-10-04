@@ -120,7 +120,9 @@ HTML comment, where everything after the mistake was read as part of it (DET-01,
 Each diagnostic is one line in the shape every compiler has used for forty years —
 `path:line: severity: RULE message` — with the line left out when the core has none, and the line
 being the one in the file on disk rather than the one the formatter's own blank-line policy moved
-it to.
+it to. An unterminated block is an error and refuses the document; a doubtful parse that did
+terminate is a warning and the document still formats (DET-06 … DET-11), with one switch per
+warning in the editor settings.
 A configuration key that is not an option, or a retired one, is reported the same way — the one
 thing a silently ignored key can never say is that it was ignored.
 

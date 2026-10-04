@@ -15,7 +15,12 @@
  */
 
 import type { CharRange } from './ignores.ts';
-import type { Region, SourceLine } from './scan.ts';
+import { assignParents, scanListItems } from './list-scan.ts';
+import { isEscaped, type Region, type SourceLine } from './scan.ts';
+
+const BACKTICK = 96;
+const DOLLAR = 36;
+const PIPE = 124;
 
 export interface Detection {
   readonly ruleId: string;
@@ -88,6 +93,7 @@ export function detect(
   regions: readonly Region[],
   ignore: readonly CharRange[] = [],
 ): Detection[] {
+  const mask = claimedMask(source, regions, ignore);
   const detections: Detection[] = [];
   for (const region of regions) {
     if (region.closed !== false) continue;
@@ -95,7 +101,11 @@ export function detect(
     if (rule === undefined) continue;
     detections.push({ ...rule, line: lineOfOffset(lines, region.start), severity: 'error' });
   }
-  detections.push(...unterminatedComments(source, lines, regions, ignore));
+  detections.push(...unterminatedComments(source, lines, mask));
+  detections.push(...unmatchedDelimiters(source, lines, mask));
+  detections.push(...unclosedInline(source, lines, mask));
+  detections.push(...raggedTables(lines, mask));
+  detections.push(...listJumps(lines, mask));
   return detections;
 }
 
@@ -108,10 +118,8 @@ export function detect(
 function unterminatedComments(
   source: string,
   lines: readonly SourceLine[],
-  regions: readonly Region[],
-  ignore: readonly CharRange[],
+  mask: Uint8Array,
 ): Detection[] {
-  const mask = claimedMask(source, regions, ignore);
   for (let at = source.indexOf('<!--'); at !== -1; at = source.indexOf('<!--', at + 1)) {
     if (mask[at] === 1) continue;
     if (source.indexOf('-->', at + 4) !== -1) continue;
@@ -127,3 +135,137 @@ function unterminatedComments(
   }
   return [];
 }
+
+/**
+ * A delimiter with no partner.
+ *
+ * CommonMark says an unmatched backtick or dollar is literal text, and the
+ * scanner agrees - which is exactly why nobody notices: the character is one
+ * keystroke away from a span, and the file looks no different either way.
+ */
+function unmatchedDelimiters(
+  source: string,
+  lines: readonly SourceLine[],
+  mask: Uint8Array,
+): Detection[] {
+  const backtickLines = new Set<number>();
+  const dollarLines = new Set<number>();
+  for (let i = 0; i < source.length; i++) {
+    const code = source.charCodeAt(i);
+    if (code !== BACKTICK && code !== DOLLAR) continue;
+    if (mask[i] === 1 || isEscaped(source, i)) continue;
+    const line = lineOfOffset(lines, i);
+    if (code === BACKTICK) backtickLines.add(line);
+    else dollarLines.add(line);
+  }
+  const out: Detection[] = [];
+  for (const line of [...backtickLines].sort((a, b) => a - b)) {
+    out.push({
+      ruleId: 'DET-06',
+      message:
+        'unmatched backtick: nothing closes it, so it stays literal text - if a code span was meant, a backtick is missing',
+      line,
+      severity: 'warning',
+    });
+  }
+  for (const line of [...dollarLines].sort((a, b) => a - b)) {
+    out.push({
+      ruleId: 'DET-07',
+      message:
+        'unmatched dollar sign: nothing closes it, so it stays literal text - a price and an unclosed formula look the same here',
+      line,
+      severity: 'warning',
+    });
+  }
+  return out;
+}
+
+/** DET-08 and DET-09: an opener whose closer is not on the same line. */
+function unclosedInline(
+  source: string,
+  lines: readonly SourceLine[],
+  mask: Uint8Array,
+): Detection[] {
+  const out: Detection[] = [];
+  const scan = (needle: string, closeMark: string, ruleId: string, message: string): void => {
+    for (let at = source.indexOf(needle); at !== -1; at = source.indexOf(needle, at + 1)) {
+      if (mask[at] === 1) continue;
+      const newline = source.indexOf('\n', at);
+      const close = source.indexOf(closeMark, at + needle.length);
+      if (close !== -1 && (newline === -1 || close < newline)) continue;
+      out.push({ ruleId, message, line: lineOfOffset(lines, at), severity: 'warning' });
+    }
+  };
+  scan('[[', ']]', 'DET-08', 'unclosed wikilink: nothing closes it on the line, so it stays literal text');
+  scan('](', ')', 'DET-09', 'unclosed link destination: the opening parenthesis is never closed, so this is not a link');
+  return out;
+}
+
+/** Cells in a table row: outer pipes stripped, escaped pipes not separators. */
+function cellCount(row: string): number {
+  const body = row.trim().replace(/^\|/, '').replace(/\|$/, '');
+  let cells = 1;
+  for (let i = 0; i < body.length; i++) {
+    if (body.charCodeAt(i) === PIPE && !isEscaped(body, i)) cells++;
+  }
+  return cells;
+}
+
+const TABLE_ROW = /^\s{0,3}\|/;
+const TABLE_DELIMITER = /^\s{0,3}\|[-\s:|]+\|\s*$/;
+
+/** DET-10: a row with a different number of cells from the header. */
+function raggedTables(lines: readonly SourceLine[], mask: Uint8Array): Detection[] {
+  const out: Detection[] = [];
+  for (let i = 0; i + 1 < lines.length; i++) {
+    const header = lines[i];
+    if (header === undefined || !TABLE_ROW.test(header.text)) continue;
+    if (!TABLE_DELIMITER.test(lines[i + 1]?.text ?? '')) continue;
+    if (mask[header.start] === 1) continue;
+    const cells = cellCount(header.text);
+    for (let j = i + 2; j < lines.length; j++) {
+      const row = lines[j];
+      if (row === undefined || !TABLE_ROW.test(row.text)) break;
+      const count = cellCount(row.text);
+      if (count === cells) continue;
+      out.push({
+        ruleId: 'DET-10',
+        message:
+          'table row has ' + String(count) + ' cells where the header has ' + String(cells) +
+          ': the row does not render in the columns above it',
+        line: j,
+        severity: 'warning',
+      });
+    }
+    i += 2;
+  }
+  return out;
+}
+
+/**
+ * DET-11: an item indented as if nested, that ended up outside the list.
+ *
+ * The indentation says one thing and the structure says another. BLK-08 repairs
+ * it - dedenting the item to the level it actually occupies - and the repair is
+ * invisible in the source, which is why the author is told.
+ */
+function listJumps(lines: readonly SourceLine[], mask: Uint8Array): Detection[] {
+  const items = scanListItems(lines.map((line) => line.text));
+  const brokeOut: boolean[] = [];
+  const parents = assignParents(items, brokeOut);
+  const out: Detection[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (item === undefined || brokeOut[i] !== true || parents[i] !== -1) continue;
+    if (mask[lines[item.line]?.start ?? 0] === 1) continue;
+    out.push({
+      ruleId: 'DET-11',
+      message:
+        'list item is indented as if nested but belongs to no parent: the indentation reads as a nested list that never becomes one',
+      line: item.line,
+      severity: 'warning',
+    });
+  }
+  return out;
+}
+

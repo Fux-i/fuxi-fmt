@@ -125,3 +125,102 @@ describe('DET-02 unterminated front matter refuses the document', () => {
     assert.equal(result.output, '---\ntitle: 我的,笔记\n---\n\n正文，后面\n');
   });
 });
+
+describe('DET-06/DET-07 a delimiter with no partner', () => {
+  test('an unmatched backtick is reported once for the line', () => {
+    const input = '用 ' + TICK + ' 表示\n';
+    const result = format(input);
+    assert.equal(result.output, input);
+    assert.equal(result.diagnostics.length, 1);
+    assert.equal(result.diagnostics[0]?.ruleId, 'DET-06');
+    assert.equal(result.diagnostics[0]?.severity, 'warning');
+    assert.equal(result.diagnostics[0]?.line, 0);
+  });
+
+  test('an escaped backtick is deliberate, and is not reported', () => {
+    assert.deepEqual(format('a \\' + TICK + ' b\n').diagnostics, []);
+  });
+
+  test('a matched code span is not an unmatched backtick', () => {
+    assert.deepEqual(format('用 ' + TICK + 'x' + TICK + ' 表示\n').diagnostics, []);
+  });
+
+  test('a backtick inside a fence is code, not a delimiter', () => {
+    const input = FENCE + '\na ' + TICK + ' b\n' + FENCE + '\n';
+    assert.deepEqual(format(input).diagnostics, []);
+  });
+
+  test('a code span the author wrapped across lines is not reported', () => {
+    // DET-05 was proposed for exactly this shape and dropped: a hard-wrapped
+    // inline code span is correct Markdown, it appears in this repository's own
+    // CHANGELOG, and the span is protected precisely as it should be. A rule that
+    // fires on correct input is a rule that teaches people to ignore the panel.
+    const input = 'text ' + TICK + 'a long span\nwrapped over two lines' + TICK + ' more\n';
+    assert.deepEqual(format(input).diagnostics, []);
+  });
+
+  test('an unmatched dollar is reported', () => {
+    const result = format('价格是 $5 元, 很便宜\n');
+    assert.equal(result.diagnostics.length, 1);
+    assert.equal(result.diagnostics[0]?.ruleId, 'DET-07');
+    assert.equal(result.diagnostics[0]?.severity, 'warning');
+  });
+
+  test('a closed formula is not an unmatched dollar', () => {
+    assert.deepEqual(format('设 $x=1$, 则结果\n').diagnostics, []);
+  });
+});
+
+describe('DET-08/DET-09 an inline opener with no closer', () => {
+  test('an unclosed wikilink', () => {
+    const result = format('见 [[笔记 A 处\n');
+    assert.equal(result.diagnostics[0]?.ruleId, 'DET-08');
+    assert.equal(result.diagnostics[0]?.severity, 'warning');
+  });
+
+  test('a closed wikilink is not reported', () => {
+    assert.deepEqual(format('见 [[笔记 A|别名]] 处\n').diagnostics, []);
+  });
+
+  test('an unclosed link destination', () => {
+    const result = format('见 [文字](https://a.b 处\n');
+    assert.equal(result.diagnostics[0]?.ruleId, 'DET-09');
+    assert.equal(result.diagnostics[0]?.severity, 'warning');
+  });
+
+  test('a closed link is not reported', () => {
+    assert.deepEqual(format('见 [文字](https://a.b) 处\n').diagnostics, []);
+  });
+});
+
+describe('DET-10 a table row that does not match its header', () => {
+  test('a row with too many cells', () => {
+    const result = format('| a | b |\n| --- | --- |\n| 1 | 2 | 3 |\n');
+    assert.equal(result.diagnostics[0]?.ruleId, 'DET-10');
+    assert.equal(result.diagnostics[0]?.severity, 'warning');
+    assert.equal(result.diagnostics[0]?.line, 2);
+  });
+
+  test('an escaped pipe is cell content, not a column separator', () => {
+    assert.deepEqual(format('| a | b |\n| --- | --- |\n| x \\| y | z |\n').diagnostics, []);
+  });
+
+  test('a table inside a fence is code', () => {
+    const input = FENCE + '\n| a | b |\n| --- | --- |\n| 1 | 2 | 3 |\n' + FENCE + '\n';
+    assert.deepEqual(format(input).diagnostics, []);
+  });
+});
+
+describe('DET-11 an item indented as if nested that belongs to no parent', () => {
+  test('the snippet that started this: an item written shallower than its siblings', () => {
+    const result = format('1. 333\n   - yes\n  - ok\n');
+    assert.equal(result.diagnostics[0]?.ruleId, 'DET-11');
+    assert.equal(result.diagnostics[0]?.severity, 'warning');
+    assert.equal(result.diagnostics[0]?.line, 2);
+  });
+
+  test('ordinary nesting is not reported', () => {
+    assert.deepEqual(format('1. a\n   - b\n').diagnostics, []);
+  });
+});
+

@@ -21,6 +21,11 @@ with release candidates suffixed `-rcN`.
   unchanged, exit 2 from the CLI, no edits in the editor — and the refusal names the line. An
   unclosed fence is legal CommonMark, so this is a deliberate over-reaction in favour of being told;
   the alternative is the silent half-formatting that this project's own reports describe twice.
+- **Six warnings for a parse that terminated but is doubtful** (DET-06 … DET-11): an unmatched
+  backtick, an unmatched dollar sign, an unclosed wikilink or link destination, a table row whose
+  cell count disagrees with its header, and a list item indented as if nested that belongs to no
+  parent. They format the document and say so. In the editor each has its own switch, because DET-07
+  cannot tell a price from an unclosed formula and DET-06 fires on a deliberate literal backtick.
 
 ### Changed
 
@@ -37,6 +42,14 @@ with release candidates suffixed `-rcN`.
 
 ### Fixed
 
+- **A code span whose content is a backslash never closed.** Escapes do not work inside a code
+  span, so the closing backtick of a span containing a backslash is a delimiter even though a
+  backslash precedes it. The scanner skipped it as escaped and left the span open across the rest of
+  the document, shifting the pairing of every backtick after it; one occurrence in the prior-art
+  report surfaced as a single unmatched backtick forty lines later. Two authoring bugs in that
+  report were found by the new rules while writing them.
+- **An escaped pipe in a table row is content.** The cell counter split on every pipe, so a row
+  containing an escaped pipe looked like it had an extra column.
 - **Unterminated front matter is protected instead of reformatted.** The scanner only claimed
   front matter when it found the closing delimiter, so `---` followed by YAML and no closing line
   was a thematic break followed by prose: `title: 我的,笔记` came out as `title: 我的，笔记`, and

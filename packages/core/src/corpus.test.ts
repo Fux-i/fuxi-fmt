@@ -54,7 +54,15 @@ describe('the fixture corpus', () => {
 
     test(name + ' formats byte for byte as recorded', () => {
       const result = format(read(name));
-      assert.deepEqual(result.diagnostics, [], 'the corpus must not trip the guard');
+      // A warning is not the guard tripping, and the corpus is about the bytes: a
+      // warning does not change them. user-notes.md legitimately warns - DET-11,
+      // because its own "  - ok" falls out of the list above it - which is the
+      // very report that round of work came from.
+      assert.deepEqual(
+        result.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'),
+        [],
+        'the corpus must not be refused',
+      );
       assert.equal(result.output, read(expectedName));
     });
 

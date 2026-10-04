@@ -79,9 +79,16 @@ describe('totality: the formatter never throws and never corrupts', () => {
         return;
       }
 
-      // Otherwise the result must be stable, and so must what it has to say.
+      // Otherwise the result must be stable. What it has to *say* need not be: a
+      // warning describes the input, and the first pass has just repaired the
+      // indentation DET-11 complained about, so the second pass rightly says less.
+      // It must not refuse anything, though.
       const again = format(result.output);
-      assert.deepEqual(again.diagnostics, result.diagnostics, 'the second pass said something else');
+      assert.deepEqual(
+        again.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'),
+        [],
+        'the second pass was refused',
+      );
       assert.equal(again.output, result.output, 'formatting did not settle in one pass');
     });
   }
