@@ -65,9 +65,13 @@ npm run build                              # bundle the VS Code extension
 2. `npm run ci` — typecheck and the whole suite.
 3. `npm run build` — the extension bundle must still bundle.
 4. Bump the version in `package.json` and in every `packages/*/package.json`
-   to match the tag. A test asserts they all agree with the newest tag, so
-   forgetting fails the suite rather than shipping a package whose version
-   contradicts its release.
+   to match the tag. A test asserts no manifest is **behind** the newest tag, so
+   forgetting to bump fails the suite rather than shipping a package whose version
+   contradicts its release. A version *ahead* of the newest tag is the release
+   sequence working, not an error — bump, commit, tag, then push the branch and
+   the tag together (`git push && git push --tags`). Pushing the branch first
+   leaves CI comparing a bumped manifest against a tag that only exists on your
+   machine, and a tag push does not trigger the workflow, so nothing re-runs.
 5. Confirm `git status` is clean afterwards. Nothing above should write to the
    tree.
 

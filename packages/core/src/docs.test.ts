@@ -46,6 +46,18 @@ describe('documentation stays true to the code', () => {
     }
   });
 
+  /** Numeric x.y.z comparison: -1, 0 or 1. Lexicographic order puts 0.9 after 0.10. */
+  function compareVersions(a: string, b: string): number {
+    const left = a.split('.').map((part) => Number.parseInt(part, 10) || 0);
+    const right = b.split('.').map((part) => Number.parseInt(part, 10) || 0);
+    for (let i = 0; i < 3; i++) {
+      const l = left[i] ?? 0;
+      const r = right[i] ?? 0;
+      if (l !== r) return l < r ? -1 : 1;
+    }
+    return 0;
+  }
+
   /** The newest release tag, or null when nothing is comparable. */
   function newestTag(): string | null {
     const tags = spawnSync('git', ['tag', '-l'], { cwd: root, encoding: 'utf8' });
@@ -317,6 +329,14 @@ describe('documentation stays true to the code', () => {
     );
   });
 
+  test('an older version is what the tag check rejects', () => {
+    // The comparison is numeric, not lexicographic: 0.9.0 precedes 0.10.0.
+    assert.equal(compareVersions('0.9.0', '0.10.0'), -1);
+    assert.equal(compareVersions('0.24.0', '0.25.0'), -1);
+    assert.equal(compareVersions('0.25.0', '0.25.0'), 0);
+    assert.equal(compareVersions('0.26.0', '0.25.0'), 1);
+  });
+
   test('the published package version tracks the newest tag', () => {
     const newest = newestTag();
     if (newest === null) return;
@@ -324,7 +344,19 @@ describe('documentation stays true to the code', () => {
     // packages/vscode is the one a marketplace would read a version from.
     for (const file of ['package.json', 'packages/core/package.json', 'packages/cli/package.json', 'packages/vscode/package.json']) {
       const parsed = JSON.parse(readFileSync(join(root, file), 'utf8')) as { version?: string };
-      assert.equal(parsed.version, version, file + ' does not match ' + newest);
+      const found = parsed.version ?? '';
+      // The direction matters, and equality was the wrong test. A package OLDER
+      // than the newest tag contradicts its release: the tag is published and the
+      // manifest is not - that is the bug this check exists for. A package NEWER
+      // than the newest tag is the release sequence working: the version is bumped,
+      // the commit is pushed, and the tag is pushed next, and tag pushes do not
+      // trigger this workflow. Demanding equality made CI red on a commit that was
+      // already correct, with a message about a version mismatch that did not
+      // exist - which is exactly what happened on the v0.25.0 release.
+      assert.ok(
+        compareVersions(found, version) >= 0,
+        file + ' says ' + found + ' but ' + newest + ' is already released',
+      );
     }
   });
 });
