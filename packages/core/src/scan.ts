@@ -119,6 +119,9 @@ export function isBlockRegionKind(kind: RegionKind): boolean {
 
 const LIST_ITEM = /^\s*(?:[-*+]|\d{1,9}[.)])\s/;
 
+/** A YAML mapping key: `title:`, `tags:`, `draft :`. The FM-02 heuristic. */
+const YAML_KEY = /^\s*[A-Za-z_][\w.-]*\s*:/;
+
 function runLength(source: string, index: number, code: number): number {
   let n = 0;
   while (index + n < source.length && source.charCodeAt(index + n) === code) n++;
@@ -153,13 +156,33 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
   let i = 0;
   const first = lines[0];
   if (first !== undefined && first.text.trimEnd() === '---') {
+    let closed = false;
     for (let j = 1; j < lines.length; j++) {
       const t = lines[j]?.text.trimEnd() ?? '';
       if (t === '---' || t === '...') {
         const end = lines[j]?.end ?? source.length;
-        if (claim(mask, 0, end)) regions.push({ kind: 'frontMatter', start: 0, end });
+        if (claim(mask, 0, end)) regions.push({ kind: 'frontMatter', start: 0, end, closed: true });
         i = j + 1;
+        closed = true;
         break;
+      }
+    }
+    // FM-02. An opener that never closes is still front matter when what follows
+    // reads as YAML, and the whole document is then protected rather than having
+    // its metadata formatted as prose - "title: 我的,笔记" lost its comma to
+    // TYPO-05 and the file a static site generator reads was no longer the file
+    // the author wrote.
+    //
+    // The heuristic is the first non-blank line being a key, so a horizontal rule
+    // at the top of a document stays a horizontal rule: refusing that document
+    // would be a false alarm on correct input.
+    if (!closed) {
+      const body = lines.slice(1).find((line) => (line?.text ?? '').trim().length > 0);
+      if (body !== undefined && YAML_KEY.test(body.text)) {
+        if (claim(mask, 0, source.length)) {
+          regions.push({ kind: 'frontMatter', start: 0, end: source.length, closed: false });
+        }
+        i = lines.length;
       }
     }
   }

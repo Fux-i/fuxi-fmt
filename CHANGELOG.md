@@ -13,9 +13,10 @@ with release candidates suffixed `-rcN`.
 
 - **Detection: the formatter now says when it had to guess.** fuxi-fmt protects a region by parsing
   the document, and a parse that goes wrong in a way the parse cannot see left the author with a
-  formatter that quietly did less than they asked. Three rules ship here. An unterminated code
-  fence (**DET-01**), an HTML comment with no closing marker (**DET-03**) and a display-math block
-  that never closes (**DET-04**) are **errors**: everything
+  formatter that quietly did less than they asked. Four rules ship here. An unterminated code
+  fence (**DET-01**), front matter that opens and never closes (**DET-02**), an HTML comment with
+  no closing marker (**DET-03**) and a display-math block that never closes (**DET-04**) are
+  **errors**: everything
   after the mistake was read as part of it, so the document is refused whole — input returned
   unchanged, exit 2 from the CLI, no edits in the editor — and the refusal names the line. An
   unclosed fence is legal CommonMark, so this is a deliberate over-reaction in favour of being told;
@@ -36,6 +37,13 @@ with release candidates suffixed `-rcN`.
 
 ### Fixed
 
+- **Unterminated front matter is protected instead of reformatted.** The scanner only claimed
+  front matter when it found the closing delimiter, so `---` followed by YAML and no closing line
+  was a thematic break followed by prose: `title: 我的,笔记` came out as `title: 我的，笔记`, and
+  the metadata a static site generator reads was no longer the file the author wrote. FM-02 has
+  promised the opposite since the first draft. The block is now claimed and **DET-02** refuses the
+  document; a `---` whose first non-blank line is not a YAML key is still a thematic break, so a
+  horizontal rule at the top of a file is not turned into a false alarm.
 - **Display math is protected, which it never was.** The inline matcher claimed the two `$$`
   markers as separate spans and left the body in prose, so a display-math block containing
   `f(x), 中文(零)` came out as `f(x)，中文（零）` — LaTeX does not survive that, and the

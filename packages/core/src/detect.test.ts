@@ -98,3 +98,30 @@ describe('DET-04 an unterminated display-math block refuses the document', () =>
     assert.equal(format(input).output, input);
   });
 });
+
+describe('DET-02 unterminated front matter refuses the document', () => {
+  test('a YAML-looking body makes the opener front matter, not a thematic break', () => {
+    // The metadata was being formatted as prose: the comma in title: 我的,笔记
+    // became full-width, and the file a static site generator reads was no longer
+    // the file the author wrote.
+    const input = '---\ntitle: 我的,笔记\ntags: [中文,测试]\n';
+    const result = format(input);
+    assert.equal(result.output, input);
+    assert.equal(result.diagnostics[0]?.ruleId, 'DET-02');
+    assert.equal(result.diagnostics[0]?.severity, 'error');
+    assert.equal(result.diagnostics[0]?.line, 0);
+  });
+
+  test('a horizontal rule followed by prose is not front matter', () => {
+    const input = '---\n这是正文,不是 YAML\n';
+    const result = format(input);
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.output, '---\n\n这是正文，不是 YAML\n');
+  });
+
+  test('closed front matter is not a detection, and its bytes are kept', () => {
+    const result = format('---\ntitle: 我的,笔记\n---\n\n正文,后面\n');
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.output, '---\ntitle: 我的,笔记\n---\n\n正文，后面\n');
+  });
+});

@@ -65,6 +65,11 @@ function claimedMask(
 
 /** A block region that reached end of file without its terminator. */
 const UNTERMINATED: Readonly<Record<string, { readonly ruleId: string; readonly message: string }>> = {
+  frontMatter: {
+    ruleId: 'DET-02',
+    message:
+      'unterminated front matter: the opening line is never closed, so the whole document was read as YAML and none of it was formatted',
+  },
   mathBlock: {
     ruleId: 'DET-04',
     message:

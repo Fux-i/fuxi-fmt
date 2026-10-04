@@ -320,6 +320,8 @@ An unclosed fenced block is **legal CommonMark** — the block simply runs to th
 
 **DET-01 — Unterminated fenced code block** · error. No closing fence was found, so every line after the opener is code (SAFE-01). Reported at the opening fence.
 
+**DET-02 — Unterminated front matter** · error. Line 1 is `---` and the first non-blank line after it is a YAML key, so the whole document was read as front matter (FM-01, FM-02). Reported at line 1.
+
 **DET-04 — Unterminated display math** · error. A `$$` line with no closing `$$` line, so every line after the opener was read as display math (SAFE-03). Reported at the opening line.
 
 **DET-03 — Unterminated HTML comment** · error. A `<!--` with no `-->` anywhere after it, outside a protected region (SAFE-04). Reported at the comment start. A comment start inside a code fence is code, not a comment, and is not reported.
