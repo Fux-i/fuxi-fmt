@@ -133,8 +133,8 @@ In the editor the same diagnostics reach the **Problems** panel, which is where 
 clicked, and the output panel as a block per file:
 
     =====docs/guide.md 16:20:01=====
-    WARNING[12] DET-06 unmatched backtick: nothing closes it, so it stays literal text
-    ERROR DET-02 unterminated front matter: the opening line is never closed
+    WARNING[12] DET-06 unmatched backtick: nothing closes it, so it stays literal text…
+    ERROR DET-02 unterminated front matter: the opening line is never closed…
 
 The header names the file relative to the workspace folder and the run it belongs to; a clean
 document writes nothing. The severity words and rule ids stay Latin so that one search finds a rule

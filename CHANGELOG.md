@@ -17,8 +17,10 @@ with release candidates suffixed `-rcN`.
   apart; the CLI is unchanged for now. Values keep their place —
   `表格这一行有 3 个单元格，而表头有 2 个` — and rule ids, configuration key names and JSON
   payloads stay Latin in every language, because those are what the documentation, the spec and
-  `--explain` are keyed on. English is the fallback when no bundle is loaded, which is what VS Code
-  reports in the default language.
+  `--explain` are keyed on. The two warnings about a stray delimiter also say how to write one:
+  escape it with a backslash, so a backtick becomes a backslash and a backtick, and a dollar sign
+  becomes a backslash and a dollar sign. English is the fallback when no bundle is loaded, which is
+  what VS Code reports in the default language.
 
 - **The command line takes `--lang zh`**, falling back to `LC_ALL` and `LANG` when nothing is asked
   for. The sentences come from the same catalogue as the editor's, so there is one set of them; the

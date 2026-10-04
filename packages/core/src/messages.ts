@@ -20,6 +20,17 @@
  * Spec references: CFG-02 (rule registry), CFG-08 (message catalogue).
  */
 
+/**
+ * The escapes the two single-delimiter warnings tell a reader to type.
+ *
+ * Built from character codes rather than written out, because a backtick cannot
+ * appear in a single-quoted string without doubling the backslash - and the
+ * backslash is half of what the sentence is telling the reader to type, so a
+ * typo here would be a warning that teaches the bug it reports.
+ */
+const ESCAPED_BACKTICK = String.fromCharCode(92) + String.fromCharCode(96);
+const ESCAPED_DOLLAR = String.fromCharCode(92) + '$';
+
 export interface MessageEntry {
   /** The English template, with {0}, {1} placeholders. Also the l10n key. */
   readonly en: string;
@@ -45,12 +56,20 @@ export const MESSAGES = {
     zh: '公式块没有闭合：找不到只含美元符号的结束行，后面的内容都被当作行间公式，因此都没有被格式化',
   },
   'det.backtickUnmatched': {
-    en: 'unmatched backtick: nothing closes it, so it stays literal text - if a code span was meant, a backtick is missing',
-    zh: '反引号没有配对：没有另一个反引号与它配对，因此按字面文本处理；如果本意是行内代码，说明少了一个反引号',
+    en:
+      'unmatched backtick: nothing closes it, so it stays literal text - if a code span was meant, a backtick is missing; to show one backtick, write ' +
+      ESCAPED_BACKTICK,
+    zh:
+      '反引号没有配对：没有另一个反引号与它配对，因此按字面文本处理；如果本意是行内代码，说明少了一个反引号；若想显示单个反引号，请用 ' +
+      ESCAPED_BACKTICK,
   },
   'det.dollarUnmatched': {
-    en: 'unmatched dollar sign: nothing closes it, so it stays literal text - a price and an unclosed formula look the same here',
-    zh: '美元符号没有配对：没有另一个美元符号与它配对，因此按字面文本处理；价格和未闭合的公式这里看起来是一样的',
+    en:
+      'unmatched dollar sign: nothing closes it, so it stays literal text - a price and an unclosed formula look the same here; to show a dollar sign, write ' +
+      ESCAPED_DOLLAR,
+    zh:
+      '美元符号没有配对：没有另一个美元符号与它配对，因此按字面文本处理；价格和未闭合的公式这里看起来是一样的；若想显示美元符号，请用 ' +
+      ESCAPED_DOLLAR,
   },
   'det.wikilinkUnclosed': {
     en: 'unclosed wikilink: nothing closes it on the line, so it stays literal text',
