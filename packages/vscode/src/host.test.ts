@@ -200,6 +200,43 @@ describe('the extension bundle against a stubbed host', () => {
     assert.equal(vscode.revealed, 1, 'the output panel was not revealed for a warning');
   });
 
+  test('a warning the reader switched off is not published and not logged', () => {
+    assert.ok(documentProvider);
+    clean(vscode);
+    vscode.settings = { 'fuxiFmt.diagnostics.unmatchedBacktick': false };
+    const warned = {
+      getText: () => '用 \u0060 表示\n',
+      uri: { fsPath: join(dist, 'switched-off.md') },
+    };
+    documentProvider.provider.provideDocumentFormattingEdits(warned);
+
+    assert.equal(lastPublished(vscode)?.diagnostics.length, 0);
+    assert.equal(vscode.revealed, 0, 'the panel was revealed for a warning that is switched off');
+    vscode.settings = {};
+  });
+
+  test('an error is published with every warning switched off', () => {
+    assert.ok(documentProvider);
+    clean(vscode);
+    vscode.settings = {
+      'fuxiFmt.diagnostics.unmatchedBacktick': false,
+      'fuxiFmt.diagnostics.unmatchedDollarSign': false,
+      'fuxiFmt.diagnostics.unclosedWikilink': false,
+      'fuxiFmt.diagnostics.unclosedLinkDestination': false,
+      'fuxiFmt.diagnostics.raggedTableRow': false,
+      'fuxiFmt.diagnostics.listIndentJump': false,
+      'fuxiFmt.diagnostics.excludedList': false,
+    };
+    const refused = {
+      getText: () => '\u0060\u0060\u0060\u0060js\ncode\n\u0060\u0060\u0060\n',
+      uri: { fsPath: join(dist, 'still-refused.md') },
+    };
+    documentProvider.provider.provideDocumentFormattingEdits(refused);
+
+    assert.equal(lastPublished(vscode)?.diagnostics[0]?.severity, vscode.DiagnosticSeverity.Error);
+    vscode.settings = {};
+  });
+
   test('a refused document publishes an error and withholds the edits', () => {
     assert.ok(documentProvider);
     clean(vscode);

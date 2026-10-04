@@ -64,6 +64,48 @@
           "scope": "resource",
           "description": "%fuxiFmt.config.description%"
         },
+        "fuxiFmt.diagnostics.unmatchedBacktick": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "markdownDescription": "%fuxiFmt.diagnostics.unmatchedBacktick.description%"
+        },
+        "fuxiFmt.diagnostics.unmatchedDollarSign": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "markdownDescription": "%fuxiFmt.diagnostics.unmatchedDollarSign.description%"
+        },
+        "fuxiFmt.diagnostics.unclosedWikilink": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "markdownDescription": "%fuxiFmt.diagnostics.unclosedWikilink.description%"
+        },
+        "fuxiFmt.diagnostics.unclosedLinkDestination": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "markdownDescription": "%fuxiFmt.diagnostics.unclosedLinkDestination.description%"
+        },
+        "fuxiFmt.diagnostics.raggedTableRow": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "markdownDescription": "%fuxiFmt.diagnostics.raggedTableRow.description%"
+        },
+        "fuxiFmt.diagnostics.listIndentJump": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "markdownDescription": "%fuxiFmt.diagnostics.listIndentJump.description%"
+        },
+        "fuxiFmt.diagnostics.excludedList": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "markdownDescription": "%fuxiFmt.diagnostics.excludedList.description%"
+        },
         "fuxiFmt.blankLines.aroundBlocks": {
           "type": "string",
           "default": "exact",

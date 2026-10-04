@@ -132,6 +132,33 @@ function locate(file: string, diagnostic: Diagnostic): string {
   return where + ': ' + diagnostic.severity + ': ' + diagnostic.ruleId + ' ' + diagnostic.message;
 }
 
+/**
+ * One switch per warning rule, because a warning that cannot be turned off is a
+ * warning that gets the whole feature turned off. Errors have no switch: a
+ * refused document is refused for a reason, and silencing the reason would put
+ * the reader back where this round started.
+ */
+const WARNING_SWITCHES: Readonly<Record<string, string>> = {
+  'DET-06': 'diagnostics.unmatchedBacktick',
+  'DET-07': 'diagnostics.unmatchedDollarSign',
+  'DET-08': 'diagnostics.unclosedWikilink',
+  'DET-09': 'diagnostics.unclosedLinkDestination',
+  'DET-10': 'diagnostics.raggedTableRow',
+  'DET-11': 'diagnostics.listIndentJump',
+  'DET-12': 'diagnostics.excludedList',
+};
+
+/** Drop the warnings the reader has switched off. Errors are never dropped. */
+function visibleDiagnostics(diagnostics: readonly Diagnostic[]): Diagnostic[] {
+  const configuration = vscode.workspace.getConfiguration('fuxiFmt');
+  return diagnostics.filter((diagnostic) => {
+    if (diagnostic.severity === 'error') return true;
+    const key = WARNING_SWITCHES[diagnostic.ruleId];
+    if (key === undefined) return true;
+    return configuration.get<boolean>(key, true);
+  });
+}
+
 /** Map a core diagnostic to the editor's, at its line. */
 function toDiagnostic(diagnostic: Diagnostic): vscode.Diagnostic {
   const severity =
@@ -169,15 +196,16 @@ function formatAndReport(
 ): readonly Edit[] {
   const loaded = loadOptions(document);
   const outcome = documentFormat(document.getText(), loaded.options);
-  collection.set(document.uri, outcome.diagnostics.map(toDiagnostic));
+  const diagnostics = visibleDiagnostics(outcome.diagnostics);
+  collection.set(document.uri, diagnostics.map(toDiagnostic));
 
   for (const notice of loaded.notices) {
     output.appendLine('config: ' + notice.message);
   }
-  for (const diagnostic of outcome.diagnostics) {
+  for (const diagnostic of diagnostics) {
     output.appendLine(locate(document.uri.fsPath, diagnostic));
   }
-  const tripped = outcome.diagnostics.length > 0 || loaded.notices.length > 0;
+  const tripped = diagnostics.length > 0 || loaded.notices.length > 0;
   if (tripped) output.show(true);
   return outcome.edits;
 }

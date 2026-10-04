@@ -30,6 +30,11 @@ with release candidates suffixed `-rcN`.
   since the first draft — `list-scan.ts` even carried a comment saying the caller reports it — and
   no code ever emitted it.
 
+- **One switch per warning rule in the editor** (`fuxiFmt.diagnostics.*`, all on by default). A
+  warning that cannot be turned off is a warning that gets the whole feature turned off. Errors have
+  no switch, because a refused document is refused for a reason, and the CLI still prints every
+  diagnostic — a build log that omits what the editor would show makes the two disagree.
+
 ### Changed
 
 - **A diagnostic says where the problem is, in the file the author has.** The line was carried as

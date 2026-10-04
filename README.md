@@ -122,7 +122,8 @@ Each diagnostic is one line in the shape every compiler has used for forty years
 being the one in the file on disk rather than the one the formatter's own blank-line policy moved
 it to. An unterminated block is an error and refuses the document; a doubtful parse that did
 terminate is a warning and the document still formats (DET-06 … DET-11), with one switch per
-warning in the editor settings.
+warning in the editor settings — one switch per rule, all on by default, because a warning that cannot be
+turned off is a warning that gets the whole feature turned off.
 A configuration key that is not an option, or a retired one, is reported the same way — the one
 thing a silently ignored key can never say is that it was ignored.
 

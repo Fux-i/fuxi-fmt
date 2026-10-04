@@ -16,7 +16,21 @@ const manifest = JSON.parse(readFileSync(new URL('packages/vscode/package.json',
 };
 const properties = manifest.contributes?.configuration?.properties ?? {};
 const PREFIX = 'fuxiFmt.';
-const NOT_OPTIONS = new Set(['enable', 'config']);
+const NOT_OPTIONS = new Set([
+  'enable',
+  'config',
+  // One switch per warning-class detection. They are deliberately not core
+  // options: the core always reports every detection, and whether to *show* one is
+  // a question only an editor can answer. The CLI prints all of them, which is
+  // what makes a build log and the editor agree about the same document.
+  'diagnostics.unmatchedBacktick',
+  'diagnostics.unmatchedDollarSign',
+  'diagnostics.unclosedWikilink',
+  'diagnostics.unclosedLinkDestination',
+  'diagnostics.raggedTableRow',
+  'diagnostics.listIndentJump',
+  'diagnostics.excludedList',
+]);
 
 /**
  * Options deliberately not contributed as settings, with the reason.

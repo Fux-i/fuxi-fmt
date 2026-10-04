@@ -293,7 +293,9 @@ These are the general form of "don't touch code blocks". Every one is byte-verba
 
 **CFG-01 — Configuration file with per-directory resolution**, plus a preset layer. The editor adds two layers around the file rather than one: the individual `fuxiFmt.*` settings sit **below** `fuxi-fmt.json`, and the `fuxiFmt.config` object sits **above** it. The file beats the granular settings because the CLI cannot see editor settings; the alternative is an editor that disagrees with `--check` about the same document.
 
-**CFG-02 — Rule registry.** Every rule has a stable ID (the IDs in this document), an `off | warn | error` severity, and typed options. No flat option bag.
+**CFG-02 — Rule registry.** Every rule has a stable ID (the IDs in this document), a default severity, and typed options. No flat option bag.
+
+The `off | warn | error` severity per rule that this section originally promised is **not what shipped**, and this is the correction. Severity is a property of a rule, not of a configuration: an error refuses the document and a warning does not, they are not interchangeable, and a configuration that could promote a warning to an error would let a settings change turn a formatting nudge into a failed build. What is configurable is **visibility**: one switch per warning rule in the editor (`fuxiFmt.diagnostics.*`, all on by default). Errors carry no switch — a refused document is refused for a reason, and silencing the reason is how this project's own users ended up with a formatter that did nothing and said nothing. The CLI prints every diagnostic regardless: a build log that omits what the editor would show makes the two disagree about the same document.
 
 **CFG-03 — In-document ignore directives**: file-level, range-level, and next-line, following dprint's four-directive shape.
 
@@ -313,6 +315,8 @@ These are the general form of "don't touch code blocks". Every one is byte-verba
 ### H. Detection — what the parse had to guess
 
 fuxi-fmt formats a document by parsing it, and a parse can be a guess. Every rule here reports a guess; nothing here holds an opinion about the prose, which is NG-12. The section exists because the alternative is a formatter that silently does less than it was asked to, and silent under-formatting is the complaint that produced most of this project's bug reports.
+
+Each warning rule can be switched off individually in the editor (CFG-02); the core always reports all of them, so the CLI and a build log never depend on an editor setting.
 
 **One rule decides the severity.** A region that never terminated swallowed everything after it, so the document is **refused** whole: an error, the input returned unchanged, exit 2 from the CLI, no edits in the editor. Anything that terminated but is implausible is a **warning**; the document formats and the author is told. A detection runs before any formatting pass, so a refused document is refused before a rule touches a text already known to be misread.
 
