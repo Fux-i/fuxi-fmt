@@ -310,6 +310,18 @@ These are the general form of "don't touch code blocks". Every one is byte-verba
 - A key that is not an option at all is reported and still ignored, so a configuration written for a later version loads.
 - The list is finite and closed: each entry exists to be deleted, and a name is removed from it the release after it is retired.
 
+### H. Detection — what the parse had to guess
+
+fuxi-fmt formats a document by parsing it, and a parse can be a guess. Every rule here reports a guess; nothing here holds an opinion about the prose, which is NG-12. The section exists because the alternative is a formatter that silently does less than it was asked to, and silent under-formatting is the complaint that produced most of this project's bug reports.
+
+**One rule decides the severity.** A region that never terminated swallowed everything after it, so the document is **refused** whole: an error, the input returned unchanged, exit 2 from the CLI, no edits in the editor. Anything that terminated but is implausible is a **warning**; the document formats and the author is told. A detection runs before any formatting pass, so a refused document is refused before a rule touches a text already known to be misread.
+
+An unclosed fenced block is **legal CommonMark** — the block simply runs to the end of the document — and this section says so out loud rather than pretending the rule is a parse error. The parse is well defined and the output for what was written is correct; the author has almost certainly forgotten a delimiter. Calling it an error is a deliberate over-reaction in favour of being told, because the alternative is the one two separate reports described: a document that formats everywhere except after the mistake, with nothing said about why.
+
+**DET-01 — Unterminated fenced code block** · error. No closing fence was found, so every line after the opener is code (SAFE-01). Reported at the opening fence.
+
+**DET-03 — Unterminated HTML comment** · error. A `<!--` with no `-->` anywhere after it, outside a protected region (SAFE-04). Reported at the comment start. A comment start inside a code fence is code, not a comment, and is not reported.
+
 ---
 
 ## 3. Non-goals

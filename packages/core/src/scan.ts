@@ -34,6 +34,12 @@ export interface Region {
   readonly info?: string;
   /** Leading indentation before the fence delimiter, verbatim (SAFE-02). */
   readonly indent?: string;
+  /**
+   * Whether a block region found its terminator. Only the kinds that can run to
+   * end of file set it: a fence with no closer is still a fence, and everything
+   * that follows is inside it, so the formatter has to know it guessed (DET-01).
+   */
+  readonly closed?: boolean;
 }
 
 interface Line {
@@ -168,6 +174,7 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
           const indent = line.text.slice(0, indentLen);
           let end = source.length;
           let next = lines.length;
+          let closed = false;
           for (let j = i + 1; j < lines.length; j++) {
             const cand = lines[j];
             if (cand === undefined) continue;
@@ -179,11 +186,12 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
             if (closing >= fenceLen && candRest.slice(closing).trim() === '') {
               end = cand.end;
               next = j + 1;
+              closed = true;
               break;
             }
           }
           if (claim(mask, line.start, end)) {
-            regions.push({ kind: 'fencedCode', start: line.start, end, info, indent });
+            regions.push({ kind: 'fencedCode', start: line.start, end, info, indent, closed });
           }
           i = next - 1;
           continue;

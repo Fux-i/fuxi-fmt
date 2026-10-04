@@ -114,7 +114,9 @@ node packages/cli/src/main.ts --explain a.md    # say what was found and what wa
 
 `--explain` is a modifier rather than a mode, so it composes with the others. It writes its report
 to stderr: where the configuration came from, whether the document changed, and what was warned
-about. Warnings are reported and do not fail the run; only the guard refusing a document does.
+about. Warnings are reported and do not fail the run. Two things do fail the run: the semantic guard
+refusing a document, and a detection that the document was misread — an unterminated code fence or
+HTML comment, where everything after the mistake was read as part of it (DET-01, DET-03).
 Each diagnostic is one line in the shape every compiler has used for forty years —
 `path:line: severity: RULE message` — with the line left out when the core has none, and the line
 being the one in the file on disk rather than the one the formatter's own blank-line policy moved

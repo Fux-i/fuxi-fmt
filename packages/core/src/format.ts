@@ -1,4 +1,5 @@
 import { segment, type AtomicRange, type BlockKind } from './blocks.ts';
+import { detect } from './detect.ts';
 import { checkSemantics } from './guard.ts';
 import { hasIgnoreFile, ignoreLines, ignoreRanges, type CharRange } from './ignores.ts';
 import { applyEndOfLine, normalizeInput, trimTrailingWhitespace, type Eol } from './hygiene.ts';
@@ -83,6 +84,17 @@ function lineAt(lines: readonly SourceLine[], offset: number): number {
   return found;
 }
 
+/** Errors first, then by line: a reader wants the refusal before the nits. */
+function orderedDiagnostics(diagnostics: readonly Diagnostic[]): Diagnostic[] {
+  return [...diagnostics].sort((a, b) => {
+    if (a.severity !== b.severity) return a.severity === 'error' ? -1 : 1;
+    const left = a.line ?? -1;
+    const right = b.line ?? -1;
+    if (left !== right) return left - right;
+    return a.ruleId.localeCompare(b.ruleId);
+  });
+}
+
 function atomicRanges(lines: readonly SourceLine[], regions: readonly Region[]): AtomicRange[] {
   const ranges: AtomicRange[] = [];
   for (const region of regions) {
@@ -112,7 +124,16 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   const base = normalized.text;
 
   const lines = splitSourceLines(base);
-  const ranges = atomicRanges(lines, scanRegions(base));
+  const regions = scanRegions(base);
+  const ranges = atomicRanges(lines, regions);
+
+  // DET-*: what the parse had to guess. An unterminated block swallowed the rest
+  // of the file, so the document is refused before any rule touches a text we
+  // already know we misread (GRT-04).
+  const detections = detect(base, lines, regions, ignoreRanges(base, options.ignore));
+  if (detections.some((diagnostic) => diagnostic.severity === 'error')) {
+    return { output: source, changed: false, diagnostics: orderedDiagnostics(detections) };
+  }
 
   const protectedLine = new Array<boolean>(lines.length).fill(false);
   for (const range of ranges) {
@@ -279,5 +300,9 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     line: inputLineOf(offset),
     severity: 'warning' as const,
   }));
-  return { output, changed: output !== source, diagnostics };
+  return {
+    output,
+    changed: output !== source,
+    diagnostics: orderedDiagnostics([...detections, ...diagnostics]),
+  };
 }

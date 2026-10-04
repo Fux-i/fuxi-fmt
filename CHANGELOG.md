@@ -9,6 +9,17 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
+### Added
+
+- **Detection: the formatter now says when it had to guess.** fuxi-fmt protects a region by parsing
+  the document, and a parse that goes wrong in a way the parse cannot see left the author with a
+  formatter that quietly did less than they asked. Two rules ship here. An unterminated code fence
+  (**DET-01**) and an HTML comment with no closing marker (**DET-03**) are **errors**: everything
+  after the mistake was read as part of it, so the document is refused whole — input returned
+  unchanged, exit 2 from the CLI, no edits in the editor — and the refusal names the line. An
+  unclosed fence is legal CommonMark, so this is a deliberate over-reaction in favour of being told;
+  the alternative is the silent half-formatting that this project's own reports describe twice.
+
 ### Changed
 
 - **A diagnostic says where the problem is, in the file the author has.** The line was carried as

@@ -79,21 +79,25 @@ describe('BLK-10 code fence delimiter normalisation', () => {
     const src = '```js\na ``` b\n    ```\n';
     const result = format(src);
     assert.equal(result.output, src);
-    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.diagnostics[0]?.ruleId, 'DET-01');
+    assert.equal(result.diagnostics[0]?.line, 0);
   });
-  // An unterminated fence swallows every line after it, so what the guard
-  // failure damaged was the content BEFORE it: a heading with no connection to
-  // the fence came out unformatted because the refusal is document-wide.
-  test('an over-indented closer does not suppress the rest of the document', () => {
-    assert.equal(
-      out('#  heading\n\n```js\na ``` b\n    ```\n'),
-      '# heading\n\n```js\na ``` b\n    ```\n',
-    );
+  // An unterminated fence swallows every line after it, so what a refusal damages
+  // is the content BEFORE it: a heading with no connection to the fence comes out
+  // unformatted. That is still true, and still deliberate - an unterminated block
+  // is an error. What is no longer true is that it happens in silence: DET-01
+  // names the fence, so the author knows which line to fix instead of wondering
+  // why half their document stopped responding.
+  test('an over-indented closer refuses the document instead of half-formatting it', () => {
+    const result = format('#  heading\n\n```js\na ``` b\n    ```\n');
+    assert.equal(result.output, '#  heading\n\n```js\na ``` b\n    ```\n');
+    assert.equal(result.diagnostics[0]?.ruleId, 'DET-01');
+    assert.equal(result.diagnostics[0]?.line, 2);
   });
   test('a trailing blank line does not change the outcome', () => {
     const src = '```js\na ``` b\n    ```\n\n';
     const result = format(src);
     assert.equal(result.output, src);
-    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.diagnostics[0]?.ruleId, 'DET-01');
   });
 });
