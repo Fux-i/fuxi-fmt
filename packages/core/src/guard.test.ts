@@ -3,6 +3,36 @@ import assert from 'node:assert/strict';
 import { checkSemantics } from './guard.ts';
 import { format } from './format.ts';
 
+describe('GRT-01 a violation says where it happened', () => {
+  test('a modified fenced code block names its line', () => {
+    const violations = checkSemantics('intro\n\n```\ncode\n```\n', 'intro\n\n```\nCODE\n```\n');
+    assert.equal(violations.length, 1);
+    assert.equal(violations[0]?.line, 2);
+  });
+  test('changed front matter names its line', () => {
+    const violations = checkSemantics('---\na: 1\n---\nx\n', '---\na: 2\n---\nx\n');
+    assert.equal(violations[0]?.ruleId, 'SAFE-01');
+    assert.equal(violations[0]?.line, 0);
+  });
+  test('a lost non-blank line names where the two documents diverge', () => {
+    const violations = checkSemantics('a\nb\nc\n', 'a\nc\n');
+    assert.equal(violations[0]?.line, 1);
+  });
+  test('a region appearing out of nothing has no line, rather than line 1', () => {
+    // The old code hard-coded 0 for every guard error, so a refusal of a document
+    // whose first line was fine still pointed at line 1.
+    const violations = checkSemantics('x\n', '```\nc\n```\nx\n');
+    assert.equal(violations[0]?.line, undefined);
+  });
+  test('no violation writes a line number into its message', () => {
+    const violations = checkSemantics('a\n', '# a\n');
+    assert.ok(violations.length > 0, 'expected the paragraph-to-heading change to be refused');
+    for (const violation of violations) {
+      assert.doesNotMatch(violation.message, /line \d/);
+    }
+  });
+});
+
 describe('GRT-01 the guard accepts intended transformations', () => {
   test('blank line insertion between blocks', () => {
     assert.deepEqual(checkSemantics('a\n- x\n', 'a\n\n- x\n'), []);

@@ -76,14 +76,25 @@ describe('TYPO-11 paired quotation marks', () => {
     const diagnostic = result.diagnostics[0];
     assert.equal(diagnostic?.ruleId, 'TYPO-11');
     assert.equal(diagnostic?.line, 0);
-    assert.match(diagnostic?.message ?? '', /line 1/);
+    // The line is data. Writing it into the message as well printed it twice, in
+    // two different bases, whenever a caller printed both.
+    assert.doesNotMatch(diagnostic?.message ?? '', /line \d/);
   });
 
-  test('the warning names the line it is on, counting from one', () => {
+  test('the warning carries the line as data, counting from zero', () => {
     const result = format('第一行\n\n他说 "你好 了\n');
     assert.equal(result.diagnostics.length, 1);
     assert.equal(result.diagnostics[0]?.line, 2);
-    assert.match(result.diagnostics[0]?.message ?? '', /line 3/);
+  });
+
+  test('the line is the one the author wrote, not the one the formatter moved it to', () => {
+    // The blank-line policy inserts a line after a heading. The quotes pass runs
+    // on the rebuilt text, so counting lines there reported line 2 for a quote on
+    // line 1, and the editor put the squiggle on the blank line instead.
+    const heading = format('# 标题\n他说 "你好 了\n');
+    assert.equal(heading.diagnostics[0]?.line, 1);
+    const fence = format('```js\nx\n```\n他说 "你好 了\n');
+    assert.equal(fence.diagnostics[0]?.line, 3);
   });
 
   test('a warning does not stop the rest of the document formatting', () => {

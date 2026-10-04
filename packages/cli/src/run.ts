@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { diffEdits, format, loadOptionsFor } from '../../core/src/index.ts';
-import type { FormatOptionsInput, LoadedConfig } from '../../core/src/index.ts';
+import type { Diagnostic, FormatOptionsInput, LoadedConfig } from '../../core/src/index.ts';
 import { parseArgs } from './args.ts';
 
 /** Everything the command needs from the outside world, injected for testing. */
@@ -20,6 +20,19 @@ export interface Io {
 export const EXIT_OK = 0;
 export const EXIT_CHANGES = 1;
 export const EXIT_ERROR = 2;
+
+/**
+ * `path:line: severity: RULE message` - the shape every C compiler and linter
+ * has used for forty years, because it is the one an editor, a CI log and a
+ * human can all read without being told how.
+ *
+ * The line is left out when the core has none: a refused document is refused
+ * whole, and inventing line 1 for it is worse than saying nothing.
+ */
+function locate(file: string, diagnostic: Diagnostic): string {
+  const where = diagnostic.line === undefined ? file : file + ':' + String(diagnostic.line + 1);
+  return where + ': ' + diagnostic.severity + ': ' + diagnostic.ruleId + ' ' + diagnostic.message;
+}
 
 export const USAGE = [
   'fuxi-fmt - format Markdown for Chinese technical writing',
@@ -111,25 +124,18 @@ export function run(argv: readonly string[], io: Io): number {
     // Errors refuse the document, warnings do not. Failing a build on a warning is
     // how a useful warning becomes a reason to switch the rule off.
     for (const diagnostic of result.diagnostics) {
-      if (diagnostic.severity !== 'warning') continue;
-      io.err(
-        'fuxi-fmt: ' + file + ': warning: ' + diagnostic.ruleId + ' ' + diagnostic.message + '\n',
-      );
+      io.err(locate(file, diagnostic) + '\n');
     }
     const errors = result.diagnostics.filter((d) => d.severity === 'error');
-    if (errors.length > 0) {
-      for (const diagnostic of errors) {
-        io.err('fuxi-fmt: ' + file + ': ' + diagnostic.ruleId + ' ' + diagnostic.message + '\n');
-      }
-      return EXIT_ERROR;
-    }
+    if (errors.length > 0) return EXIT_ERROR;
 
     if (explain) {
       io.err(
         'fuxi-fmt: ' + file + '\n' +
           '  config: ' + (loaded?.configPath ?? 'none, using the defaults') + '\n' +
           '  changed: ' + (result.changed ? 'yes' : 'no') + '\n' +
-          '  warnings: ' + String(result.diagnostics.length) + '\n',
+          '  warnings: ' +
+            String(result.diagnostics.filter((d) => d.severity === 'warning').length) + '\n',
       );
     }
 

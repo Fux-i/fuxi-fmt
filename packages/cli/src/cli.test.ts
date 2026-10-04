@@ -41,6 +41,15 @@ describe('CLI warnings and notices', () => {
     assert.match(io.errText(), /TYPO-11/);
     assert.match(io.errText(), /warning/);
   });
+  test('a diagnostic is one machine-readable line: path, line, severity, rule', () => {
+    // The shape every compiler uses, so an editor or a CI log can pick it up. The
+    // line is the one in the file on disk - the quote is on the third line, and
+    // the blank-line policy adding one is the formatter's problem, not the
+    // reader's.
+    const io = fakeIo({ 'a.md': '#  Title\n\n他说 "你好 了\n' });
+    run(['a.md'], io);
+    assert.match(io.errText(), /^a\.md:3: warning: TYPO-11 /m);
+  });
   test('an error still fails the run', () => {
     // An opening fence longer than the closing one is not a fence pair, and the
     // guard refuses the document rather than guessing.

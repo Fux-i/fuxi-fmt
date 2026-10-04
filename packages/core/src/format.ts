@@ -24,7 +24,17 @@ function lineOf(text: string, offset: number): number {
 export interface Diagnostic {
   readonly ruleId: string;
   readonly message: string;
-  readonly line: number;
+  /**
+   * 0-based line in the *input*, or `undefined` when the complaint is about the
+   * document as a whole: a refused document is refused in one piece, not at a
+   * line, and pretending otherwise pointed every refusal at line 1.
+   *
+   * The location is data. It used to be written into the message as well, which
+   * printed it twice in two different bases, and it was taken from the text the
+   * formatter had already moved lines in, so a rule could name the line it had
+   * moved a problem to rather than the line the author wrote it on.
+   */
+  readonly line: number | undefined;
   /**
    * 'error' means the document was refused and the input is the output.
    * 'warning' means the document was formatted and something in it wants a look,
@@ -175,6 +185,11 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   };
 
   const parts: string[] = [];
+  // Where every emitted line came from: the input line index, or -1 for a blank
+  // the blank-line policy invented. Diagnostics describe the input, so a rule
+  // that reports a line maps back through this instead of counting the lines of
+  // whatever text it happens to be holding.
+  const partLines: number[] = [];
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i];
     if (block === undefined) continue;
@@ -183,19 +198,41 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
       if (listBlanks !== 'preserve' && sameList(i - 1, i)) {
         blanks = listBlanks === 'remove' ? 0 : 1;
       }
-      for (let k = 0; k < blanks; k++) parts.push('');
+      for (let k = 0; k < blanks; k++) {
+        parts.push('');
+        partLines.push(-1);
+      }
     }
     for (let j = block.start; j < block.end; j++) {
       // BLK-03 is opt-in: a blank line between items flips a tight list to loose,
       // so it never happens unless asked for. The j > block.start guard is what
       // keeps this idempotent - on a second pass each item is already its own
       // block with its own blank before it.
-      if (listBlanks === 'one' && j > block.start && isItem(j)) parts.push('');
+      if (listBlanks === 'one' && j > block.start && isItem(j)) {
+        parts.push('');
+        partLines.push(-1);
+      }
       parts.push(reindented[j] ?? texts[j] ?? '');
+      partLines.push(j);
     }
   }
 
   const structural = parts.length === 0 ? '' : parts.join('\n') + '\n';
+  const structuralLines = splitSourceLines(structural);
+  /**
+   * The input line an offset into the rebuilt text sits on.
+   *
+   * Everything from here on is indexed against `structural`, whose lines the
+   * blank-line policy may have inserted or removed. A line reported to the author
+   * has to be the line they wrote, so this maps through `partLines` and gives up
+   * (undefined) rather than guess when the offset lands on an invented blank.
+   */
+  const inputLineOf = (offset: number): number | undefined => {
+    const index = lineAt(structuralLines, offset);
+    if (index < 0) return undefined;
+    const mapped = partLines[index];
+    return mapped === undefined || mapped < 0 ? undefined : mapped;
+  };
   // Width first, so that spacing sees ordinary digits; punctuation before
   // spacing, so that TYPO-07 can remove the gaps a conversion leaves behind.
   // The three width passes each rewrite one character for one character, so
@@ -226,7 +263,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
       diagnostics: violations.map((violation) => ({
         ruleId: violation.ruleId,
         message: violation.message,
-        line: 0,
+        line: violation.line,
         severity: 'error' as const,
       })),
     };
@@ -238,11 +275,8 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   // the author wrote, and the author is told which line to look at.
   const diagnostics: Diagnostic[] = quoted.unpaired.map((offset) => ({
     ruleId: 'TYPO-11',
-    message:
-      'unpaired straight quote on line ' +
-      (lineOf(structural, offset) + 1) +
-      ': this paragraph has an odd number of them, so none were converted',
-    line: lineOf(structural, offset),
+    message: 'unpaired straight quote: this paragraph has an odd number of them, so none were converted',
+    line: inputLineOf(offset),
     severity: 'warning' as const,
   }));
   return { output, changed: output !== source, diagnostics };

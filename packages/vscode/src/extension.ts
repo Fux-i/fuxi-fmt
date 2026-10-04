@@ -122,16 +122,30 @@ function enabled(): boolean {
   return vscode.workspace.getConfiguration('fuxiFmt').get<boolean>('enable', true);
 }
 
+/**
+ * `path:line: severity: RULE message` - deliberately the same shape the CLI
+ * prints, so a reader who has read one log has read both. The diagnostic in the
+ * Problems panel carries the file already; this is the log's copy.
+ */
+function locate(file: string, diagnostic: Diagnostic): string {
+  const where = diagnostic.line === undefined ? file : file + ':' + String(diagnostic.line + 1);
+  return where + ': ' + diagnostic.severity + ': ' + diagnostic.ruleId + ' ' + diagnostic.message;
+}
+
 /** Map a core diagnostic to the editor's, at its line. */
 function toDiagnostic(diagnostic: Diagnostic): vscode.Diagnostic {
   const severity =
     diagnostic.severity === 'error'
       ? vscode.DiagnosticSeverity.Error
       : vscode.DiagnosticSeverity.Warning;
+  // A document-level diagnostic has no line. The editor has no way to attach a
+  // comment to a whole file, so it goes on the first line - but the message and
+  // the output channel both say the line is unknown rather than pretend.
+  const line = diagnostic.line ?? 0;
   return new vscode.Diagnostic(
     new vscode.Range(
-      new vscode.Position(diagnostic.line, 0),
-      new vscode.Position(diagnostic.line, Number.MAX_SAFE_INTEGER),
+      new vscode.Position(line, 0),
+      new vscode.Position(line, Number.MAX_SAFE_INTEGER),
     ),
     diagnostic.ruleId + ': ' + diagnostic.message,
     severity,
@@ -161,10 +175,7 @@ function formatAndReport(
     output.appendLine('config: ' + notice.message);
   }
   for (const diagnostic of outcome.diagnostics) {
-    output.appendLine(
-      diagnostic.severity + ': line ' + String(diagnostic.line + 1) + ': ' +
-        diagnostic.ruleId + ' ' + diagnostic.message,
-    );
+    output.appendLine(locate(document.uri.fsPath, diagnostic));
   }
   const tripped = outcome.diagnostics.length > 0 || loaded.notices.length > 0;
   if (tripped) output.show(true);

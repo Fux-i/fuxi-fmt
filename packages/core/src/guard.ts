@@ -24,6 +24,12 @@ import { scanRegions, type Region } from './scan.ts';
 export interface Violation {
   readonly ruleId: string;
   readonly message: string;
+  /**
+   * 0-based line in the input when the violation can be pinned to one. The
+   * guard's first job is to say *what* diverged; this says where. `undefined` is
+   * the honest answer for a complaint that is a global count with no position.
+   */
+  readonly line: number | undefined;
 }
 
 /** A paragraph that looks like an ATX heading missing its space. */
@@ -57,8 +63,29 @@ function regionSignature(text: string, region: Region, trimBlankLines: boolean):
   return region.kind + ':' + body + '\u0000' + (region.info ?? '');
 }
 
-function nonBlankLines(text: string): string[] {
-  return text.split('\n').filter((line) => line.trim().length > 0);
+/** 0-based line of a character offset. */
+function lineOfOffset(text: string, offset: number): number {
+  let line = 0;
+  const limit = Math.max(0, Math.min(offset, text.length));
+  for (let i = 0; i < limit; i++) if (text.charCodeAt(i) === 10) line++;
+  return line;
+}
+
+interface Anchor {
+  readonly text: string;
+  /** 0-based line in the document this line came from. */
+  readonly line: number;
+}
+
+/** The non-blank lines, each still knowing the line it was on. */
+function nonBlankLines(text: string): Anchor[] {
+  const out: Anchor[] = [];
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? '';
+    if (line.trim().length > 0) out.push({ text: line, line: i });
+  }
+  return out;
 }
 
 export function checkSemantics(
@@ -72,6 +99,18 @@ export function checkSemantics(
   const afterRegions = scanRegions(after);
 
   if (beforeRegions.length !== afterRegions.length) {
+    // The count is global, but the divergence is local: walk the regions in
+    // order and stop at the first one with no counterpart, so the author is sent
+    // to the region that changed rather than to the top of the file.
+    const common = Math.min(beforeRegions.length, afterRegions.length);
+    let first = 0;
+    while (first < common) {
+      const a = beforeRegions[first];
+      const b = afterRegions[first];
+      if (a === undefined || b === undefined || a.kind !== b.kind) break;
+      first++;
+    }
+    const anchor = beforeRegions[first > 0 ? first - 1 : 0];
     violations.push({
       ruleId: 'GRT-01',
       message:
@@ -79,6 +118,7 @@ export function checkSemantics(
         String(beforeRegions.length) +
         ' -> ' +
         String(afterRegions.length),
+      line: anchor === undefined ? undefined : lineOfOffset(before, anchor.start),
     });
   } else {
     for (let i = 0; i < beforeRegions.length; i++) {
@@ -92,6 +132,7 @@ export function checkSemantics(
           ruleId: 'SAFE-01',
           message:
             a.kind + ' region changed: ' + JSON.stringify(signatureA) + ' -> ' + JSON.stringify(signatureB),
+          line: lineOfOffset(before, a.start),
         });
       }
     }
@@ -101,6 +142,21 @@ export function checkSemantics(
   const afterLines = nonBlankLines(after);
 
   if (beforeLines.length !== afterLines.length) {
+    // Same reasoning as the regions: report where the two documents stop
+    // agreeing. The old code said "line i + 1" against the non-blank-filtered
+    // array, which is not a line in the file at all.
+    const common = Math.min(beforeLines.length, afterLines.length);
+    let first = 0;
+    while (first < common) {
+      const a = beforeLines[first];
+      const b = afterLines[first];
+      if (a === undefined || b === undefined) break;
+      if (classifyContent(a.text) !== classifyContent(b.text)) break;
+      first++;
+    }
+    // The last line the two documents still agreed on. When a line was lost,
+    // that is the line that went missing - which is the one to go and look at.
+    const anchor = beforeLines[first > 0 ? first - 1 : 0];
     violations.push({
       ruleId: 'GRT-01',
       message:
@@ -108,21 +164,22 @@ export function checkSemantics(
         String(beforeLines.length) +
         ' -> ' +
         String(afterLines.length),
+      line: anchor?.line,
     });
     return violations;
   }
 
   for (let i = 0; i < beforeLines.length; i++) {
-    const a = beforeLines[i] ?? '';
-    const b = afterLines[i] ?? '';
+    const a = beforeLines[i]?.text ?? '';
+    const b = afterLines[i]?.text ?? '';
     const kindA = classifyContent(a);
     const kindB = classifyContent(b);
     if (kindA === kindB) continue;
     if (kindA === 'paragraph' && kindB === 'heading' && isHeadingPromotion(a, b)) continue;
     violations.push({
       ruleId: 'GRT-01',
-      message:
-        'block kind changed on line ' + String(i + 1) + ': ' + kindA + ' -> ' + kindB,
+      message: 'block kind changed: ' + kindA + ' -> ' + kindB,
+      line: beforeLines[i]?.line,
     });
   }
 

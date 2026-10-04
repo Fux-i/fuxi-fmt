@@ -70,15 +70,18 @@ describe('totality: the formatter never throws and never corrupts', () => {
         assert.fail('format threw on ' + JSON.stringify(source.slice(0, 40)) + ': ' + String(error));
       }
 
-      // If the guard withheld a result, the input must come back untouched.
-      if (result.diagnostics.length > 0) {
-        assert.equal(result.output, source, 'guard withheld a result but the output changed');
+      // If the guard withheld a result, the input must come back untouched. Only
+      // an *error* withholds; a warning formats the document and says so, so
+      // testing for any diagnostic conflated the two and passed only because the
+      // hostile inputs happen to contain no straight quotes.
+      if (result.diagnostics.some((d) => d.severity === 'error')) {
+        assert.equal(result.output, source, 'the guard withheld a result but the output changed');
         return;
       }
 
-      // Otherwise the result must be stable.
+      // Otherwise the result must be stable, and so must what it has to say.
       const again = format(result.output);
-      assert.deepEqual(again.diagnostics, [], 'the second pass was withheld');
+      assert.deepEqual(again.diagnostics, result.diagnostics, 'the second pass said something else');
       assert.equal(again.output, result.output, 'formatting did not settle in one pass');
     });
   }

@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases are tagged using the Linux kernel convention: `vMAJOR.MINOR[.PATCH]`,
 with release candidates suffixed `-rcN`.
 
+## [Unreleased]
+
+### Changed
+
+- **A diagnostic says where the problem is, in the file the author has.** The line was carried as
+  data *and* written into the message, so anything printing both printed it twice in two different
+  bases; and it was counted in the text the formatter had already inserted blank lines into, so a
+  document whose heading gained a blank line had its unpaired quote reported one line too low and
+  the editor drew the squiggle on the blank. The line is now data only, mapped back to the input
+  through the blank-line policy's own record of what it invented, and `undefined` when the
+  complaint is about the document as a whole — every guard refusal used to point at line 1.
+- **The CLI prints one machine-readable line per diagnostic**: `path:line: severity: RULE message`,
+  the shape an editor, a CI log and a human can all read. The `fuxi-fmt:` prefix is gone; the path
+  identifies the file and the summary line names the tool.
+
+### Fixed
+
+- **Guard violations name the lines they are about.** A changed region reports its own line, and a
+  changed non-blank line count reports the last line the two documents still agreed on — the line
+  that went missing — instead of an index into the non-blank-filtered array, which was not a line
+  in the file at all.
+- `--explain` counted every diagnostic as a warning. Only warnings are warnings.
+
 ## [0.24.0] - 2026-10-02
 
 ### Added
