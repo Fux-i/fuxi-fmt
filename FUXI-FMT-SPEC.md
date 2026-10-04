@@ -334,6 +334,8 @@ An unclosed fenced block is **legal CommonMark** — the block simply runs to th
 
 **DET-10 — Ragged table row** · warning. A row whose cell count differs from its header's. An escaped `\|` is cell content, not a column separator.
 
+**DET-12 — List excluded because it contains a protected block** · warning. BLK-08 leaves such a list un-reindented (SAFE-02 × BLK-08, section 7 item 1), the indentation is not repaired, and nothing in the source says why. The exclusion covers the blank-line policy too, for the reason in section 7.
+
 **DET-11 — Item indented as if nested, belonging to no parent** · warning. BLK-08 dedents it to the level it actually occupies, and that repair is invisible in the source, which is why the author is told.
 
 **Deliberately not reported.** A code span the author wrapped across a line break is correct Markdown and its contents are protected exactly as intended. The rule that would have flagged it was dropped after firing four times on this repository's own CHANGELOG and prior-art report. A detection that fires on correct input teaches people to ignore the panel, which is worse than not having it.
@@ -494,7 +496,7 @@ Everything in this block is implemented.
 indentation normalization, and a diagnostic is reported when that happens. Option (a) — letting
 the fence follow the list — would move code the author wrote at a fixed indentation, and moving
 code is precisely what SAFE-02 exists to prevent. Excluding the list keeps both promises.
-**Implemented.** `list.orderedIndent` / `list.unorderedIndent` sets the minimum indent width used by list reindentation, and
+**Implemented, including the diagnostic, as **DET-12**. The exclusion covers the blank-line policy as well as the indentation plan: inserting a blank line inside such a list is not cosmetic, because a deeply indented item after a blank line is an indented code block, so the tidied document parses differently from the written one. That interaction was a real refusal — a list containing a code block with an over-indented child came back untouched with `protected region count changed: 1 -> 2`. `list.orderedIndent` / `list.unorderedIndent` sets the minimum indent width used by list reindentation, and
 `list.tabWidth` the width hard tabs are expanded to — two jobs that one option used to conflate:
 reindentation is driven by the parent's content column, not by that option.
 2. **YAML front matter format** (FM-01) is currently "protect entirely". The `frontMatter.enabled`

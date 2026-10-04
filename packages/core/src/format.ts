@@ -166,6 +166,39 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   const excludedLists = new Set(
     findExcludedLists(texts, listItems, listParents, protectedLine),
   );
+  // Which list items belong to a list that contains a protected block. Such a
+  // list is left alone entirely: BLK-08 already refuses to reindent it, and the
+  // blank-line policy has to refuse too. Inserting a blank line inside that list
+  // is not cosmetic - a deeply indented item after a blank line is an indented
+  // code block, so the "tidy" version of the document parses differently from the
+  // version the author wrote, and the guard refuses it. That refusal was real:
+  // a list with a code block and an over-indented child would not format at all.
+  const excludedItemLines = new Set<number>();
+  for (let i = 0; i < listItems.length; i++) {
+    const item = listItems[i];
+    if (item === undefined) continue;
+    let at = i;
+    const seen = new Set<number>();
+    for (;;) {
+      const parent = listParents[at];
+      if (parent === undefined || parent === -1 || seen.has(at)) break;
+      seen.add(at);
+      at = parent;
+    }
+    if (excludedLists.has(at)) excludedItemLines.add(item.line);
+  }
+  for (const root of excludedLists) {
+    const item = listItems[root];
+    if (item === undefined) continue;
+    detections.push({
+      ruleId: 'DET-12',
+      message:
+        'this list is not reindented: it contains a protected block, and moving code the author placed at a fixed indentation is what SAFE-02 exists to prevent',
+      line: item.line,
+      severity: 'warning',
+    });
+  }
+
   const reindented = [...texts];
   const orderedMin = options.list.orderedIndent === 'aligned' ? 0 : options.list.orderedIndent;
   const unorderedMin =
@@ -206,6 +239,14 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     return left !== null && left === right;
   };
 
+  /** A gap between two blocks that lies inside a list containing a protected block. */
+  const gapIsExcluded = (index: number): boolean => {
+    const block = blocks[index];
+    const previous = blocks[index - 1];
+    if (block === undefined || previous === undefined) return false;
+    return excludedItemLines.has(previous.end - 1) || excludedItemLines.has(block.start);
+  };
+
   const parts: string[] = [];
   // Where every emitted line came from: the input line index, or -1 for a blank
   // the blank-line policy invented. Diagnostics describe the input, so a rule
@@ -216,8 +257,9 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     const block = blocks[i];
     if (block === undefined) continue;
     if (i > 0) {
-      let blanks = blankCount(block.blanksBefore, options);
-      if (listBlanks !== 'preserve' && sameList(i - 1, i)) {
+      const untouched = gapIsExcluded(i);
+      let blanks = untouched ? block.blanksBefore : blankCount(block.blanksBefore, options);
+      if (!untouched && listBlanks !== 'preserve' && sameList(i - 1, i)) {
         blanks = listBlanks === 'remove' ? 0 : 1;
       }
       for (let k = 0; k < blanks; k++) {
@@ -230,7 +272,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
       // so it never happens unless asked for. The j > block.start guard is what
       // keeps this idempotent - on a second pass each item is already its own
       // block with its own blank before it.
-      if (listBlanks === 'one' && j > block.start && isItem(j)) {
+      if (listBlanks === 'one' && j > block.start && isItem(j) && !excludedItemLines.has(j)) {
         parts.push('');
         partLines.push(-1);
       }

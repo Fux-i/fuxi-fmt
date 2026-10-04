@@ -51,7 +51,10 @@ describe('scale: a document the size of a real article', () => {
 
   test('the guard holds', () => {
     const result = format(source);
-    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(
+      result.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'),
+      [],
+    );
     assert.deepEqual(checkSemantics(source, result.output), []);
   });
 

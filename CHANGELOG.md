@@ -21,11 +21,14 @@ with release candidates suffixed `-rcN`.
   unchanged, exit 2 from the CLI, no edits in the editor — and the refusal names the line. An
   unclosed fence is legal CommonMark, so this is a deliberate over-reaction in favour of being told;
   the alternative is the silent half-formatting that this project's own reports describe twice.
-- **Six warnings for a parse that terminated but is doubtful** (DET-06 … DET-11): an unmatched
+- **Seven warnings for a parse that terminated but is doubtful** (DET-06 … DET-12): an unmatched
   backtick, an unmatched dollar sign, an unclosed wikilink or link destination, a table row whose
-  cell count disagrees with its header, and a list item indented as if nested that belongs to no
-  parent. They format the document and say so. In the editor each has its own switch, because DET-07
-  cannot tell a price from an unclosed formula and DET-06 fires on a deliberate literal backtick.
+  cell count disagrees with its header, a list item indented as if nested that belongs to no parent,
+  and a list left alone because it contains a protected block. They format the document and say so.
+  In the editor each has its own switch, because DET-07 cannot tell a price from an unclosed formula
+  and DET-06 fires on a deliberate literal backtick. **DET-12** has been promised by section 7 item 1
+  since the first draft — `list-scan.ts` even carried a comment saying the caller reports it — and
+  no code ever emitted it.
 
 ### Changed
 
@@ -42,6 +45,12 @@ with release candidates suffixed `-rcN`.
 
 ### Fixed
 
+- **A list containing a code block is no longer refused.** The blank-line policy inserted a blank
+  line after the closing fence, and a deeply indented item following a blank line is an indented code
+  block — so the tidied document parsed differently from the written one and the guard refused it
+  with `protected region count changed: 1 -> 2`. Four lines were enough: a list item, a fenced code
+  block under it, and an over-indented item after the block. A list containing a protected block is
+  now left alone by the blank-line policy as well as by the indentation plan, and DET-12 says why.
 - **A code span whose content is a backslash never closed.** Escapes do not work inside a code
   span, so the closing backtick of a span containing a backslash is a delimiter even though a
   backslash precedes it. The scanner skipped it as escaped and left the span open across the rest of

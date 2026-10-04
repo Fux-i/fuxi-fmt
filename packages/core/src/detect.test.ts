@@ -224,3 +224,35 @@ describe('DET-11 an item indented as if nested that belongs to no parent', () =>
   });
 });
 
+describe('DET-12 a list left alone because it contains a protected block', () => {
+  const LIST = '- a\n  ' + FENCE + 'js\n  x\n  ' + FENCE + '\n  - child\n';
+
+  test('the list is reported, and the document still formats', () => {
+    const result = format(LIST);
+    assert.equal(result.diagnostics.length, 1);
+    assert.equal(result.diagnostics[0]?.ruleId, 'DET-12');
+    assert.equal(result.diagnostics[0]?.severity, 'warning');
+    assert.equal(result.diagnostics[0]?.line, 0);
+  });
+
+  test('a list without a protected block is reindented, and not reported', () => {
+    const result = format('- a\n      - deep\n');
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.output, '- a\n  - deep\n');
+  });
+
+  test('an over-indented item after a code block is no longer a refusal', () => {
+    // This document used to come back untouched with "protected region count
+    // changed: 1 -> 2". The blank-line policy inserted a blank line after the
+    // closing fence, and a deeply indented item following a blank line is an
+    // indented code block - so the tidied document parsed differently from the
+    // written one and the guard refused it. A legal document, refused, with an
+    // opaque message and no line.
+    const input = '- a\n  ' + FENCE + 'js\n  x\n  ' + FENCE + '\n      - deep\n';
+    const result = format(input);
+    assert.deepEqual(result.diagnostics.filter((d) => d.severity === 'error'), []);
+    assert.equal(result.output, input);
+    assert.equal(result.diagnostics[0]?.ruleId, 'DET-12');
+  });
+});
+

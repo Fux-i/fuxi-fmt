@@ -64,7 +64,13 @@ describe('the option surface in combination', () => {
         const first = format(source, options);
         const label = 'options ' + JSON.stringify(options);
 
-        assert.deepEqual(first.diagnostics, [], 'guard withheld a result for ' + label);
+        // Errors, not diagnostics: a warning says what the parse had to guess and
+        // does not stop the document formatting.
+        assert.deepEqual(
+          first.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'),
+          [],
+          'guard withheld a result for ' + label,
+        );
 
         const second = format(first.output, options);
         assert.equal(second.output, first.output, 'did not settle in one pass for ' + label);
