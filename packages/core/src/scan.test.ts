@@ -2,6 +2,8 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { scanRegions } from './scan.ts';
 
+const TICK = String.fromCharCode(96);
+
 /** Assert on the matched source text so tests do not depend on raw offsets. */
 function slices(src: string) {
   return scanRegions(src).map((r) => [r.kind, src.slice(r.start, r.end)] as const);
@@ -130,6 +132,21 @@ describe('scan: verbatim link and markup destinations (SAFE-04, SAFE-05, SAFE-06
   test('detects a `{{ }}` shortcode', () => {
     const src = '见 {{< figure src="a.png" >}} 处\n';
     assert.deepEqual(slices(src), [['mdx', '{{< figure src="a.png" >}}']]);
+  });
+});
+
+describe('scan: inline code delimiters', () => {
+  test('a span whose content is a backslash still closes', () => {
+    const src = 'escape ' + TICK + '[' + TICK + ' ' + TICK + ']' + TICK + ' ' + TICK + '\\' + TICK + ' done\n';
+    assert.deepEqual(slices(src), [
+      ['inlineCode', TICK + '[' + TICK],
+      ['inlineCode', TICK + ']' + TICK],
+      ['inlineCode', TICK + '\\' + TICK],
+    ]);
+  });
+
+  test('an escaped backtick does not open a span', () => {
+    assert.deepEqual(slices('a \\' + TICK + ' b\n'), []);
   });
 });
 

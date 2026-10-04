@@ -1,7 +1,7 @@
 
 # Mainstream Markdown Formatters — Configurable Feature Surface
 
-Facts only; primary docs/source cited. Inline code shown with ` (rendered as a backtick by the reader).
+Facts only; primary docs/source cited. Inline code shown with &#96; (rendered as a backtick by the reader).
 
 ## 1. Prettier
 
@@ -100,7 +100,7 @@ Docs: [style](https://mdformat.readthedocs.io/en/stable/users/style.html), [plug
 ## 4. remark / remark-stringify / remark-lint
 
 **remark-stringify options** (defaults from [readme](https://github.com/remarkjs/remark/blob/main/packages/remark-stringify/readme.md)):
-`bullet` `'*'`; `bulletOther` opposite of bullet; `bulletOrdered` `'.'`; `closeAtx` false; `emphasis` `'*'`; `fence` `'\`'`; `fences` true; `incrementListMarker` true; `listItemIndent` `'one'` (also `'mixed'`, `'tab'`); `quote` `'"'`; `resourceLink` false; `rule` `'*'`; `ruleRepetition` 3; `ruleSpaces` false; `setext` false; `strong` `'*'`; `tightDefinitions` false; plus `handlers`, `join`, `unsafe` (escape schemas). GFM table serialization options come from remark-gfm: `tableCellPadding`, `tablePipeAlign`, `tablePipes`.
+`bullet` `'*'`; `bulletOther` opposite of bullet; `bulletOrdered` `'.'`; `closeAtx` false; `emphasis` `'*'`; `fence` ``'`'``; `fences` true; `incrementListMarker` true; `listItemIndent` `'one'` (also `'mixed'`, `'tab'`); `quote` `'"'`; `resourceLink` false; `rule` `'*'`; `ruleRepetition` 3; `ruleSpaces` false; `setext` false; `strong` `'*'`; `tightDefinitions` false; plus `handlers`, `join`, `unsafe` (escape schemas). GFM table serialization options come from remark-gfm: `tableCellPadding`, `tablePipeAlign`, `tablePipes`.
 - Serialization always uses one blank line between blocks unless a `join`/tight-list case says otherwise; `tightDefinitions` joins definitions without a blank line.
 - Front matter is preserved (not formatted) by `remark-frontmatter` (YAML/TOML/etc.).
 - remark-lint does not itself rewrite text; each fixable rule documents the equivalent `remark-stringify`/`remark-gfm` option, and re-serializing the AST produces the fix.

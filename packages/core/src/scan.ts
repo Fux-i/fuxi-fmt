@@ -128,7 +128,7 @@ function runLength(source: string, index: number, code: number): number {
   return n;
 }
 
-function isEscaped(source: string, index: number): boolean {
+export function isEscaped(source: string, index: number): boolean {
   let backslashes = 0;
   for (let i = index - 1; i >= 0 && source.charCodeAt(i) === BACKSLASH; i--) backslashes++;
   return backslashes % 2 === 1;
@@ -316,8 +316,12 @@ function isWithinList(lines: Line[], index: number): boolean {
 }
 
 function scanInline(source: string, mask: Uint8Array, regions: Region[]): void {
-  scanPattern(source, mask, regions, /<!--[\s\S]*?-->/g, 'htmlComment');
+  // A code span wins the characters it covers. CommonMark parses code spans before
+  // raw HTML, and the order matters here: the comment pattern used to claim the
+  // first, so an `<!--` written inside backticks swallowed the closing backtick
+  // and left two unmatched ones behind.
   scanInlineCode(source, mask, regions);
+  scanPattern(source, mask, regions, /<!--[\s\S]*?-->/g, 'htmlComment');
   scanPattern(source, mask, regions, /\[\[[^\]\n]*\]\]/g, 'wikilink');
   scanPattern(source, mask, regions, /\{\{[^}\n]*\}\}/g, 'mdx');
   scanPattern(source, mask, regions, /<[A-Z][A-Za-z0-9.]*(?:\s[^<>]*?)?\/?>/g, 'mdx');
@@ -371,7 +375,14 @@ function scanInlineCode(source: string, mask: Uint8Array, regions: Region[]): vo
         continue;
       }
       const run = runLength(source, j, BACKTICK);
-      if (run === open && !isEscaped(source, j)) {
+      // No escape check on the closer. Backslash escapes do not work inside a code
+      // span, so the closing backtick of a span whose content is a backslash is a
+      // delimiter even though a backslash precedes it. Requiring it to be
+      // unescaped meant that span never closed and the opener stayed open across
+      // the rest of the document, shifting the pairing of every backtick after it:
+      // one such span in MAINSTREAM_MD_FORMATTERS_REPORT.md surfaced as a single
+      // unmatched backtick forty lines later.
+      if (run === open) {
         closeAt = j;
         break;
       }
