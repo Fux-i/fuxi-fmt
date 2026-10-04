@@ -9,11 +9,45 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+        with:
+          # The changelog checks read 'git tag'. The default checkout is one commit
+          # deep and carries no tags at all, so those checks failed on every CI run
+          # for two releases while passing on every developer machine.
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+
+  package:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run vsix
+      - name: The package contains what an install needs
+        run: |
+          set -eu
+          version=$(node -p "require('./packages/vscode/package.json').version")
+          vsix="output/fuxi-fmt-${version}.vsix"
+          test -f "$vsix" || { echo "no package at $vsix"; exit 1; }
+          unzip -l "$vsix" > /tmp/vsix.txt
+          cat /tmp/vsix.txt
+          for name in package.json package.nls.json package.nls.zh-cn.json extension.cjs; do
+            grep -q "extension/$name\|extension/dist/$name" /tmp/vsix.txt || { echo "the package is missing $name"; exit 1; }
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fuxi-fmt-vsix
+          path: output/*.vsix
+          if-no-files-found: error

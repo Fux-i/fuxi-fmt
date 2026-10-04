@@ -281,12 +281,14 @@ describe('documentation stays true to the code', () => {
     // The changelog check above asserts the newest TAG has an entry, so its frame
     // is tag -> entry and untagged work falls outside it entirely. That is how
     // '[Unreleased] Nothing yet.' survived nine commits.
-    const tags = execFileSync('git', ['tag', '-l'], { cwd: root, encoding: 'utf8' })
-      .split('\n')
-      .filter((tag) => tag.length > 0)
-      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-    const newest = tags[tags.length - 1];
-    assert.ok(newest !== undefined, 'expected at least one tag');
+    // This used to assert that a tag existed, which tested the environment rather
+    // than the changelog: a source tarball, a shallow clone and GitHub Actions'
+    // default checkout all have no tags, so the suite was red on every CI run for
+    // two releases while staying green on every machine that had ever fetched
+    // tags. The workflow fetches them now, so the check runs where it matters; a
+    // tagless clone has no baseline and says so instead of failing.
+    const newest = newestTag();
+    if (newest === null) return;
 
     const subjects = execFileSync('git', ['log', '--format=%s', newest + '..HEAD'], {
       cwd: root,
