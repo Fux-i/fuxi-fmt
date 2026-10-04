@@ -1,0 +1,23 @@
+{
+  "block kind changed: {0} -> {1}": "block kind changed: {0} -> {1}",
+  "list item is indented as if nested but belongs to no parent: the indentation reads as a nested list that never becomes one": "list item is indented as if nested but belongs to no parent: the indentation reads as a nested list that never becomes one",
+  "list.indentWidth was split into list.orderedIndent and list.unorderedIndent; it was rewritten as {0} and the old key will be removed in the next release": "list.indentWidth was split into list.orderedIndent and list.unorderedIndent; it was rewritten as {0} and the old key will be removed in the next release",
+  "non-blank line count changed: {0} -> {1}": "non-blank line count changed: {0} -> {1}",
+  "protected region count changed: {0} -> {1}": "protected region count changed: {0} -> {1}",
+  "table row has {0} cells where the header has {1}: the row does not render in the columns above it": "table row has {0} cells where the header has {1}: the row does not render in the columns above it",
+  "this list is not reindented: it contains a protected block, and moving code the author placed at a fixed indentation is what SAFE-02 exists to prevent": "this list is not reindented: it contains a protected block, and moving code the author placed at a fixed indentation is what SAFE-02 exists to prevent",
+  "typography.semicolon was removed in favour of typography.punctuationChangeList; it was folded into the list as {0} and the old key will be removed in the next release": "typography.semicolon was removed in favour of typography.punctuationChangeList; it was folded into the list as {0} and the old key will be removed in the next release",
+  "unclosed link destination: the opening parenthesis is never closed, so this is not a link": "unclosed link destination: the opening parenthesis is never closed, so this is not a link",
+  "unclosed wikilink: nothing closes it on the line, so it stays literal text": "unclosed wikilink: nothing closes it on the line, so it stays literal text",
+  "unmatched backtick: nothing closes it, so it stays literal text - if a code span was meant, a backtick is missing": "unmatched backtick: nothing closes it, so it stays literal text - if a code span was meant, a backtick is missing",
+  "unmatched dollar sign: nothing closes it, so it stays literal text - a price and an unclosed formula look the same here": "unmatched dollar sign: nothing closes it, so it stays literal text - a price and an unclosed formula look the same here",
+  "unpaired straight quote: this paragraph has an odd number of them, so none were converted": "unpaired straight quote: this paragraph has an odd number of them, so none were converted",
+  "unterminated HTML comment: nothing closes it, so everything after it is a comment and none of it was formatted": "unterminated HTML comment: nothing closes it, so everything after it is a comment and none of it was formatted",
+  "unterminated code fence: no closing fence was found, so everything after it is code and none of it was formatted": "unterminated code fence: no closing fence was found, so everything after it is code and none of it was formatted",
+  "unterminated front matter: the opening line is never closed, so the whole document was read as YAML and none of it was formatted": "unterminated front matter: the opening line is never closed, so the whole document was read as YAML and none of it was formatted",
+  "unterminated math block: no closing line of dollar signs was found, so everything after it is display math and none of it was formatted": "unterminated math block: no closing line of dollar signs was found, so everything after it is display math and none of it was formatted",
+  "{0} is not a fuxi-fmt option; it was ignored": "{0} is not a fuxi-fmt option; it was ignored",
+  "{0} no longer takes true or false; it was rewritten to {1} and the old form will be removed in the next release": "{0} no longer takes true or false; it was rewritten to {1} and the old form will be removed in the next release",
+  "{0} region changed: {1} -> {2}": "{0} region changed: {1} -> {2}",
+  "{0} was renamed to {1} ({2}); the old name still works and will be removed in the next release": "{0} was renamed to {1} ({2}); the old name still works and will be removed in the next release"
+}

@@ -131,6 +131,10 @@ describe('the settings are localised, and stay localised', () => {
     for (const name of LOCALES) {
       assert.ok(shipped.includes(name), 'package-vsix.mjs does not ship ' + name);
     }
+    // The runtime strings are a second, separate set of files (CFG-08), and the
+    // same trap applies: an extension without them installs and quietly answers in
+    // English no matter what language the editor is set to.
+    assert.ok(shipped.includes('l10n'), 'package-vsix.mjs does not ship the l10n bundles');
   });
 
   test('the Chinese strings are actually Chinese', () => {

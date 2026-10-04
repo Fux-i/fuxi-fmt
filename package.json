@@ -18,7 +18,8 @@
     "fuxi-fmt": "node packages/cli/src/main.ts",
     "ci": "npm run typecheck && npm test",
     "build": "npm run build -w fuxi-fmt-vscode",
-    "vsix": "npm run build && node packages/vscode/package-vsix.mjs"
+    "vsix": "npm run build && node packages/vscode/package-vsix.mjs",
+    "l10n": "node packages/vscode/generate-l10n.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

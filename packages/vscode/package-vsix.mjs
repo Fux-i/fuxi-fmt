@@ -36,6 +36,9 @@ const SHIPPED = [
   // are not optional extras.
   'package.nls.json',
   'package.nls.zh-cn.json',
+  // The runtime strings the editor shows: without this directory every diagnostic
+  // falls back to English, in silence.
+  'l10n',
   'dist',
   'icon.png',
   'assets',
