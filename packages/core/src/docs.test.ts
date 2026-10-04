@@ -181,7 +181,10 @@ describe('documentation stays true to the code', () => {
     const scripts = new Set(Object.keys(parsed.scripts ?? {}));
 
     const required = new Set<string>();
-    for (const match of readme.matchAll(/npm run ([a-z][a-z:-]*)/g)) required.add(match[1] ?? '');
+    // An npm script name may contain a digit - 'l10n' is the conventional one for
+    // this job - and the pattern used to stop at the first one, reading it as 'l'
+    // and then claiming the readme named a script that does not exist.
+    for (const match of readme.matchAll(/npm run ([a-z][a-z0-9:._-]*)/g)) required.add(match[1] ?? '');
     if (/npm test\b/.test(readme)) required.add('test');
 
     // 'npm ci' and 'npm install' are npm's own subcommands, not scripts.
@@ -217,7 +220,7 @@ describe('documentation stays true to the code', () => {
       ),
     );
     let seen = 0;
-    for (const match of workflow.matchAll(/npm run ([a-z][a-z:-]*)/g)) {
+    for (const match of workflow.matchAll(/npm run ([a-z][a-z0-9:._-]*)/g)) {
       const name = match[1] ?? '';
       if (!scripts.has(name)) continue;
       seen++;

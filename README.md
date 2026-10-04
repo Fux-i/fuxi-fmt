@@ -215,6 +215,7 @@ npm run typecheck    # tsc -p for each package
 npm run ci           # typecheck + tests, what CI runs
 npm run build        # bundle the VS Code extension
 npm run vsix         # build, then package output/fuxi-fmt-<version>.vsix to install
+npm run l10n         # regenerate packages/vscode/l10n from the message catalogue
 ```
 
 ### Verifying a change without lying to yourself
