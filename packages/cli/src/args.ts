@@ -7,6 +7,11 @@ export interface ParsedArgs {
   readonly files: readonly string[];
   /** Report what happened and why, instead of only what changed. */
   readonly explain: boolean;
+  /**
+   * The language to print messages in, when it was asked for (CFG-08). Absent
+   * means "decide from the environment", which is what a shell already knows.
+   */
+  readonly lang?: string;
 }
 
 const FLAGS: Readonly<Record<string, Mode>> = {
@@ -22,11 +27,24 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
   let mode: Mode = 'stdout';
   let chosen = false;
   let explain = false;
+  let lang: string | undefined;
 
-  for (const arg of argv) {
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i] ?? '';
     // A modifier rather than a mode: it says how much to say, not what to do.
     if (arg === '--explain') {
       explain = true;
+      continue;
+    }
+    // Also a modifier. The value is a language tag, so it may look like a flag's
+    // argument rather than a file; nothing else here takes one.
+    if (arg === '--lang' || arg.startsWith('--lang=')) {
+      const value = arg === '--lang' ? argv[i + 1] : arg.slice('--lang='.length);
+      if (value === undefined || value.length === 0 || value.startsWith('-')) {
+        throw new Error('fuxi-fmt: --lang needs a language, for example --lang zh');
+      }
+      lang = value;
+      if (arg === '--lang') i++;
       continue;
     }
     const flag = FLAGS[arg];
@@ -43,5 +61,5 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
     files.push(arg);
   }
 
-  return { mode, files, explain };
+  return lang === undefined ? { mode, files, explain } : { mode, files, explain, lang };
 }

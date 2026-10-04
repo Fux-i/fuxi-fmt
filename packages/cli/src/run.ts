@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { diffEdits, format, loadOptionsFor } from '../../core/src/index.ts';
+import { diffEdits, format, loadOptionsFor, translate } from '../../core/src/index.ts';
 import type { Diagnostic, FormatOptionsInput, LoadedConfig } from '../../core/src/index.ts';
 import { parseArgs } from './args.ts';
 
@@ -15,6 +15,8 @@ export interface Io {
    * only knows the resolved options still works.
    */
   configFor?(path: string): LoadedConfig;
+  /** The environment, for deciding the language. Optional, and defaults to English. */
+  env?: Record<string, string | undefined>;
 }
 
 export const EXIT_OK = 0;
@@ -29,9 +31,29 @@ export const EXIT_ERROR = 2;
  * The line is left out when the core has none: a refused document is refused
  * whole, and inventing line 1 for it is worse than saying nothing.
  */
-function locate(file: string, diagnostic: Diagnostic): string {
+function locate(file: string, diagnostic: Diagnostic, locale: string): string {
   const where = diagnostic.line === undefined ? file : file + ':' + String(diagnostic.line + 1);
-  return where + ': ' + diagnostic.severity + ': ' + diagnostic.ruleId + ' ' + diagnostic.message;
+  return (
+    where + ': ' + diagnostic.severity + ': ' + diagnostic.ruleId + ' ' +
+    translate(diagnostic.messageId, diagnostic.args, locale)
+  );
+}
+
+/**
+ * The language to print in (CFG-08).
+ *
+ * What was asked for wins; otherwise the environment decides, because a Chinese
+ * developer's shell already says so. There is no guessing beyond that: a language
+ * with no translation falls back to English, and a mixed-language CI log is worse
+ * than a consistently English one, so English is the floor rather than an
+ * accident.
+ */
+function localeOf(
+  asked: string | undefined,
+  env: Readonly<Record<string, string | undefined>>,
+): string {
+  if (asked !== undefined) return asked;
+  return env['LC_ALL'] ?? env['LC_MESSAGES'] ?? env['LANG'] ?? env['LANGUAGE'] ?? 'en';
 }
 
 export const USAGE = [
@@ -44,6 +66,7 @@ export const USAGE = [
   '  --diff    print the lines that would change, approximately; write nothing',
   '  --write   rewrite the files in place',
   '  --explain say what was found and what was done, on stderr',
+  '  --lang zh print messages in Chinese (English by default, LANG otherwise)',
   '  --help    print this message',
   '',
   'With no option the formatted document is written to stdout.',
@@ -81,11 +104,13 @@ export function run(argv: readonly string[], io: Io): number {
   let mode;
   let files;
   let explain = false;
+  let lang: string | undefined;
   try {
     const parsed = parseArgs(argv);
     mode = parsed.mode;
     files = parsed.files;
     explain = parsed.explain;
+    lang = parsed.lang;
   } catch (error) {
     io.err(messageOf(error) + '\n');
     return EXIT_ERROR;
@@ -100,6 +125,7 @@ export function run(argv: readonly string[], io: Io): number {
     return EXIT_ERROR;
   }
 
+  const locale = localeOf(lang, io.env ?? {});
   let changed = false;
 
   for (const file of files) {
@@ -118,13 +144,16 @@ export function run(argv: readonly string[], io: Io): number {
     // is told that a key they wrote did less than they asked for, which is the one
     // thing a silently ignored key can never say.
     for (const notice of loaded?.notices ?? []) {
-      io.err('fuxi-fmt: ' + file + ': ' + notice.key + ': ' + notice.message + '\n');
+      io.err(
+        'fuxi-fmt: ' + file + ': ' + notice.key + ': ' +
+          translate(notice.messageId, notice.args, locale) + '\n',
+      );
     }
 
     // Errors refuse the document, warnings do not. Failing a build on a warning is
     // how a useful warning becomes a reason to switch the rule off.
     for (const diagnostic of result.diagnostics) {
-      io.err(locate(file, diagnostic) + '\n');
+      io.err(locate(file, diagnostic, locale) + '\n');
     }
     const errors = result.diagnostics.filter((d) => d.severity === 'error');
     if (errors.length > 0) return EXIT_ERROR;
@@ -162,4 +191,5 @@ export const fileIo: Io = {
   err: (text) => void process.stderr.write(text),
   optionsFor: (path) => loadOptionsFor(path).options,
   configFor: (path) => loadOptionsFor(path),
+  env: process.env,
 };

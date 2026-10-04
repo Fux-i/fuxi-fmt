@@ -90,6 +90,45 @@ describe('CLI warnings and notices', () => {
   });
 });
 
+describe('CLI language', () => {
+  const FILE = { 'a.md': '用 ' + String.fromCharCode(96) + ' 表示,很常见\n' };
+
+  test('--lang takes the next word, or the equals form', () => {
+    assert.equal(parseArgs(['--lang', 'zh', 'a.md']).lang, 'zh');
+    assert.equal(parseArgs(['--lang=zh', 'a.md']).lang, 'zh');
+    assert.equal(parseArgs(['a.md']).lang, undefined);
+  });
+
+  test('--lang with nothing to take is an error, not a filename', () => {
+    assert.throws(() => parseArgs(['--lang']), /needs a language/);
+    assert.throws(() => parseArgs(['--lang', '--check', 'a.md']), /needs a language/);
+  });
+
+  test('the messages are Chinese when asked for, and English otherwise', () => {
+    const zh = fakeIo(FILE);
+    assert.equal(run(['--lang', 'zh', 'a.md'], zh), 0);
+    assert.match(zh.errText(), /DET-06/);
+    assert.match(zh.errText(), /反引号/);
+
+    const en = fakeIo(FILE);
+    run(['a.md'], en);
+    assert.match(en.errText(), /DET-06/);
+    assert.match(en.errText(), /unmatched backtick/);
+  });
+
+  test('the environment decides when nothing is asked for', () => {
+    const io = { ...fakeIo(FILE), env: { LC_ALL: 'zh_CN.UTF-8' } };
+    run(['a.md'], io);
+    assert.match(io.errText(), /反引号/);
+  });
+
+  test('--lang beats the environment, so a CI log can be pinned', () => {
+    const io = { ...fakeIo(FILE), env: { LC_ALL: 'zh_CN.UTF-8' } };
+    run(['--lang', 'en', 'a.md'], io);
+    assert.match(io.errText(), /unmatched backtick/);
+  });
+});
+
 describe('CLI argument parsing', () => {
   test('defaults to printing the formatted document', () => {
     assert.deepEqual(parseArgs(['a.md']), { mode: 'stdout', files: ['a.md'], explain: false });

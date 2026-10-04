@@ -20,6 +20,11 @@ with release candidates suffixed `-rcN`.
   `--explain` are keyed on. English is the fallback when no bundle is loaded, which is what VS Code
   reports in the default language.
 
+- **The command line takes `--lang zh`**, falling back to `LC_ALL` and `LANG` when nothing is asked
+  for. The sentences come from the same catalogue as the editor's, so there is one set of them; the
+  default is English because a CI log is read by more than the person who wrote it, and a language
+  with no translation falls back to English rather than to a key.
+
 ### Changed
 
 - **The editor's output panel logs one block per document instead of one line per diagnostic.** A

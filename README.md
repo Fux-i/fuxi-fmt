@@ -110,9 +110,13 @@ node packages/cli/src/main.ts --check docs/   # exit 1 if anything would change
 node packages/cli/src/main.ts --diff  docs/   # show the lines that would change
 node packages/cli/src/main.ts --write docs/   # rewrite in place
 node packages/cli/src/main.ts --explain a.md    # say what was found and what was done
+node packages/cli/src/main.ts --lang zh a.md    # print the messages in Chinese
 ```
 
-`--explain` is a modifier rather than a mode, so it composes with the others. It writes its report
+`--explain` and `--lang` are modifiers rather than modes, so they compose with the others. Messages
+are English unless asked for; `--lang` switches them, and `LC_ALL` or `LANG` decides when nothing is
+asked for. A language with no translation falls back to English rather than to a raw key.
+`--explain` writes its report
 to stderr: where the configuration came from, whether the document changed, and what was warned
 about. Warnings are reported and do not fail the run. Two things do fail the run: the semantic guard
 refusing a document, and a detection that the document was misread — an unterminated code fence or
