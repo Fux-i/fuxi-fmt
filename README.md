@@ -134,7 +134,9 @@ clicked, and the output panel as a block per file:
 
 The header names the file relative to the workspace folder and the run it belongs to; a clean
 document writes nothing. The severity words and rule ids stay Latin so that one search finds a rule
-in either log.
+in either log. The sentences follow the editor's **display language** — Chinese when VS Code is set
+to Chinese, English otherwise — and come from the same catalogue the command line reads, so the two
+cannot drift apart.
 A configuration key that is not an option, or a retired one, is reported the same way — the one
 thing a silently ignored key can never say is that it was ignored.
 

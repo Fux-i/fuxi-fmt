@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { defaultOptions, loadOptionsFor } from '../../core/src/index.ts';
+import { defaultOptions, loadOptionsFor, templateOf } from '../../core/src/index.ts';
 import type { ConfigNotice, Diagnostic, FormatOptionsInput } from '../../core/src/index.ts';
 import { mergeOptions } from '../../core/src/config.ts';
 import { documentFormat, editsInRange, type Edit } from './edits.ts';
@@ -123,6 +123,20 @@ function enabled(): boolean {
 }
 
 /**
+ * The sentence in the editor's language (CFG-08).
+ *
+ * vscode.l10n looks a string up by its English text, which is why the catalogue's
+ * English is handed over as the key and the bundle is keyed the same way. With no
+ * bundle loaded - the default language, or an install that lost l10n/ - l10n
+ * returns the key unchanged, so the fallback is the English sentence. Falling back
+ * to English is the only acceptable failure here; the alternative is a reader
+ * seeing raw keys or an id.
+ */
+function sentence(messageId: Diagnostic['messageId'], args: Diagnostic['args']): string {
+  return vscode.l10n.t(templateOf(messageId), ...args);
+}
+
+/**
  * Which file, and when: `=====docs/guide.md 16:20:01=====`.
  *
  * The path is relative to the workspace folder, because a log read at a glance
@@ -147,7 +161,7 @@ function headerFor(document: vscode.TextDocument, at: Date): string {
 function lineFor(diagnostic: Diagnostic): string {
   const level = diagnostic.severity === 'error' ? 'ERROR' : 'WARNING';
   const where = diagnostic.line === undefined ? '' : '[' + String(diagnostic.line + 1) + ']';
-  return level + where + ' ' + diagnostic.ruleId + ' ' + diagnostic.message;
+  return level + where + ' ' + diagnostic.ruleId + ' ' + sentence(diagnostic.messageId, diagnostic.args);
 }
 
 /**
@@ -187,14 +201,19 @@ function toDiagnostic(diagnostic: Diagnostic): vscode.Diagnostic {
   // comment to a whole file, so it goes on the first line - but the message and
   // the output channel both say the line is unknown rather than pretend.
   const line = diagnostic.line ?? 0;
-  return new vscode.Diagnostic(
+  const editorDiagnostic = new vscode.Diagnostic(
     new vscode.Range(
       new vscode.Position(line, 0),
       new vscode.Position(line, Number.MAX_SAFE_INTEGER),
     ),
-    diagnostic.ruleId + ': ' + diagnostic.message,
+    sentence(diagnostic.messageId, diagnostic.args),
     severity,
   );
+  // The rule id belongs in the panel's own field rather than glued to the
+  // sentence: it stays Latin while the sentence does not, and the panel can show
+  // and filter it.
+  editorDiagnostic.code = diagnostic.ruleId;
+  return editorDiagnostic;
 }
 
 /**
@@ -225,7 +244,9 @@ function formatAndReport(
   if (tripped) {
     output.appendLine(headerFor(document, new Date()));
     for (const notice of notices) {
-      output.appendLine('NOTICE ' + notice.key + ' ' + notice.message);
+      output.appendLine(
+        'NOTICE ' + notice.key + ' ' + sentence(notice.messageId, notice.args),
+      );
     }
     for (const diagnostic of diagnostics) {
       output.appendLine(lineFor(diagnostic));

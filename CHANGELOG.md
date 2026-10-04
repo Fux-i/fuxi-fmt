@@ -9,6 +9,17 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
+### Added
+
+- **Diagnostics are Chinese when the editor's display language is Chinese.** The sentences come from
+  one catalogue in the core and are rendered through `vscode.l10n` against a bundle generated from
+  that catalogue, so the editor and the command line share one set of sentences instead of drifting
+  apart; the CLI is unchanged for now. Values keep their place —
+  `表格这一行有 3 个单元格，而表头有 2 个` — and rule ids, configuration key names and JSON
+  payloads stay Latin in every language, because those are what the documentation, the spec and
+  `--explain` are keyed on. English is the fallback when no bundle is loaded, which is what VS Code
+  reports in the default language.
+
 ### Changed
 
 - **The editor's output panel logs one block per document instead of one line per diagnostic.** A

@@ -48,6 +48,8 @@ describe('the extension bundle against a stubbed host', () => {
   extension.activate(context);
 
   interface PublishedDiagnostic {
+  /** The rule id, which the extension puts in the diagnostic's own field. */
+  code?: string;
     readonly message: string;
     readonly severity: number;
     readonly range: { readonly start: { readonly line: number } };
@@ -196,7 +198,11 @@ describe('the extension bundle against a stubbed host', () => {
     assert.equal(published?.diagnostics.length, 1);
     assert.equal(published?.diagnostics[0]?.severity, vscode.DiagnosticSeverity.Warning);
     assert.equal(published?.diagnostics[0]?.range.start.line, 2);
-    assert.match(String(published?.diagnostics[0]?.message), /TYPO-11/);
+    // No bundle is installed in this test, which is what VS Code reports in the
+    // default language: the sentence is the English one, and the rule id lives in
+    // the diagnostic's own code field rather than glued to the sentence.
+    assert.match(String(published?.diagnostics[0]?.message), /^unpaired straight quote/);
+    assert.equal(published?.diagnostics[0]?.code, 'TYPO-11');
     assert.equal(vscode.revealed, 1, 'the output panel was not revealed for a warning');
   });
 
@@ -214,7 +220,7 @@ describe('the extension bundle against a stubbed host', () => {
     // The path is relative to the workspace folder, and the clock is short: it
     // separates one run from the next rather than being a timestamp of record.
     assert.match(String(vscode.outputLines[0]), /^=====docs\/warning\.md \d\d:\d\d:\d\d=====$/);
-    assert.match(String(vscode.outputLines[1]), /^WARNING\[3\] TYPO-11 /);
+    assert.match(String(vscode.outputLines[1]), /^WARNING\[3\] TYPO-11 unpaired straight quote/);
     assert.equal(vscode.outputLines.length, 2, 'one header and one diagnostic line');
 
     clean(vscode);
@@ -224,6 +230,33 @@ describe('the extension bundle against a stubbed host', () => {
     };
     documentProvider.provider.provideDocumentFormattingEdits(tidy);
     assert.deepEqual(vscode.outputLines, [], 'a clean document wrote a header anyway');
+    vscode.workspaceFolder = undefined;
+  });
+
+  test('a diagnostic is Chinese when the editor is, numbers and all', () => {
+    assert.ok(documentProvider);
+    clean(vscode);
+    vscode.workspaceFolder = dist;
+    // The bundle that ships, not a copy of it: if the generated file is wrong, this
+    // is where it shows.
+    vscode.l10nBundle = JSON.parse(
+      readFileSync(join(pkgRoot, 'l10n', 'bundle.l10n.zh-cn.json'), 'utf8'),
+    );
+    const ragged = {
+      getText: () => '| a | b |\n| --- | --- |\n| 1 | 2 | 3 |\n',
+      uri: { fsPath: join(dist, 'table.md') },
+    };
+    documentProvider.provider.provideDocumentFormattingEdits(ragged);
+
+    const published = lastPublished(vscode);
+    assert.match(String(published?.diagnostics[0]?.message), /单元格/);
+    // The values survive the translation: three cells against a header of two.
+    assert.match(String(published?.diagnostics[0]?.message), /3 个单元格/);
+    assert.equal(published?.diagnostics[0]?.code, 'DET-10');
+    // And the rule id stays Latin in the log, in either language.
+    assert.match(String(vscode.outputLines[1]), /^WARNING\[3\] DET-10 /);
+    assert.match(String(vscode.outputLines[1]), /3 个单元格/);
+    vscode.l10nBundle = undefined;
     vscode.workspaceFolder = undefined;
   });
 

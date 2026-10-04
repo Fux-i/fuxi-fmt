@@ -32,6 +32,28 @@ module.exports = {
   /** How many times the output channel was revealed. */
   revealed: 0,
 
+  /**
+   * The l10n bundle in force, for tests. Undefined is what VS Code reports in the
+   * default language: no bundle is loaded and every lookup returns its key.
+   */
+  l10nBundle: undefined,
+
+  l10n: {
+    /**
+     * Stands in for vscode.l10n.t. A test installs the bundle file that actually
+     * ships, so what is under test is the translation, not a copy of it.
+     */
+    t: (message, ...args) => {
+      const bundle = module.exports.l10nBundle;
+      const template =
+        bundle && Object.prototype.hasOwnProperty.call(bundle, message) ? bundle[message] : message;
+      return template.replace(/\{(\d+)\}/g, (whole, index) => {
+        const value = args[Number(index)];
+        return value === undefined ? whole : String(value);
+      });
+    },
+  },
+
   DiagnosticSeverity: { Error: 0, Warning: 1, Information: 2, Hint: 3 },
 
   Diagnostic: class Diagnostic {
