@@ -12,6 +12,7 @@
  * silence is how an option comes to look broken for the life of a project.
  */
 
+import { english, type MessageArgs, type MessageId } from './messages.ts';
 import { defaultOptions } from './options.ts';
 
 type Raw = Record<string, unknown>;
@@ -20,8 +21,15 @@ export interface ConfigNotice {
   readonly kind: 'renamed' | 'unknown';
   /** The key as the configuration wrote it, e.g. typography.symbolWhitelist. */
   readonly key: string;
+  /** The catalogue entry (CFG-08), so the notice speaks the reader's language. */
+  readonly messageId: MessageId;
+  readonly args: MessageArgs;
+  /** The English rendering, for an adapter that does not localise. */
   readonly message: string;
 }
+
+/** A notice before its English sentence has been rendered from the catalogue. */
+type PendingNotice = Omit<ConfigNotice, 'message'>;
 
 /** Sections that hold options, and therefore the only places a leaf can live. */
 const SECTIONS = ['blankLines', 'typography', 'list', 'codeBlock', 'ignore'] as const;
@@ -57,7 +65,7 @@ function bag(root: Raw, section: string): Raw {
 }
 
 /** Move one leaf, if the configuration used the old name. */
-function rename(root: Raw, notice: ConfigNotice[], entry: (typeof RENAMES)[number]): void {
+function rename(root: Raw, notice: PendingNotice[], entry: (typeof RENAMES)[number]): void {
   const [section, leaf] = entry.from.split('.');
   const [, toLeaf] = entry.to.split('.');
   if (section === undefined || leaf === undefined || toLeaf === undefined) return;
@@ -70,12 +78,12 @@ function rename(root: Raw, notice: ConfigNotice[], entry: (typeof RENAMES)[numbe
   notice.push({
     kind: 'renamed',
     key: entry.from,
-    message:
-      entry.from + ' was renamed to ' + entry.to + ' (' + entry.why + '); the old name still works and will be removed in the next release',
+    messageId: 'cfg.renamed',
+    args: [entry.from, entry.to, entry.why],
   });
 }
 
-function moveBoolean(root: Raw, notice: ConfigNotice[], path: string, convert: (value: boolean) => unknown): void {
+function moveBoolean(root: Raw, notice: PendingNotice[], path: string, convert: (value: boolean) => unknown): void {
   const [section, leaf] = path.split('.');
   if (section === undefined || leaf === undefined) return;
   const from = bag(root, section);
@@ -88,7 +96,8 @@ function moveBoolean(root: Raw, notice: ConfigNotice[], path: string, convert: (
   notice.push({
     kind: 'renamed',
     key: path,
-    message: path + ' no longer takes true or false; it was rewritten to ' + JSON.stringify(to[leaf]) + ' and the old form will be removed in the next release',
+    messageId: 'cfg.booleanConverted',
+    args: [path, JSON.stringify(to[leaf])],
   });
 }
 
@@ -101,7 +110,7 @@ function moveBoolean(root: Raw, notice: ConfigNotice[], path: string, convert: (
  */
 export function applyAliases(raw: Raw): { readonly raw: Raw; readonly notices: ConfigNotice[] } {
   const root: Raw = { ...raw };
-  const notices: ConfigNotice[] = [];
+  const notices: PendingNotice[] = [];
 
   for (const entry of RENAMES) rename(root, notices, entry);
 
@@ -126,8 +135,8 @@ export function applyAliases(raw: Raw): { readonly raw: Raw; readonly notices: C
     notices.push({
       kind: 'renamed',
       key: 'typography.semicolon',
-      message:
-        'typography.semicolon was removed in favour of typography.punctuationChangeList; it was folded into the list as ' + JSON.stringify(next) + ' and the old key will be removed in the next release',
+      messageId: 'cfg.semicolonFolded',
+      args: [JSON.stringify(next)],
     });
   }
 
@@ -145,15 +154,15 @@ export function applyAliases(raw: Raw): { readonly raw: Raw; readonly notices: C
     notices.push({
       kind: 'renamed',
       key: 'list.indentWidth',
-      message:
-        'list.indentWidth was split into list.orderedIndent and list.unorderedIndent; it was rewritten as ' + JSON.stringify({ orderedIndent: to.orderedIndent, unorderedIndent: to.unorderedIndent }) + ' and the old key will be removed in the next release',
+      messageId: 'cfg.indentWidthSplit',
+      args: [JSON.stringify({ orderedIndent: to.orderedIndent, unorderedIndent: to.unorderedIndent })],
     });
   }
 
   for (const key of Object.keys(root)) {
     if ((TOP_LEVEL_LEAVES as readonly string[]).includes(key)) continue;
     if (!(SECTIONS as readonly string[]).includes(key)) {
-      notices.push({ kind: 'unknown', key, message: key + ' is not a fuxi-fmt option; it was ignored' });
+      notices.push({ kind: 'unknown', key, messageId: 'cfg.unknownKey', args: [key] });
     }
   }
   for (const sectionName of SECTIONS) {
@@ -163,9 +172,15 @@ export function applyAliases(raw: Raw): { readonly raw: Raw; readonly notices: C
     for (const leaf of Object.keys(stated)) {
       if (known.has(leaf)) continue;
       const key = sectionName + '.' + leaf;
-      notices.push({ kind: 'unknown', key, message: key + ' is not a fuxi-fmt option; it was ignored' });
+      notices.push({ kind: 'unknown', key, messageId: 'cfg.unknownKey', args: [key] });
     }
   }
 
-  return { raw: root, notices };
+  return {
+    raw: root,
+    notices: notices.map((notice) => ({
+      ...notice,
+      message: english(notice.messageId, notice.args),
+    })),
+  };
 }

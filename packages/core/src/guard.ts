@@ -19,11 +19,14 @@
  */
 
 import { classifyContent } from './blocks.ts';
+import type { MessageArgs, MessageId } from './messages.ts';
 import { scanRegions, type Region } from './scan.ts';
 
 export interface Violation {
   readonly ruleId: string;
-  readonly message: string;
+  /** The catalogue entry (CFG-08), so the sentence renders in any language. */
+  readonly messageId: MessageId;
+  readonly args: MessageArgs;
   /**
    * 0-based line in the input when the violation can be pinned to one. The
    * guard's first job is to say *what* diverged; this says where. `undefined` is
@@ -113,11 +116,8 @@ export function checkSemantics(
     const anchor = beforeRegions[first > 0 ? first - 1 : 0];
     violations.push({
       ruleId: 'GRT-01',
-      message:
-        'protected region count changed: ' +
-        String(beforeRegions.length) +
-        ' -> ' +
-        String(afterRegions.length),
+      messageId: 'grt.regionCount',
+      args: [beforeRegions.length, afterRegions.length],
       line: anchor === undefined ? undefined : lineOfOffset(before, anchor.start),
     });
   } else {
@@ -130,8 +130,8 @@ export function checkSemantics(
       if (signatureA !== signatureB) {
         violations.push({
           ruleId: 'SAFE-01',
-          message:
-            a.kind + ' region changed: ' + JSON.stringify(signatureA) + ' -> ' + JSON.stringify(signatureB),
+          messageId: 'safe.regionChanged',
+          args: [a.kind, JSON.stringify(signatureA), JSON.stringify(signatureB)],
           line: lineOfOffset(before, a.start),
         });
       }
@@ -159,11 +159,8 @@ export function checkSemantics(
     const anchor = beforeLines[first > 0 ? first - 1 : 0];
     violations.push({
       ruleId: 'GRT-01',
-      message:
-        'non-blank line count changed: ' +
-        String(beforeLines.length) +
-        ' -> ' +
-        String(afterLines.length),
+      messageId: 'grt.nonBlankCount',
+      args: [beforeLines.length, afterLines.length],
       line: anchor?.line,
     });
     return violations;
@@ -178,7 +175,8 @@ export function checkSemantics(
     if (kindA === 'paragraph' && kindB === 'heading' && isHeadingPromotion(a, b)) continue;
     violations.push({
       ruleId: 'GRT-01',
-      message: 'block kind changed: ' + kindA + ' -> ' + kindB,
+      messageId: 'grt.blockKindChanged',
+      args: [kindA, kindB],
       line: beforeLines[i]?.line,
     });
   }

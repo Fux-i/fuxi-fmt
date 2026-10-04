@@ -1,5 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { english } from '../../core/src/index.ts';
 import { parseArgs } from './args.ts';
 import { run } from './run.ts';
 import type { Io } from './run.ts';
@@ -71,7 +72,15 @@ describe('CLI warnings and notices', () => {
         options: {},
         configPath: '/tmp/fuxi-fmt.json',
         notices: [
-          { kind: 'unknown' as const, key: 'typo', message: 'typo is not a fuxi-fmt option' },
+          {
+            kind: 'unknown' as const,
+            key: 'typo',
+            messageId: 'cfg.unknownKey' as const,
+            args: ['typo'],
+            // Rendered from the catalogue rather than spelled out here, so the
+            // fake notice cannot drift from the real one.
+            message: english('cfg.unknownKey', ['typo']),
+          },
         ],
       }),
     };

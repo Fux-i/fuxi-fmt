@@ -1,6 +1,7 @@
 import { segment, type AtomicRange, type BlockKind } from './blocks.ts';
-import { detect } from './detect.ts';
+import { detect, type Detection } from './detect.ts';
 import { checkSemantics } from './guard.ts';
+import { english, type MessageArgs, type MessageId } from './messages.ts';
 import { hasIgnoreFile, ignoreLines, ignoreRanges, type CharRange } from './ignores.ts';
 import { applyEndOfLine, normalizeInput, trimTrailingWhitespace, type Eol } from './hygiene.ts';
 import { renumberOrderedLists } from './lists.ts';
@@ -24,6 +25,11 @@ function lineOf(text: string, offset: number): number {
 
 export interface Diagnostic {
   readonly ruleId: string;
+  /** The catalogue entry this sentence came from (CFG-08). */
+  readonly messageId: MessageId;
+  /** The values its placeholders take, so a translation can place them too. */
+  readonly args: MessageArgs;
+  /** The English rendering, for an adapter that does not localise. */
   readonly message: string;
   /**
    * 0-based line in the *input*, or `undefined` when the complaint is about the
@@ -85,6 +91,26 @@ function lineAt(lines: readonly SourceLine[], offset: number): number {
   return found;
 }
 
+/**
+ * Build a diagnostic from a catalogue entry.
+ *
+ * The English is rendered here, once, from the entry and its arguments; nothing
+ * else is allowed to spell a message out. An adapter that speaks another language
+ * takes the entry and the arguments and renders its own.
+ */
+function diagnostic(
+  ruleId: string,
+  messageId: MessageId,
+  args: MessageArgs,
+  line: number | undefined,
+  severity: 'error' | 'warning',
+): Diagnostic {
+  return { ruleId, messageId, args, message: english(messageId, args), line, severity };
+}
+
+const asDiagnostic = (detection: Detection): Diagnostic =>
+  diagnostic(detection.ruleId, detection.messageId, detection.args, detection.line, detection.severity);
+
 /** Errors first, then by line: a reader wants the refusal before the nits. */
 function orderedDiagnostics(diagnostics: readonly Diagnostic[]): Diagnostic[] {
   return [...diagnostics].sort((a, b) => {
@@ -133,7 +159,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   // already know we misread (GRT-04).
   const detections = detect(base, lines, regions, ignoreRanges(base, options.ignore));
   if (detections.some((diagnostic) => diagnostic.severity === 'error')) {
-    return { output: source, changed: false, diagnostics: orderedDiagnostics(detections) };
+    return { output: source, changed: false, diagnostics: orderedDiagnostics(detections.map(asDiagnostic)) };
   }
 
   const protectedLine = new Array<boolean>(lines.length).fill(false);
@@ -192,8 +218,8 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     if (item === undefined) continue;
     detections.push({
       ruleId: 'DET-12',
-      message:
-        'this list is not reindented: it contains a protected block, and moving code the author placed at a fixed indentation is what SAFE-02 exists to prevent',
+      messageId: 'det.listExcluded',
+      args: [],
       line: item.line,
       severity: 'warning',
     });
@@ -324,12 +350,9 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     return {
       output: source,
       changed: false,
-      diagnostics: violations.map((violation) => ({
-        ruleId: violation.ruleId,
-        message: violation.message,
-        line: violation.line,
-        severity: 'error' as const,
-      })),
+      diagnostics: violations.map((violation) =>
+        diagnostic(violation.ruleId, violation.messageId, violation.args, violation.line, 'error'),
+      ),
     };
   }
 
@@ -337,15 +360,12 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   const output = applyEndOfLine(candidate, eol);
   // TYPO-11: an unpaired quote is a warning, never a failure. The line keeps what
   // the author wrote, and the author is told which line to look at.
-  const diagnostics: Diagnostic[] = quoted.unpaired.map((offset) => ({
-    ruleId: 'TYPO-11',
-    message: 'unpaired straight quote: this paragraph has an odd number of them, so none were converted',
-    line: inputLineOf(offset),
-    severity: 'warning' as const,
-  }));
+  const diagnostics: Diagnostic[] = quoted.unpaired.map((offset) =>
+    diagnostic('TYPO-11', 'typo.unpairedQuote', [], inputLineOf(offset), 'warning'),
+  );
   return {
     output,
     changed: output !== source,
-    diagnostics: orderedDiagnostics([...detections, ...diagnostics]),
+    diagnostics: orderedDiagnostics([...detections.map(asDiagnostic), ...diagnostics]),
   };
 }

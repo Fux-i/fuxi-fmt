@@ -1,6 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { checkSemantics } from './guard.ts';
+import { english, MESSAGES } from './messages.ts';
 import { format } from './format.ts';
 
 describe('GRT-01 a violation says where it happened', () => {
@@ -24,11 +25,23 @@ describe('GRT-01 a violation says where it happened', () => {
     const violations = checkSemantics('x\n', '```\nc\n```\nx\n');
     assert.equal(violations[0]?.line, undefined);
   });
-  test('no violation writes a line number into its message', () => {
+  test('no violation writes a line number into its sentence', () => {
+    // The sentence now comes from the catalogue, so this checks the catalogue as
+    // much as the guard: a template with a line number in it would be untranslatable
+    // and would print the position twice, since the position is data.
     const violations = checkSemantics('a\n', '# a\n');
     assert.ok(violations.length > 0, 'expected the paragraph-to-heading change to be refused');
     for (const violation of violations) {
-      assert.doesNotMatch(violation.message, /line \d/);
+      assert.doesNotMatch(english(violation.messageId, violation.args), /line \d/);
+    }
+  });
+
+  test('every violation names a catalogue entry that exists', () => {
+    // A typo in a message id would not fail the typecheck inside a data structure;
+    // it would render as the literal id at runtime.
+    const violations = checkSemantics('a\n', '# a\n');
+    for (const violation of violations) {
+      assert.ok(violation.messageId in MESSAGES, 'unknown message id ' + String(violation.messageId));
     }
   });
 });

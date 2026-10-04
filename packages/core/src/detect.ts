@@ -16,6 +16,7 @@
 
 import type { CharRange } from './ignores.ts';
 import { assignParents, scanListItems } from './list-scan.ts';
+import type { MessageArgs, MessageId } from './messages.ts';
 import { isEscaped, type Region, type SourceLine } from './scan.ts';
 
 const BACKTICK = 96;
@@ -24,7 +25,9 @@ const PIPE = 124;
 
 export interface Detection {
   readonly ruleId: string;
-  readonly message: string;
+  /** The catalogue entry (CFG-08). The English is rendered by the caller. */
+  readonly messageId: MessageId;
+  readonly args: MessageArgs;
   readonly line: number | undefined;
   readonly severity: 'error' | 'warning';
 }
@@ -69,21 +72,18 @@ function claimedMask(
 }
 
 /** A block region that reached end of file without its terminator. */
-const UNTERMINATED: Readonly<Record<string, { readonly ruleId: string; readonly message: string }>> = {
+const UNTERMINATED: Readonly<Record<string, { readonly ruleId: string; readonly messageId: MessageId }>> = {
   frontMatter: {
     ruleId: 'DET-02',
-    message:
-      'unterminated front matter: the opening line is never closed, so the whole document was read as YAML and none of it was formatted',
+    messageId: 'det.frontMatterUnterminated',
   },
   mathBlock: {
     ruleId: 'DET-04',
-    message:
-      'unterminated math block: no closing line of dollar signs was found, so everything after it is display math and none of it was formatted',
+    messageId: 'det.mathUnterminated',
   },
   fencedCode: {
     ruleId: 'DET-01',
-    message:
-      'unterminated code fence: no closing fence was found, so everything after it is code and none of it was formatted',
+    messageId: 'det.fenceUnterminated',
   },
 };
 
@@ -99,7 +99,7 @@ export function detect(
     if (region.closed !== false) continue;
     const rule = UNTERMINATED[region.kind];
     if (rule === undefined) continue;
-    detections.push({ ...rule, line: lineOfOffset(lines, region.start), severity: 'error' });
+    detections.push({ ...rule, args: [], line: lineOfOffset(lines, region.start), severity: 'error' });
   }
   detections.push(...unterminatedComments(source, lines, mask));
   detections.push(...unmatchedDelimiters(source, lines, mask));
@@ -126,8 +126,8 @@ function unterminatedComments(
     return [
       {
         ruleId: 'DET-03',
-        message:
-          'unterminated HTML comment: nothing closes it, so everything after it is a comment and none of it was formatted',
+        messageId: 'det.commentUnterminated',
+        args: [],
         line: lineOfOffset(lines, at),
         severity: 'error',
       },
@@ -162,8 +162,8 @@ function unmatchedDelimiters(
   for (const line of [...backtickLines].sort((a, b) => a - b)) {
     out.push({
       ruleId: 'DET-06',
-      message:
-        'unmatched backtick: nothing closes it, so it stays literal text - if a code span was meant, a backtick is missing',
+      messageId: 'det.backtickUnmatched',
+      args: [],
       line,
       severity: 'warning',
     });
@@ -171,8 +171,8 @@ function unmatchedDelimiters(
   for (const line of [...dollarLines].sort((a, b) => a - b)) {
     out.push({
       ruleId: 'DET-07',
-      message:
-        'unmatched dollar sign: nothing closes it, so it stays literal text - a price and an unclosed formula look the same here',
+      messageId: 'det.dollarUnmatched',
+      args: [],
       line,
       severity: 'warning',
     });
@@ -187,17 +187,17 @@ function unclosedInline(
   mask: Uint8Array,
 ): Detection[] {
   const out: Detection[] = [];
-  const scan = (needle: string, closeMark: string, ruleId: string, message: string): void => {
+  const scan = (needle: string, closeMark: string, ruleId: string, messageId: MessageId): void => {
     for (let at = source.indexOf(needle); at !== -1; at = source.indexOf(needle, at + 1)) {
       if (mask[at] === 1) continue;
       const newline = source.indexOf('\n', at);
       const close = source.indexOf(closeMark, at + needle.length);
       if (close !== -1 && (newline === -1 || close < newline)) continue;
-      out.push({ ruleId, message, line: lineOfOffset(lines, at), severity: 'warning' });
+      out.push({ ruleId, messageId, args: [], line: lineOfOffset(lines, at), severity: 'warning' });
     }
   };
-  scan('[[', ']]', 'DET-08', 'unclosed wikilink: nothing closes it on the line, so it stays literal text');
-  scan('](', ')', 'DET-09', 'unclosed link destination: the opening parenthesis is never closed, so this is not a link');
+  scan('[[', ']]', 'DET-08', 'det.wikilinkUnclosed');
+  scan('](', ')', 'DET-09', 'det.linkDestinationUnclosed');
   return out;
 }
 
@@ -230,9 +230,8 @@ function raggedTables(lines: readonly SourceLine[], mask: Uint8Array): Detection
       if (count === cells) continue;
       out.push({
         ruleId: 'DET-10',
-        message:
-          'table row has ' + String(count) + ' cells where the header has ' + String(cells) +
-          ': the row does not render in the columns above it',
+        messageId: 'det.tableRowRagged',
+        args: [count, cells],
         line: j,
         severity: 'warning',
       });
@@ -260,8 +259,8 @@ function listJumps(lines: readonly SourceLine[], mask: Uint8Array): Detection[] 
     if (mask[lines[item.line]?.start ?? 0] === 1) continue;
     out.push({
       ruleId: 'DET-11',
-      message:
-        'list item is indented as if nested but belongs to no parent: the indentation reads as a nested list that never becomes one',
+      messageId: 'det.listItemOrphan',
+      args: [],
       line: item.line,
       severity: 'warning',
     });

@@ -161,7 +161,9 @@ git tag -n          # verify
 ## Adding a rule
 
 1. Confirm the rule exists in the spec. If it does not, propose the spec change first.
-2. Add it to the rule registry with its spec ID, default severity and typed options.
+2. Add it to the rule registry with its spec ID, default severity and typed options, and add
+   its sentence to the catalogue in `packages/core/src/messages.ts` (CFG-08). No rule spells a
+   message out where it is used: a sentence built by concatenation cannot be translated.
 3. Write tests first — a positive case, a negative case, and a protected-region case proving the
    rule does not leak into code blocks, front matter or inline spans.
 4. Verify idempotence (run the formatter twice in the test).
