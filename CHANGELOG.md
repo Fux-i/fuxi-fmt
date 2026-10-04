@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases are tagged using the Linux kernel convention: `vMAJOR.MINOR[.PATCH]`,
 with release candidates suffixed `-rcN`.
 
-## [Unreleased]
+## [0.25.0] - 2026-10-04
 
 ### Added
 
