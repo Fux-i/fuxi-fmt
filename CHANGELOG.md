@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases are tagged using the Linux kernel convention: `vMAJOR.MINOR[.PATCH]`,
 with release candidates suffixed `-rcN`.
 
+## [Unreleased]
+
+### Changed
+
+- **The editor's output panel logs one block per document instead of one line per diagnostic.** A
+  run is a header naming the file and the time it started, then one line per diagnosis:
+  `=====docs/guide.md 16:20:01=====` followed by `WARNING[12] DET-06 …` and, for a refused
+  document, `ERROR DET-02 …`. The file is relative to the workspace folder, the path is no longer
+  repeated on every line, and a clean document writes nothing at all — the old format printed an
+  absolute path per line with nothing to tell one run from the next, which is what made it hard to
+  read. The severity words and rule ids stay Latin so one search finds a rule in either log. The CLI
+  is unchanged: it still prints `path:line: severity: RULE message`, which is what a compiler log is
+  read for.
+
 ## [0.25.0] - 2026-10-04
 
 ### Added

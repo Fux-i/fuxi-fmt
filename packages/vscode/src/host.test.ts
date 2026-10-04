@@ -200,6 +200,51 @@ describe('the extension bundle against a stubbed host', () => {
     assert.equal(vscode.revealed, 1, 'the output panel was not revealed for a warning');
   });
 
+  test('the log is one header block per document, and only when it has something in it', () => {
+    assert.ok(documentProvider);
+    clean(vscode);
+    vscode.workspaceFolder = dist;
+    vscode.settings = {};
+    const warned = {
+      getText: () => '#  标题\n\n他说 "你好 了\n',
+      uri: { fsPath: join(dist, 'docs', 'warning.md') },
+    };
+    documentProvider.provider.provideDocumentFormattingEdits(warned);
+
+    // The path is relative to the workspace folder, and the clock is short: it
+    // separates one run from the next rather than being a timestamp of record.
+    assert.match(String(vscode.outputLines[0]), /^=====docs\/warning\.md \d\d:\d\d:\d\d=====$/);
+    assert.match(String(vscode.outputLines[1]), /^WARNING\[3\] TYPO-11 /);
+    assert.equal(vscode.outputLines.length, 2, 'one header and one diagnostic line');
+
+    clean(vscode);
+    const tidy = {
+      getText: () => '# Title\n\nSome text.\n',
+      uri: { fsPath: join(dist, 'clean.md') },
+    };
+    documentProvider.provider.provideDocumentFormattingEdits(tidy);
+    assert.deepEqual(vscode.outputLines, [], 'a clean document wrote a header anyway');
+    vscode.workspaceFolder = undefined;
+  });
+
+  test('an error line says ERROR and names the rule that refused the document', () => {
+    assert.ok(documentProvider);
+    clean(vscode);
+    vscode.workspaceFolder = dist;
+    const refused = {
+      getText: () => '\u0060\u0060\u0060\u0060js\ncode\n\u0060\u0060\u0060\n',
+      uri: { fsPath: join(dist, 'refused.md') },
+    };
+    documentProvider.provider.provideDocumentFormattingEdits(refused);
+
+    assert.match(String(vscode.outputLines[1]), /^ERROR\[1\] DET-01 /);
+    // No line is printed for a complaint about the document as a whole - the form
+    // is ERROR RULE message - but every reachable fixture has a line, because the
+    // four error-class detections all fire at one. That branch belongs to the
+    // guard, which these documents cannot reach.
+    vscode.workspaceFolder = undefined;
+  });
+
   test('a warning the reader switched off is not published and not logged', () => {
     assert.ok(documentProvider);
     clean(vscode);

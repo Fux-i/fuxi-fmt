@@ -117,13 +117,24 @@ to stderr: where the configuration came from, whether the document changed, and 
 about. Warnings are reported and do not fail the run. Two things do fail the run: the semantic guard
 refusing a document, and a detection that the document was misread — an unterminated code fence or
 HTML comment, where everything after the mistake was read as part of it (DET-01, DET-03).
-Each diagnostic is one line in the shape every compiler has used for forty years —
-`path:line: severity: RULE message` — with the line left out when the core has none, and the line
-being the one in the file on disk rather than the one the formatter's own blank-line policy moved
-it to. An unterminated block is an error and refuses the document; a doubtful parse that did
-terminate is a warning and the document still formats (DET-06 … DET-11), with one switch per
-warning in the editor settings — one switch per rule, all on by default, because a warning that cannot be
-turned off is a warning that gets the whole feature turned off.
+On the command line each diagnostic is one line in the shape every compiler has used for forty
+years — `path:line: severity: RULE message` — with the line left out when the core has none, and
+the line being the one in the file on disk rather than the one the formatter's own blank-line policy
+moved it to. An unterminated block is an error and refuses the document; a doubtful parse that did
+terminate is a warning and the document still formats (DET-06 … DET-12), with one switch per warning
+in the editor settings, all on by default, because a warning that cannot be turned off is a warning
+that gets the whole feature turned off.
+
+In the editor the same diagnostics reach the **Problems** panel, which is where a location can be
+clicked, and the output panel as a block per file:
+
+    =====docs/guide.md 16:20:01=====
+    WARNING[12] DET-06 unmatched backtick: nothing closes it, so it stays literal text
+    ERROR DET-02 unterminated front matter: the opening line is never closed
+
+The header names the file relative to the workspace folder and the run it belongs to; a clean
+document writes nothing. The severity words and rule ids stay Latin so that one search finds a rule
+in either log.
 A configuration key that is not an option, or a retired one, is reported the same way — the one
 thing a silently ignored key can never say is that it was ignored.
 

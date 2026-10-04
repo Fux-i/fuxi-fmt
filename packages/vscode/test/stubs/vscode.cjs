@@ -73,7 +73,21 @@ module.exports = {
     },
   },
 
+  /**
+   * The folder asRelativePath is relative to, for tests. Undefined means a window
+   * with no folder open, where VS Code returns the absolute path - which the test
+   * for it exercises.
+   */
+  workspaceFolder: undefined,
+
   workspace: {
+    asRelativePath: (pathOrUri) => {
+      const full =
+        typeof pathOrUri === 'string' ? pathOrUri : (pathOrUri && pathOrUri.fsPath) || '';
+      const root = module.exports.workspaceFolder;
+      if (root && full.startsWith(root + '/')) return full.slice(root.length + 1);
+      return full;
+    },
     getConfiguration: (section) => ({
       get: (key, fallback) => {
         if (key === 'config') return module.exports.config;

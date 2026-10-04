@@ -123,13 +123,31 @@ function enabled(): boolean {
 }
 
 /**
- * `path:line: severity: RULE message` - deliberately the same shape the CLI
- * prints, so a reader who has read one log has read both. The diagnostic in the
- * Problems panel carries the file already; this is the log's copy.
+ * Which file, and when: `=====docs/guide.md 16:20:01=====`.
+ *
+ * The path is relative to the workspace folder, because a log read at a glance
+ * wants the shortest name that is still unambiguous. The time is short because it
+ * is there to separate one run from the next, not to be a timestamp of record.
  */
-function locate(file: string, diagnostic: Diagnostic): string {
-  const where = diagnostic.line === undefined ? file : file + ':' + String(diagnostic.line + 1);
-  return where + ': ' + diagnostic.severity + ': ' + diagnostic.ruleId + ' ' + diagnostic.message;
+function headerFor(document: vscode.TextDocument, at: Date): string {
+  const pad = (value: number): string => String(value).padStart(2, '0');
+  const clock = pad(at.getHours()) + ':' + pad(at.getMinutes()) + ':' + pad(at.getSeconds());
+  return '=====' + vscode.workspace.asRelativePath(document.uri, false) + ' ' + clock + '=====';
+}
+
+/**
+ * `WARNING[12] DET-06 message`, or `ERROR DET-02 message` when the complaint is
+ * about the document as a whole: a refused document is refused whole, so there is
+ * no line to name and an empty bracket would be worse than none.
+ *
+ * The level is one of the same two Latin words the CLI prints, so one search finds
+ * a rule in either log, and the rule id stays where it is because the
+ * documentation, the spec and --explain are all keyed on it.
+ */
+function lineFor(diagnostic: Diagnostic): string {
+  const level = diagnostic.severity === 'error' ? 'ERROR' : 'WARNING';
+  const where = diagnostic.line === undefined ? '' : '[' + String(diagnostic.line + 1) + ']';
+  return level + where + ' ' + diagnostic.ruleId + ' ' + diagnostic.message;
 }
 
 /**
@@ -199,14 +217,21 @@ function formatAndReport(
   const diagnostics = visibleDiagnostics(outcome.diagnostics);
   collection.set(document.uri, diagnostics.map(toDiagnostic));
 
-  for (const notice of loaded.notices) {
-    output.appendLine('config: ' + notice.message);
+  const notices = loaded.notices;
+  const tripped = diagnostics.length > 0 || notices.length > 0;
+  // One block per document, and only when there is something under the header: a
+  // header on every save would fill the panel with blocks that say nothing, which
+  // is the state this replaced.
+  if (tripped) {
+    output.appendLine(headerFor(document, new Date()));
+    for (const notice of notices) {
+      output.appendLine('NOTICE ' + notice.key + ' ' + notice.message);
+    }
+    for (const diagnostic of diagnostics) {
+      output.appendLine(lineFor(diagnostic));
+    }
+    output.show(true);
   }
-  for (const diagnostic of diagnostics) {
-    output.appendLine(locate(document.uri.fsPath, diagnostic));
-  }
-  const tripped = diagnostics.length > 0 || loaded.notices.length > 0;
-  if (tripped) output.show(true);
   return outcome.edits;
 }
 
