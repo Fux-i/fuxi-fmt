@@ -48,6 +48,7 @@ interface Schema {
   readonly scope?: string;
   readonly markdownDescription?: string;
   readonly description?: string;
+  readonly keywords?: readonly string[];
 }
 
 function corePaths(): string[] {
@@ -186,6 +187,21 @@ describe('every option is a setting, and every setting is an option', () => {
       assert.ok(
         schema.markdownDescription !== undefined || schema.description !== undefined,
         id + ' has no description',
+      );
+    }
+  });
+
+  test('every setting carries the product name as a keyword', () => {
+    // VS Code matches a query word against one field at a time: the key satisfies
+    // "fuxi" and the description satisfies "标记", but a query of both is matched
+    // per field, so it can never be satisfied by the two together. keywords is a
+    // field of its own, and its own line in the search index, which is what makes
+    // "fuxi 标记" find these settings.
+    for (const [id, value] of Object.entries(properties)) {
+      const schema = value as Schema;
+      assert.ok(
+        Array.isArray(schema.keywords) && schema.keywords.includes('fuxi'),
+        id + ' cannot be found by searching for the product name',
       );
     }
   });

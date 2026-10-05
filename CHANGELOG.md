@@ -9,6 +9,15 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
+### Changed
+
+- **The settings are findable by the product name.** Searching the Settings UI for `fuxi 标记` used to
+  find nothing while `标记` alone found the settings, because VS Code matches every word of a query
+  inside one field: the setting id answers `fuxi`, the description answers `标记`, and a query of both
+  is never satisfied by the two together. Every setting now carries
+  `keywords: ["fuxi", "fuxi-fmt"]`, a searchable field of its own that is never shown to the user.
+  A per-setting `title` cannot do this — VS Code's settings model does not read one.
+
 ### Removed
 
 - **The benchmark harness (`.bench/`) is no longer in the tree.** Appendix B of the specification keeps

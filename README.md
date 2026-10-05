@@ -263,9 +263,14 @@ environment excludes it, so a fresh clone will not contain it.
 ## Settings in VS Code
 
 Every option is a VS Code setting — `fuxiFmt.typography.cjkSpacing`, `fuxiFmt.list.unorderedMarker`,
-`fuxiFmt.blankLines.aroundBlocks` and the other 21 — contributed with their defaults, their allowed
-values and the specification rule each one implements. They render in the Settings UI as ordinary
-controls, so the panel doubles as the reference.
+`fuxiFmt.blankLines.aroundBlocks` and every other option — contributed with their defaults, their
+allowed values and the specification rule each one implements. They render in the Settings UI as
+ordinary controls, so the panel doubles as the reference.
+
+Each setting also carries the product name as a **keyword**. VS Code matches every word of a search
+query within a *single* field: the setting id answers `fuxi` and the description answers `标记`, so
+`标记` alone finds the settings and the two together find nothing. A keyword is a searchable field of
+its own, and it is not shown to the user.
 
 Four layers, **last wins**:
 
@@ -282,8 +287,8 @@ same document — a file that formats clean on save and fails the pipeline. `fux
 when you do mean to override the project, on purpose.
 
 `packages/core/src/settings.test.ts` asserts that this list and the core's option surface are
-identical in both directions, that each setting carries the core's own default, and that every
-setting is `resource`-scoped.
+identical in both directions, that each setting carries the core's own default, that every setting is
+`resource`-scoped, and that every setting carries the product-name keyword.
 
 ## Constraints
 
