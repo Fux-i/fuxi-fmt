@@ -239,19 +239,23 @@ describe('documentation stays true to the code', () => {
     const block = (spec.split('```yaml')[1] ?? '').split('```')[0] ?? '';
     assert.ok(block.length > 0, 'the specification has no config block');
 
+    // Option bags nest (`typography.emphasis.strong`, `table.mode`), so the block
+    // is read by indentation rather than by "one level and no more": a rule that
+    // documents only its top level would otherwise pass while listing nothing.
     const documented = new Set<string>();
-    let section = '';
+    const stack: { indent: number; path: string }[] = [];
     for (const raw of block.split('\n')) {
       const line = raw.replace(/#.*$/, '');
       if (line.trim().length === 0) continue;
-      const top = /^([A-Za-z][A-Za-z0-9]*):/.exec(line);
-      if (top !== null) {
-        section = top[1] ?? '';
-        documented.add(section);
-        continue;
-      }
-      const nested = /^ {2}([A-Za-z][A-Za-z0-9]*):/.exec(line);
-      if (nested !== null && section.length > 0) documented.add(section + '.' + (nested[1] ?? ''));
+      const match = /^(\s*)([A-Za-z][A-Za-z0-9]*):/.exec(line);
+      if (match === null) continue;
+      const indent = (match[1] ?? '').length;
+      const name = match[2] ?? '';
+      while (stack.length > 0 && (stack[stack.length - 1]?.indent ?? -1) >= indent) stack.pop();
+      const parent = stack[stack.length - 1];
+      const path = parent === undefined ? name : parent.path + '.' + name;
+      stack.push({ indent, path });
+      documented.add(path);
     }
 
     const bags = defaultOptions as unknown as Record<string, unknown>;

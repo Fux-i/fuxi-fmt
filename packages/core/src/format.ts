@@ -19,6 +19,7 @@ import {
 } from './scan.ts';
 import { normalizeQuotes } from './quotes.ts';
 import { applyTypography } from './typography.ts';
+import { normalizeEmphasis } from './emphasis.ts';
 import { normalizeFullwidthAlphanumerics, normalizeParens, normalizePunctuation } from './widths.ts';
 
 /** The two characters a block marker may be separated by (BLK-09). */
@@ -413,7 +414,11 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   // region scans per format, measured at about 6%. widths.length.test.ts pins
   // the property that makes this sound rather than hopeful.
   const widthMask = protectedMask(structural, ignoreRanges(structural, options.ignore));
-  const widths = normalizeFullwidthAlphanumerics(structural, options.typography, widthMask);
+  // TYPO-12 runs before the width passes so that they see the final delimiters;
+  // it is a character-for-character rewrite of runs the parser pairs, so nothing
+  // downstream can be surprised by it.
+  const emphasised = normalizeEmphasis(structural, options.typography.emphasis, widthMask);
+  const widths = normalizeFullwidthAlphanumerics(emphasised, options.typography, widthMask);
   const punctuation = normalizePunctuation(widths, options.typography, widthMask);
   const parens = normalizeParens(punctuation, options.typography, widthMask);
   const quoted = normalizeQuotes(parens, options.typography, widthMask);

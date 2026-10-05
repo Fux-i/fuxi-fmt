@@ -257,6 +257,15 @@ Mid-text `#` is a hashtag/anchor token and is **never spaced**, because `中文#
 - A quote written tight against a word is an inch mark rather than a quotation, so `12" x 8"` is untouched.
 - A quotation is a context scope for TYPO-05 and TYPO-08, which is why `他说 "hello, world" 这句话` becomes `他说“hello, world”这句话` with the comma still half-width.
 
+**TYPO-12 — One delimiter per emphasis kind** · default `preserve`
+
+`**x**` and `__x__` are the same node, `*x*` and `_x_` are the same node, and one tilde is strikethrough in the dialects that accept it as well as two. `typography.emphasis` chooses the spelling for each: `strong: "asterisks" | "underscores" | "preserve"`, `em: "asterisk" | "underscore" | "preserve"`, `strikethrough: "double" | "single" | "preserve"`, all `preserve` by default.
+
+- **Only a pair the parser would pair is rewritten.** The decision is CommonMark's own flanking test, and `_` is the character that makes it matter: `snake_case_name` is not emphasis and never becomes any, and neither is `中文_斜体_中文`, because an underscore inside a word cannot open one. The **target** is tested the same way before it is written, which is what stops `中文**加粗**中文` from becoming `中文__加粗__中文` — that rewrite would delete the emphasis rather than respell it.
+- **Runs of three or more are left alone.** `***x***` is two nodes sharing one run of delimiters, and telling those apart is a parser's job. A run this rule cannot read is a run it does not touch.
+- **Only within one line**, and never inside a protected region: a delimiter in a code span or a fence is content.
+- **Strikethrough carries a dialect risk that the other two do not.** `~~x~~` is strikethrough in GitHub-flavoured Markdown and `~x~` is literal text there; a renderer that understands one reads the other as tildes. That is why `preserve` is the default and why the setting's description says so out loud.
+
 ### D. Front matter
 
 **FM-01 — Front matter is a fully protected region** · always on
@@ -477,6 +486,10 @@ typography:
   parenStyle: mixed               # mixed | fullwidth | halfwidth | preserve
   context: line                   # line | adjacent
   quotes: paired                  # paired | preserve
+  emphasis:
+    strong: preserve              # asterisks | underscores | preserve
+    em: preserve                  # asterisk | underscore | preserve
+    strikethrough: preserve       # double | single | preserve
   halfwidthAlphanumerics: true
   ideographicSpace: true
   hashtag: false                  # opt-in, see TYPO-09

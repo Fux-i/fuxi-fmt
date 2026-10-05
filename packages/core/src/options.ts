@@ -41,6 +41,24 @@ export type QuoteStyle = 'preserve' | 'paired';
  * because length and internal spaces carry no meaning.
  */
 export type ThematicBreak = 'dashes' | 'asterisks' | 'underscores' | 'preserve';
+export type StrongStyle = 'asterisks' | 'underscores' | 'preserve';
+export type EmStyle = 'asterisk' | 'underscore' | 'preserve';
+export type StrikeStyle = 'double' | 'single' | 'preserve';
+
+/**
+ * Which delimiter each emphasis kind is written with (TYPO-12).
+ *
+ * `preserve` for all three is the default, because a rewrite here changes bytes
+ * the author typed deliberately and Markdown renders both spellings the same -
+ * under a renderer that understands them. One tilde is strikethrough in some
+ * dialects and literal text in others, which is why `strikethrough` says so in its
+ * description rather than guessing.
+ */
+export interface EmphasisOptions {
+  readonly strong: StrongStyle;
+  readonly em: EmStyle;
+  readonly strikethrough: StrikeStyle;
+}
 
 export interface TypographyOptions {
   /** Insert one space at every CJK to non-CJK boundary (TYPO-01). */
@@ -61,6 +79,8 @@ export interface TypographyOptions {
   readonly context: ContextMode;
   /** Straight double quotes to paired Chinese marks (TYPO-11). */
   readonly quotes: QuoteStyle;
+  /** Which delimiter each emphasis kind is written with (TYPO-12). */
+  readonly emphasis: EmphasisOptions;
   /** Which scripts count as CJK. Defaults to Han alone. */
   readonly cjkClasses: readonly CjkClass[];
   /**
@@ -171,8 +191,15 @@ export interface TypographyInput {
   readonly parenStyle?: ParenStyle;
   readonly context?: ContextMode;
   readonly quotes?: QuoteStyle;
+  readonly emphasis?: EmphasisInput;
   readonly cjkClasses?: readonly CjkClass[];
   readonly spacingSymbols?: readonly string[];
+}
+
+export interface EmphasisInput {
+  readonly strong?: StrongStyle;
+  readonly em?: EmStyle;
+  readonly strikethrough?: StrikeStyle;
 }
 
 export interface ListInput {
@@ -206,6 +233,7 @@ export const defaultOptions: FormatOptions = {
     parenStyle: 'mixed',
     context: 'line',
     quotes: 'paired',
+    emphasis: { strong: 'preserve', em: 'preserve', strikethrough: 'preserve' },
     cjkClasses: DEFAULT_CJK_CLASSES,
     spacingSymbols: new Set(DEFAULT_SPACING_SYMBOLS),
   },
@@ -253,6 +281,13 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
       parenStyle: input?.typography?.parenStyle ?? defaultOptions.typography.parenStyle,
       context: input?.typography?.context ?? defaultOptions.typography.context,
       quotes: input?.typography?.quotes ?? defaultOptions.typography.quotes,
+      emphasis: {
+        strong: input?.typography?.emphasis?.strong ?? defaultOptions.typography.emphasis.strong,
+        em: input?.typography?.emphasis?.em ?? defaultOptions.typography.emphasis.em,
+        strikethrough:
+          input?.typography?.emphasis?.strikethrough ??
+          defaultOptions.typography.emphasis.strikethrough,
+      },
       cjkClasses: input?.typography?.cjkClasses ?? defaultOptions.typography.cjkClasses,
       spacingSymbols: new Set(
         input?.typography?.spacingSymbols ?? defaultOptions.typography.spacingSymbols,

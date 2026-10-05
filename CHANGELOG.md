@@ -21,6 +21,15 @@ with release candidates suffixed `-rcN`.
   H2 into a paragraph and a horizontal rule — and the guard could not see it, because both lines keep
   the same block kind. A break inside a block quote is normalised too, marker chain included.
 
+- **TYPO-12: emphasis uses the delimiter you choose.** `**x**` and `__x__` are the same node, `*x*`
+  and `_x_` are the same node, and one tilde is strikethrough in the dialects that accept it as well
+  as two, so `typography.emphasis` chooses the spelling of each and `preserve` (the default) leaves
+  every delimiter as written. Only a pair CommonMark would pair is respelled — `snake_case_name` and
+  `中文_斜体_中文` contain no emphasis to respell — and the target is tested the same way, so
+  `中文**加粗**中文` is left alone rather than turned into `__` marks that would not be emphasis at all.
+  Runs of three delimiters are left alone; telling `***x***` apart from a run of three is a parser's
+  job.
+
 ### Changed
 
 - **The settings are findable by the product name.** Searching the Settings UI for `fuxi 标记` used to

@@ -28,6 +28,10 @@ import type {
   FormatOptionsInput,
   ListInput,
   ThematicBreak,
+  EmStyle,
+  EmphasisInput,
+  StrikeStyle,
+  StrongStyle,
   TypographyInput,
 } from './options.ts';
 
@@ -322,6 +326,7 @@ function readSections(raw: Raw): FormatOptionsInput {
       parenStyle?: 'mixed' | 'fullwidth' | 'halfwidth' | 'preserve';
       context?: 'line' | 'adjacent';
       quotes?: 'preserve' | 'paired';
+      emphasis?: EmphasisInput;
       cjkClasses?: readonly CjkClass[];
       spacingSymbols?: readonly string[];
     } = {};
@@ -333,6 +338,36 @@ function readSections(raw: Raw): FormatOptionsInput {
         'mixed',
         'off',
       ]);
+    }
+    if (from.emphasis !== undefined) {
+      const bag = section(from.emphasis, 'typography.emphasis');
+      const values: {
+        strong?: StrongStyle;
+        em?: EmStyle;
+        strikethrough?: StrikeStyle;
+      } = {};
+      if (bag.strong !== undefined) {
+        values.strong = oneOf<StrongStyle>(bag.strong, 'typography.emphasis.strong', [
+          'asterisks',
+          'underscores',
+          'preserve',
+        ]);
+      }
+      if (bag.em !== undefined) {
+        values.em = oneOf<EmStyle>(bag.em, 'typography.emphasis.em', [
+          'asterisk',
+          'underscore',
+          'preserve',
+        ]);
+      }
+      if (bag.strikethrough !== undefined) {
+        values.strikethrough = oneOf<StrikeStyle>(
+          bag.strikethrough,
+          'typography.emphasis.strikethrough',
+          ['double', 'single', 'preserve'],
+        );
+      }
+      to.emphasis = values;
     }
     if (from.punctuationChangeList !== undefined) {
       to.punctuationChangeList = strings(
@@ -410,7 +445,17 @@ export function mergeOptions(base: FormatOptionsInput, override: FormatOptionsIn
   const blankLines = mergeSection(base.blankLines, override.blankLines);
   if (blankLines !== undefined) out.blankLines = blankLines;
   const typography = mergeSection(base.typography, override.typography);
-  if (typography !== undefined) out.typography = typography;
+  if (typography !== undefined) {
+    // `emphasis` is the one bag inside the typography options. Merging it whole
+    // would let a layer that sets one kind silently drop the other two set below
+    // it, which is the opposite of what layering is for.
+    const emphasis: EmphasisInput = {
+      ...base.typography?.emphasis,
+      ...override.typography?.emphasis,
+    };
+    out.typography =
+      Object.keys(emphasis).length === 0 ? typography : { ...typography, emphasis };
+  }
   const list = mergeSection(base.list, override.list);
   if (list !== undefined) out.list = list;
   const codeBlock = mergeSection(base.codeBlock, override.codeBlock);

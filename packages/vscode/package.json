@@ -335,6 +335,57 @@
           ],
           "markdownDescription": "%fuxiFmt.typography.quotes.description%"
         },
+        "fuxiFmt.typography.emphasis.strong": {
+          "keywords": ["fuxi", "fuxi-fmt"],
+          "type": "string",
+          "default": "preserve",
+          "scope": "resource",
+          "enum": [
+            "asterisks",
+            "underscores",
+            "preserve"
+          ],
+          "enumDescriptions": [
+            "%fuxiFmt.typography.emphasis.strong.enum.0%",
+            "%fuxiFmt.typography.emphasis.strong.enum.1%",
+            "%fuxiFmt.typography.emphasis.strong.enum.2%"
+          ],
+          "markdownDescription": "%fuxiFmt.typography.emphasis.strong.description%"
+        },
+        "fuxiFmt.typography.emphasis.em": {
+          "keywords": ["fuxi", "fuxi-fmt"],
+          "type": "string",
+          "default": "preserve",
+          "scope": "resource",
+          "enum": [
+            "asterisk",
+            "underscore",
+            "preserve"
+          ],
+          "enumDescriptions": [
+            "%fuxiFmt.typography.emphasis.em.enum.0%",
+            "%fuxiFmt.typography.emphasis.em.enum.1%",
+            "%fuxiFmt.typography.emphasis.em.enum.2%"
+          ],
+          "markdownDescription": "%fuxiFmt.typography.emphasis.em.description%"
+        },
+        "fuxiFmt.typography.emphasis.strikethrough": {
+          "keywords": ["fuxi", "fuxi-fmt"],
+          "type": "string",
+          "default": "preserve",
+          "scope": "resource",
+          "enum": [
+            "double",
+            "single",
+            "preserve"
+          ],
+          "enumDescriptions": [
+            "%fuxiFmt.typography.emphasis.strikethrough.enum.0%",
+            "%fuxiFmt.typography.emphasis.strikethrough.enum.1%",
+            "%fuxiFmt.typography.emphasis.strikethrough.enum.2%"
+          ],
+          "markdownDescription": "%fuxiFmt.typography.emphasis.strikethrough.description%"
+        },
         "fuxiFmt.list.orderedStyle": {
           "keywords": ["fuxi", "fuxi-fmt"],
           "type": "string",

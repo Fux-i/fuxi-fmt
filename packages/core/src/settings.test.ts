@@ -51,15 +51,27 @@ interface Schema {
   readonly keywords?: readonly string[];
 }
 
+/**
+ * Every leaf of the option surface, however deep it nests.
+ *
+ * One level was enough until `typography.emphasis` and `table` arrived: with a
+ * flat walk the bag itself counted as a leaf, so a setting for one key inside it
+ * had nothing to be compared against and the audit would have gone quiet.
+ */
 function corePaths(): string[] {
   const paths: string[] = [];
-  for (const [section, value] of Object.entries(defaultOptions)) {
-    if (value !== null && typeof value === 'object' && !(value instanceof Set)) {
-      for (const leaf of Object.keys(value as Record<string, unknown>)) paths.push(section + '.' + leaf);
-    } else {
-      paths.push(section);
+  const walk = (node: unknown, prefix: string): void => {
+    const bag =
+      node !== null && typeof node === 'object' && !(node instanceof Set) && !Array.isArray(node);
+    if (!bag) {
+      if (prefix.length > 0) paths.push(prefix);
+      return;
     }
-  }
+    for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+      walk(value, prefix.length === 0 ? key : prefix + '.' + key);
+    }
+  };
+  walk(defaultOptions, '');
   return paths.sort();
 }
 
@@ -72,10 +84,12 @@ function settingPaths(): string[] {
 }
 
 function defaultOf(path: string): unknown {
-  const [section, leaf] = path.split('.');
-  const value = (defaultOptions as unknown as Record<string, unknown>)[section ?? ''];
-  if (leaf === undefined) return value;
-  return (value as Record<string, unknown>)[leaf];
+  let node: unknown = defaultOptions;
+  for (const part of path.split('.')) {
+    if (node === null || typeof node !== 'object') return undefined;
+    node = (node as Record<string, unknown>)[part];
+  }
+  return node;
 }
 
 function placeholders(node: unknown, out: Set<string> = new Set()): Set<string> {

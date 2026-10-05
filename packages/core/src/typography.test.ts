@@ -1,6 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { format } from './format.ts';
+import type { FormatOptionsInput } from './options.ts';
 
 const out = (src: string) => format(src).output;
 
@@ -150,5 +151,56 @@ describe('GRT-02 typography is idempotent', () => {
     const src = '中文abc，中文`code`中文 中文  x\n';
     const once = out(src);
     assert.equal(out(once), once);
+  });
+});
+
+describe('TYPO-12 one delimiter per emphasis kind', () => {
+  const strong = (value: 'asterisks' | 'underscores' | 'preserve') => ({
+    typography: { emphasis: { strong: value } },
+  });
+  const em = (value: 'asterisk' | 'underscore' | 'preserve') => ({
+    typography: { emphasis: { em: value } },
+  });
+  const strike = (value: 'double' | 'single' | 'preserve') => ({
+    typography: { emphasis: { strikethrough: value } },
+  });
+  const emph = (src: string, options: Parameters<typeof format>[1]) => format(src, options).output;
+
+  test('preserve is the default, so no delimiter moves', () => {
+    for (const src of ['a **b** c\n', 'a __b__ c\n', 'a *b* c\n', 'a _b_ c\n', 'a ~~b~~ c\n']) {
+      assert.equal(out(src), src);
+    }
+  });
+  test('respells a pair, one kind at a time', () => {
+    assert.equal(emph('a **b** c\n', strong('underscores')), 'a __b__ c\n');
+    assert.equal(emph('a __b__ c\n', strong('asterisks')), 'a **b** c\n');
+    assert.equal(emph('a _b_ c\n', em('asterisk')), 'a *b* c\n');
+    assert.equal(emph('a *b* c\n', em('underscore')), 'a _b_ c\n');
+    assert.equal(emph('a ~b~ c\n', strike('double')), 'a ~~b~~ c\n');
+    assert.equal(emph('a ~~b~~ c\n', strike('single')), 'a ~b~ c\n');
+  });
+  test('never turns a word into emphasis', () => {
+    // An underscore inside a word cannot open one, so there is no pair to respell.
+    assert.equal(emph('snake_case_name\n', em('asterisk')), 'snake_case_name\n');
+    assert.equal(emph('中文_斜体_中文\n', em('asterisk')), '中文_斜体_中文\n');
+    // And the target is tested too: '**' here is emphasis, '__' would not be.
+    assert.equal(emph('中文**加粗**中文\n', strong('underscores')), '中文**加粗**中文\n');
+    assert.equal(emph('中文__加粗__中文\n', strong('asterisks')), '中文__加粗__中文\n');
+  });
+  test('leaves a run of three delimiters alone', () => {
+    assert.equal(emph('***both***\n', strong('underscores')), '***both***\n');
+  });
+  test('never reaches into a protected region', () => {
+    const src = 'a `__b__` c\n';
+    assert.equal(emph(src, strong('asterisks')), src);
+    const fence = '```\n__b__\n```\n';
+    assert.equal(emph(fence, strong('asterisks')), fence);
+  });
+  test('settles in one pass', () => {
+    const options: FormatOptionsInput = {
+      typography: { emphasis: { strong: 'asterisks', em: 'asterisk', strikethrough: 'double' } },
+    };
+    const once = emph('a __b__ _c_ ~d~\n', options);
+    assert.equal(emph(once, options), once);
   });
 });
