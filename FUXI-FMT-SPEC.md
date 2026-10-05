@@ -74,7 +74,7 @@ Rule IDs are stable and intended to become the rule registry's canonical identif
 
 **BLK-01 — Blank lines around blocks** · default `exact`
 
-Insert blank lines around top-level blocks: paragraphs, headings, lists, fenced code, blockquotes, tables, thematic breaks, HTML blocks, and the boundary between front matter and body.
+Insert blank lines around top-level blocks: paragraphs, headings, lists, fenced code, blockquotes, tables, thematic breaks, HTML blocks, and the boundary between front matter and body. Not between two blocks that both sit inside a block quote: a blank line there ends the quote, so the author's spacing is left alone (section 7, item 0).
 
 - `blankLines.aroundBlocks: "exact" | "atLeast"` (default `exact`).
 - `atLeast` is only observably different from `exact` when BLK-02 allows more than one blank line; this must be documented rather than left implicit.
@@ -265,6 +265,8 @@ Unparseable or unterminated front matter is copied verbatim with a diagnostic. I
 
 These are the general form of "don't touch code blocks". Every one is byte-verbatim.
 
+**A region inside a block quote is still a region.** The marker chain is part of it: a fence written after a `>` opens a fence, its body is code, and the marker bytes belong to the region like every other byte in it. The chain is peeled to *find* the region, never to rewrite it - the region starts at the beginning of the first line and ends at the end of the last, markers included - and display math, an HTML block and indented code stack the same way. Detections do not stop at a quote either. Before this, a quoted fence was not a region at all: its body was spaced like prose and the author was told about an unmatched backtick instead of the fence that never closed.
+
 **SAFE-01 — Fenced and indented code bodies** · never modified, never formatted by a language formatter, never trimmed of leading/trailing blank lines, never dedented.
 
 **SAFE-02 — Fence delimiter line** · the fence's **indentation and info string are byte-verbatim**, including Pandoc-style attributes such as ` ~~~ c {3, 4}`. Only the fence character and length may change (BLK-10).
@@ -328,11 +330,11 @@ Each warning rule can be switched off individually in the editor (CFG-02); the c
 
 An unclosed fenced block is **legal CommonMark** — the block simply runs to the end of the document — and this section says so out loud rather than pretending the rule is a parse error. The parse is well defined and the output for what was written is correct; the author has almost certainly forgotten a delimiter. Calling it an error is a deliberate over-reaction in favour of being told, because the alternative is the one two separate reports described: a document that formats everywhere except after the mistake, with nothing said about why.
 
-**DET-01 — Unterminated fenced code block** · error. No closing fence was found, so every line after the opener is code (SAFE-01). Reported at the opening fence.
+**DET-01 — Unterminated fenced code block** · error. No closing fence was found, so every line after the opener is code (SAFE-01). Reported at the opening fence. A fence inside a block quote is unterminated when the quote ends before the fence does: a blank line ends the quote, and the author is told rather than the formatter reading the next quote's text as code.
 
 **DET-02 — Unterminated front matter** · error. Line 1 is `---` and the first non-blank line after it is a YAML key, so the whole document was read as front matter (FM-01, FM-02). Reported at line 1.
 
-**DET-04 — Unterminated display math** · error. A `$$` line with no closing `$$` line, so every line after the opener was read as display math (SAFE-03). Reported at the opening line.
+**DET-04 — Unterminated display math** · error. A `$$` line with no closing `$$` line, so every line after the opener was read as display math (SAFE-03). Reported at the opening line. Inside a block quote the same test applies within the quote.
 
 **DET-06 — Unmatched backtick** · warning. A backtick no code span claims, outside a protected region and not backslash-escaped. CommonMark makes it literal text, which is why nobody notices: the file looks the same either way.
 
@@ -496,10 +498,14 @@ Everything in this block is implemented.
 
 ## 7. Open items
 
-0. **`blankLines.insideBlockquotes` was withdrawn, not built.** A blank line inside a blockquote is
-   a `>` line; a `>` line is non-blank; GRT-01 compares the non-blank line count and refuses any
-   change to it. The only mechanism that could implement the option is the one the semantic guard
-   forbids, so the option was withdrawn rather than the guard weakened.
+0. **`blankLines.insideBlockquotes` was withdrawn, not built, and the policy stands down inside
+   quotes.** A blank line inside a blockquote is a `>` line; a `>` line is non-blank; GRT-01 compares
+   the non-blank line count and refuses any change to it. The only mechanism that could implement the
+   option is the one the semantic guard forbids, so the option was withdrawn rather than the guard
+   weakened. What the policy must not do is the opposite: an *empty* line inserted between two quoted
+   blocks is invisible to that same count - an empty line is blank - and it still ends the quote, so
+   BLK-01 leaves the author's spacing inside a quote exactly as written. A quoted blank line is the
+   author's to write.
 
 
 1. **Fence indentation vs list-indentation normalization (SAFE-02 x BLK-08).** SAFE-02 says a fence's indentation is byte-verbatim. BLK-08 normalizes list indentation. When a fenced block sits *inside* a list item, normalizing the list changes the indentation the fence must have, or the block escapes its parent. Options: (a) the fence follows its list context, so SAFE-02 applies only to fences not inside lists; (b) any list containing a fence is excluded from indentation normalization; (c) normalization is skipped and a diagnostic is reported. **Resolved: option (b).** A list containing a protected block is excluded from

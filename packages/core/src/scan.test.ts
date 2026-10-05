@@ -180,3 +180,45 @@ describe('scan: region contract', () => {
     }
   });
 });
+
+describe('scan: a protected region inside a block quote (SAFE-01, SAFE-04)', () => {
+  test('a quoted fence is a fence, markers included in the region', () => {
+    const src = '> ' + TICK.repeat(3) + '\n> 中文abc\n> ' + TICK.repeat(3) + '\n';
+    assert.deepEqual(slices(src), [
+      ['fencedCode', '> ' + TICK.repeat(3) + '\n> 中文abc\n> ' + TICK.repeat(3)],
+    ]);
+  });
+
+  test('an unterminated quoted fence ends where the quote ends', () => {
+    const src = '> ' + TICK.repeat(3) + '\n> code\n\ntext\n';
+    assert.deepEqual(slices(src), [
+      ['fencedCode', '> ' + TICK.repeat(3) + '\n> code'],
+    ]);
+  });
+
+  test('a quoted display math block is a math block, not two inline spans', () => {
+    const src = '> $$\n> 中文abc\n> $$\n';
+    assert.deepEqual(slices(src), [['mathBlock', '> $$\n> 中文abc\n> $$']]);
+  });
+
+  test('a quoted HTML block is an HTML block', () => {
+    const src = '> <div>\n> 中文,abc\n> </div>\n';
+    assert.deepEqual(slices(src), [['htmlBlock', '> <div>\n> 中文,abc\n> </div>']]);
+  });
+
+  test('a quoted indented code block is code', () => {
+    const src = '>\n>     中文abc\n';
+    assert.deepEqual(slices(src), [['indentedCode', '>     中文abc']]);
+  });
+
+  test('a bare > is a blank line, so it ends a quoted HTML block', () => {
+    const src = '> <div>\n>\n> 中文,abc\n> </div>\n';
+    const kinds = scanRegions(src).map((r) => r.kind);
+    assert.deepEqual(kinds, ['htmlBlock']);
+    assert.equal(slices(src)[0]?.[1], '> <div>');
+  });
+
+  test('front matter is still a document-start thing, not a quoted one', () => {
+    assert.deepEqual(slices('> ---\ntitle: x\n> ---\n'), []);
+  });
+});

@@ -65,6 +65,59 @@ function extendsBlock(current: ContentKind, next: ContentKind): boolean {
   return false;
 }
 
+/**
+ * Block quote markers at the head of a line: the `>` chain, each marker followed by
+ * at most one space. This is the syntax TYPO-07 and BLK-09 both need to know about,
+ * and the scanner needs it to see a protected region that is wrapped in a quote.
+ */
+export interface QuotePrefix {
+  /** Offset just past the last marker. */
+  readonly end: number;
+  /** How many markers the chain has. */
+  readonly depth: number;
+}
+
+const QUOTE_MARKER = /^[ \t]*>/;
+
+export function quotePrefix(line: string): QuotePrefix {
+  let at = 0;
+  let depth = 0;
+  for (;;) {
+    const match = QUOTE_MARKER.exec(line.slice(at));
+    if (match === null) return { end: at, depth };
+    at += match[0].length;
+    depth++;
+  }
+}
+
+const LIST_MARKER = /^[ \t]*(?:[-*+]|\d{1,9}[.)])(?=[ \t]|$)/;
+const HEADING_MARKER = /^[ \t]*#{1,6}(?=[ \t]|$)/;
+
+/**
+ * Where the content of a line starts, past the block markers at its head and the
+ * whitespace the last of them is separated by.
+ *
+ * TYPO-07 deletes the whitespace beside full-width punctuation, and at a block
+ * marker that whitespace is syntax rather than spacing: `- “引用”` is a list
+ * item, while `-“引用”` is a paragraph that happens to start with a hyphen. The
+ * two are the same characters with a different meaning, and the formatter is not
+ * free to choose the second. The markers recognised here mirror the
+ * classification above; what is needed is where the marker chain ends, not
+ * whether the line is one.
+ */
+export function contentStartOf(line: string): number {
+  let at = 0;
+  for (;;) {
+    const rest = line.slice(at);
+    const match =
+      QUOTE_MARKER.exec(rest) ?? LIST_MARKER.exec(rest) ?? HEADING_MARKER.exec(rest);
+    if (match === null) break;
+    at += match[0].length;
+  }
+  const spaces = /^[ \t]*/.exec(line.slice(at))?.[0] ?? '';
+  return at + spaces.length;
+}
+
 export function segment(texts: readonly string[], atomic: readonly AtomicRange[]): Block[] {
   const starts = new Map<number, AtomicRange>();
   const inside = new Set<number>();

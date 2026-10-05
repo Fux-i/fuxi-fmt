@@ -29,6 +29,16 @@ with release candidates suffixed `-rcN`.
   block inside a quote code. The rule now owns exactly one space after the marker chain: it inserts a
   missing one, and the content keeps the indentation the author wrote.
 
+- **A fenced code block, a display math block or an HTML block inside a block quote is now protected,
+  and an unterminated one refuses the document.** The scanner looked for block markers at the start of
+  the line and never past a `>`, so a quoted fence was not a region at all: its body was spaced like
+  prose - a code body was edited - and the report named an unmatched backtick instead of the fence
+  that never closed. Quoted regions are now found by peeling the marker chain, and the markers stay
+  inside the region, byte-verbatim. A quote also ends where CommonMark says it does, so a quoted
+  fence with a blank line in it is unterminated (DET-01) rather than swallowing the next quote. In
+  the same change: BLK-01 no longer inserts a blank line between two quoted blocks, because an empty
+  line ends the quote and the guard cannot see an *empty* line in its non-blank count.
+
 ## [0.26.0] - 2026-10-04
 
 ### Added

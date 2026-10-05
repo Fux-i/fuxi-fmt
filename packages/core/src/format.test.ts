@@ -133,3 +133,30 @@ describe('GRT guarantees', () => {
     assert.equal(format('# A\n\ntext\n').changed, false);
   });
 });
+
+describe('a protected region inside a block quote (SAFE-01, SAFE-04)', () => {
+  test('a quoted fence body keeps its bytes', () => {
+    const src = '> ```\n> 中文abc\n> ```\n';
+    assert.equal(out(src), src);
+  });
+  test('a quoted math body keeps its bytes', () => {
+    const src = '> $$\n> 中文abc\n> $$\n';
+    assert.equal(out(src), src);
+  });
+  test('a quoted HTML block keeps its bytes', () => {
+    const src = '> <div>\n> 中文,abc\n> </div>\n';
+    assert.equal(out(src), src);
+  });
+  // A blank line ends a block quote. An invented one is an empty line, which the
+  // guard's non-blank count cannot see, so it would split a quote in silence.
+  test('no blank line is invented between two quoted blocks', () => {
+    const fence = '> para\n> ```\n> code\n> ```\n';
+    assert.equal(out(fence), fence);
+    const code = '>\n>     indented\n';
+    assert.equal(out(code), code);
+  });
+  test('a line without the marker still ends the quote', () => {
+    const src = '> para\n\n> other\n';
+    assert.equal(out(src), src);
+  });
+});

@@ -256,3 +256,29 @@ describe('DET-12 a list left alone because it contains a protected block', () =>
   });
 });
 
+
+describe('DET-01 … DET-04 inside a block quote', () => {
+  test('an unterminated fence inside a quote refuses the document and names the line', () => {
+    const input = '> text\n> ' + FENCE + '\n> 中文abc\n';
+    const result = format(input);
+    assert.equal(result.output, input);
+    assert.equal(result.diagnostics.length, 1);
+    assert.equal(result.diagnostics[0]?.ruleId, 'DET-01');
+    assert.equal(result.diagnostics[0]?.severity, 'error');
+    assert.equal(result.diagnostics[0]?.line, 1);
+  });
+
+  test('an unterminated math block inside a quote is refused', () => {
+    const input = '> $$\n> 中文abc\n';
+    const result = format(input);
+    assert.equal(result.diagnostics[0]?.ruleId, 'DET-04');
+    assert.equal(result.diagnostics[0]?.severity, 'error');
+  });
+
+  test('a terminated quoted fence is not refused, and its body keeps its bytes', () => {
+    const input = '> ' + FENCE + '\n> 中文abc\n> ' + FENCE + '\n';
+    const result = format(input);
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.output, input);
+  });
+});

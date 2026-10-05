@@ -1,4 +1,4 @@
-import { segment, type AtomicRange, type BlockKind } from './blocks.ts';
+import { quotePrefix, segment, type AtomicRange, type BlockKind } from './blocks.ts';
 import { detect, type Detection } from './detect.ts';
 import { checkSemantics } from './guard.ts';
 import { english, type MessageArgs, type MessageId } from './messages.ts';
@@ -265,6 +265,25 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     return left !== null && left === right;
   };
 
+  /**
+   * A gap between two blocks that both sit inside a block quote.
+   *
+   * A blank line ends a block quote, so a blank line inserted between two quoted
+   * blocks splits one quote into two - and an invented blank is an *empty* line,
+   * which the guard's non-blank line count cannot see. The blank-line policy
+   * therefore stands down inside quotes and leaves the author's spacing exactly
+   * as written. Section 7 item 0 records why the alternative - writing a quoted
+   * blank line - is the guard's business rather than this pass's.
+   */
+  const gapInsideQuote = (index: number): boolean => {
+    const block = blocks[index];
+    const previous = blocks[index - 1];
+    if (block === undefined || previous === undefined) return false;
+    const before = reindented[previous.end - 1] ?? '';
+    const after = reindented[block.start] ?? '';
+    return quotePrefix(before).depth > 0 && quotePrefix(after).depth > 0;
+  };
+
   /** A gap between two blocks that lies inside a list containing a protected block. */
   const gapIsExcluded = (index: number): boolean => {
     const block = blocks[index];
@@ -283,7 +302,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     const block = blocks[i];
     if (block === undefined) continue;
     if (i > 0) {
-      const untouched = gapIsExcluded(i);
+      const untouched = gapIsExcluded(i) || gapInsideQuote(i);
       let blanks = untouched ? block.blanksBefore : blankCount(block.blanksBefore, options);
       if (!untouched && listBlanks !== 'preserve' && sameList(i - 1, i)) {
         blanks = listBlanks === 'remove' ? 0 : 1;

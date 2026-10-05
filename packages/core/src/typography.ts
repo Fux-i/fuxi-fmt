@@ -15,6 +15,7 @@
  * TYPO-03 (compound names), TYPO-07 (full-width punctuation), TYPO-09 (hashtags).
  */
 
+import { contentStartOf } from './blocks.ts';
 import { isCjk, isFullPunct, isSpacingChar, type CjkClass } from './chars.ts';
 import type { CharRange } from './ignores.ts';
 import type { TypographyOptions } from './options.ts';
@@ -27,35 +28,6 @@ interface Unit {
   readonly cls: CharClass;
   /** Offset of the unit in the text being formatted. */
   readonly start: number;
-}
-
-/**
- * Where the content of a line starts, past the block markers at its head and the
- * whitespace the last of them is separated by.
- *
- * TYPO-07 deletes the whitespace beside full-width punctuation, and at a block
- * marker that whitespace is syntax rather than spacing: `- “引用”` is a list
- * item, while `-“引用”` is a paragraph that happens to start with a hyphen. The
- * two are the same characters with a different meaning, and the formatter is not
- * free to choose the second. The markers recognised here mirror the
- * classification in blocks.ts; what is needed is where the marker chain ends, not
- * whether the line is one.
- */
-const BLOCKQUOTE_MARKER = /^[ \t]*>/;
-const LIST_MARKER = /^[ \t]*(?:[-*+]|\d{1,9}[.)])(?=[ \t]|$)/;
-const HEADING_MARKER = /^[ \t]*#{1,6}(?=[ \t]|$)/;
-
-function contentStartOf(line: string): number {
-  let at = 0;
-  for (;;) {
-    const rest = line.slice(at);
-    const match =
-      BLOCKQUOTE_MARKER.exec(rest) ?? LIST_MARKER.exec(rest) ?? HEADING_MARKER.exec(rest);
-    if (match === null) break;
-    at += match[0].length;
-  }
-  const spaces = /^[ \t]*/.exec(line.slice(at))?.[0] ?? '';
-  return at + spaces.length;
 }
 
 function classOf(ch: string, options: TypographyOptions): CharClass {
