@@ -9,6 +9,14 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
+### Removed
+
+- **The benchmark harness (`.bench/`) is no longer in the tree.** Appendix B of the specification keeps
+  the method and section 1.3 keeps its numbers, both now marked as measurements taken at the time
+  rather than results this project re-runs; the harness itself stays in the history if they need
+  re-deriving. Nothing referenced it but those two documents — no script, no test, no workflow — and a
+  generated 372 KB fixture, two scripts and a Rust crate is a lot of tree for that.
+
 ### Fixed
 
 - **A list item, a heading or any nested marker that starts with full-width punctuation is no longer

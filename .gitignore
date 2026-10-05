@@ -14,8 +14,6 @@ coverage/
 
 # scratch
 .probe/
-.bench/fixture.md
-.bench/rustbench/target/
 .cargo/
 
 # editors / os

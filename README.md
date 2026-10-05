@@ -245,7 +245,6 @@ packages/
 FUXI-FMT-SPEC.md     normative behavioural contract
 MAINSTREAM_MD_FORMATTERS_REPORT.md
                      prior-art survey, with primary sources
-.bench/              benchmark harness (see Appendix B of the spec)
 ```
 
 The CLI and the extension are thin adapters over `@fuxi-fmt/core`, which never imports from
