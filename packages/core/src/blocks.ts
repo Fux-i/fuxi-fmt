@@ -92,6 +92,21 @@ export function quotePrefix(line: string): QuotePrefix {
   }
 }
 
+/**
+ * The line as it reads from inside its block quote markers.
+ *
+ * The marker chain is a prefix, so what a quoted line *is* - a list item, a
+ * heading, a blank line - is what its content is. A bare `>` is a blank line
+ * inside the quote, which is what lets a rule put a blank line there at all.
+ */
+export function quoteContentOf(line: string): string {
+  const quote = quotePrefix(line);
+  if (quote.depth === 0) return line;
+  const after = line.charCodeAt(quote.end);
+  const start = after === 32 || after === 9 ? quote.end + 1 : quote.end;
+  return line.slice(start);
+}
+
 const LIST_MARKER = /^[ \t]*(?:[-*+]|\d{1,9}[.)])(?=[ \t]|$)/;
 const HEADING_MARKER = /^[ \t]*#{1,6}(?=[ \t]|$)/;
 

@@ -41,6 +41,17 @@ with release candidates suffixed `-rcN`.
   DET-10 now also reports a delimiter row that declares a different number of columns from its
   header, and both the rule and the detection understand tables written without outer pipes.
 
+- **BLK-14: a block quote is a prefix, not a wall.** What is inside a quote is a document like any
+  other, and the rules now act on it as one: a quoted list is reindented to the canonical width
+  (a quoted item used to not be an item at all, so BLK-08 never saw one), a quoted list and a
+  top-level list are two lists even when they share a marker, and the table, thematic-break and
+  emphasis rules all reach inside. This builds on the protection fix in this release, which is what
+  made the interiors safe to touch. Two supporting changes came with it: the semantic guard compares
+  a quoted line by its *content*, so a nested list flattened inside a quote is a violation rather
+  than an invisible kind-preserving edit, and a bare `>` counts as the blank line it renders as, so
+  a rule may add or remove one without the non-blank line count objecting. The blank-line policy still
+  stands down inside quotes, for the reason recorded in section 7 item 0.
+
 ### Changed
 
 - **The settings are findable by the product name.** Searching the Settings UI for `fuxi 标记` used to

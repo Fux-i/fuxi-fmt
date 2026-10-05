@@ -5,8 +5,19 @@ import { scanListItems } from './list-scan.ts';
 describe('BLK-08 list item scanning', () => {
   test('records the marker and content columns of a flat item', () => {
     assert.deepEqual(scanListItems(['- a']), [
-      { line: 0, indent: 0, marker: '-', contentColumn: 2, ordered: false, content: 'a' },
+      { line: 0, prefix: '', indent: 0, marker: '-', contentColumn: 2, ordered: false, content: 'a' },
     ]);
+  });
+
+  test('reads an item from inside its block quote, indent relative to the prefix', () => {
+    // BLK-14: a quoted list is a list. The indentation is measured from the
+    // content, so a nested quoted item keeps its nesting rather than being read as
+    // a flat item at the column the '>' happens to occupy.
+    const items = scanListItems(['> - a', '>   - b']);
+    assert.equal(items[0]?.indent, 0);
+    assert.equal(items[1]?.indent, 2);
+    assert.equal(items[1]?.prefix, '> ');
+    assert.equal(items[1]?.contentColumn, 4);
   });
 
   test('keeps the indentation rather than inferring depth from it', () => {

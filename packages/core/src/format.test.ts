@@ -160,3 +160,22 @@ describe('a protected region inside a block quote (SAFE-01, SAFE-04)', () => {
     assert.equal(out(src), src);
   });
 });
+
+describe('BLK-14 a block quote is a prefix, not a wall', () => {
+  test('a quoted list is reindented like any other list', () => {
+    assert.equal(out('> - a\n>     - b\n'), '> - a\n>   - b\n');
+    assert.equal(out('> 1. a\n>      1. b\n'), '> 1. a\n>    1. b\n');
+  });
+  test('a blank line still separates a quoted list from a top-level one', () => {
+    const src = '- a\n\n> - b\n';
+    assert.equal(out(src), src);
+  });
+  test('the marker of a quoted item is left where the author put it', () => {
+    const src = '> - a\n>   - b\n>     - c\n';
+    assert.equal(out(src), src);
+  });
+  test('a quoted blank line is the author’s to write', () => {
+    const src = '> - a\n>\n> - b\n';
+    assert.equal(out(src), src);
+  });
+});

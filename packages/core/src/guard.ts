@@ -18,7 +18,7 @@
  * renumbering lists, spacing around CJK and normalising blank lines all pass.
  */
 
-import { classifyContent } from './blocks.ts';
+import { classifyContent, quoteContentOf } from './blocks.ts';
 import type { MessageArgs, MessageId } from './messages.ts';
 import { scanRegions, type Region } from './scan.ts';
 
@@ -80,13 +80,20 @@ interface Anchor {
   readonly line: number;
 }
 
-/** The non-blank lines, each still knowing the line it was on. */
+/**
+ * The non-blank lines, each still knowing the line it was on.
+ *
+ * Blankness is decided on the content, so a bare `>` counts as the blank line it
+ * renders as rather than as a line of text. Without that, no rule could add or
+ * remove a blank line inside a block quote: the guard would read the `>` line as a
+ * new line and refuse the document for it (section 7, item 0).
+ */
 function nonBlankLines(text: string): Anchor[] {
   const out: Anchor[] = [];
   const lines = text.split('\n');
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? '';
-    if (line.trim().length > 0) out.push({ text: line, line: i });
+    if (quoteContentOf(line).trim().length > 0) out.push({ text: line, line: i });
   }
   return out;
 }
@@ -167,8 +174,12 @@ export function checkSemantics(
   }
 
   for (let i = 0; i < beforeLines.length; i++) {
-    const a = beforeLines[i]?.text ?? '';
-    const b = afterLines[i]?.text ?? '';
+    // Compared as content rather than as raw lines: every quoted line is a
+    // 'blockquote' to the classifier, so a change inside a quote - a nested list
+    // flattened into siblings, a marker eaten - used to be invisible here. It is
+    // the same comparison as before for a line that is not in a quote.
+    const a = quoteContentOf(beforeLines[i]?.text ?? '');
+    const b = quoteContentOf(afterLines[i]?.text ?? '');
     const kindA = classifyContent(a);
     const kindB = classifyContent(b);
     if (kindA === kindB) continue;

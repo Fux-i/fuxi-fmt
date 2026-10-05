@@ -289,7 +289,10 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     for (let j = block.start; j < block.end; j++) {
       if (!isItem(j)) continue;
       const item = listItems.find((candidate) => candidate.line === j);
-      return item === undefined ? null : item.marker;
+      // The prefix is part of a list's identity: a quoted list and a top-level list
+      // are two lists, not one, so a blank line between them separates them (BLK-06,
+      // BLK-03) and must not be removed as if it were inside one.
+      return item === undefined ? null : item.prefix + item.marker;
     }
     return null;
   };

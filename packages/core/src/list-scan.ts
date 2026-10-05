@@ -16,10 +16,18 @@
  * rather than guessed at, and neither occurs in the fixture corpus.
  */
 
+import { quotePrefix } from './blocks.ts';
+
 export interface ListItem {
   /** Index into the lines array. */
   readonly line: number;
-  /** Width of the leading whitespace. Tabs count as one. */
+  /**
+   * The block quote markers in front of the item, with their one space, so the
+   * plan can put an item back at a new indentation *inside* its quote. Empty for
+   * an item that is not quoted.
+   */
+  readonly prefix: string;
+  /** Width of the whitespace between the prefix and the marker. Tabs count as one. */
   readonly indent: number;
   /** The marker as written: '-', '+', '*', or a number with '.' or ')'. */
   readonly marker: string;
@@ -34,13 +42,24 @@ const ITEM = /^(\s*)([-*+]|\d{1,9}[.)])(\s+)(.*)$/;
 export function scanListItems(lines: readonly string[]): ListItem[] {
   const items: ListItem[] = [];
   for (let i = 0; i < lines.length; i++) {
-    const match = ITEM.exec(lines[i] ?? '');
+    const text = lines[i] ?? '';
+    // A quoted list is a list: the marker chain is a prefix, so the item is read
+    // from inside it and its indentation is measured from there. Without this a
+    // quoted item was not an item at all, and BLK-08 never touched one.
+    const quote = quotePrefix(text);
+    // With no marker there is no separator either: the leading whitespace is the
+    // item's own indentation, and eating a column of it would shift every list.
+    const afterQuote =
+      quote.depth > 0 && isSpace(text.charCodeAt(quote.end)) ? quote.end + 1 : quote.end;
+    const prefix = text.slice(0, afterQuote);
+    const match = ITEM.exec(text.slice(afterQuote));
     if (match === null) continue;
     const indent = (match[1] ?? '').length;
     const marker = match[2] ?? '';
     const gap = (match[3] ?? '').length;
     items.push({
       line: i,
+      prefix,
       indent,
       marker,
       contentColumn: indent + marker.length + gap,
@@ -49,6 +68,11 @@ export function scanListItems(lines: readonly string[]): ListItem[] {
     });
   }
   return items;
+}
+
+/** Space or tab, by character code. */
+function isSpace(code: number): boolean {
+  return code === 32 || code === 9;
 }
 
 /**
@@ -229,14 +253,26 @@ export function planListIndent(
     if (delta === 0) continue;
 
     const original = lines[item.line] ?? '';
-    planned.set(item.line, ' '.repeat(target) + original.slice(item.indent));
+    planned.set(
+      item.line,
+      item.prefix + ' '.repeat(target) + original.slice(item.prefix.length + item.indent),
+    );
 
     for (let j = item.line + 1; j < lines.length; j++) {
       const text = lines[j] ?? '';
       if (text.trim().length === 0 || isItemLine.has(j)) break;
-      const indent = (/^\s*/.exec(text)?.[0] ?? '').length;
+      // Continuation lines move by the same delta, inside whatever prefix each of
+      // them carries, so a quoted continuation stays quoted.
+      const quote = quotePrefix(text);
+      const afterQuote =
+        quote.depth > 0 && isSpace(text.charCodeAt(quote.end)) ? quote.end + 1 : quote.end;
+      const body = text.slice(afterQuote);
+      const indent = (/^\s*/.exec(body)?.[0] ?? '').length;
       if (indent < item.indent) break;
-      planned.set(j, ' '.repeat(Math.max(0, indent + delta)) + text.slice(indent));
+      planned.set(
+        j,
+        text.slice(0, afterQuote) + ' '.repeat(Math.max(0, indent + delta)) + body.slice(indent),
+      );
     }
   }
 

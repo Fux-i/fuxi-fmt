@@ -120,3 +120,21 @@ describe('GRT-01 the guard holds over a corpus of awkward documents', () => {
     });
   }
 });
+
+describe('GRT-01 a block quote is compared as content', () => {
+  test('a nested list flattened inside a quote is a violation', () => {
+    // Every quoted line is the same kind to the classifier, which is how this used
+    // to pass unnoticed.
+    const violations = checkSemantics('> - “引用”\n', '> -“引用”\n');
+    assert.equal(violations.length, 1);
+    assert.equal(violations[0]?.ruleId, 'GRT-01');
+    assert.deepEqual(violations[0]?.args, ['list', 'paragraph']);
+  });
+  test('a bare > is a blank line, so a rule may add one inside a quote', () => {
+    assert.deepEqual(checkSemantics('> a\n> b\n', '> a\n>\n> b\n'), []);
+  });
+  test('renumbering and marker spacing inside a quote are still intended', () => {
+    assert.deepEqual(checkSemantics('> 1. a\n> 3. b\n', '> 1. a\n> 2. b\n'), []);
+    assert.deepEqual(checkSemantics('>quote\n', '> quote\n'), []);
+  });
+});

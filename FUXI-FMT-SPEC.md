@@ -168,6 +168,15 @@ A GFM table is the one block whose source layout *is* its presentation, so paddi
 - **A pipe-less table is padded pipe-less.** GFM’s outer pipes are optional, while this formatter’s classifier reads `| a | b |` as a table and `a | b` as a paragraph, so adding the pipes would change what the line is for every pass that reads the classification. The author’s convention is kept, and so are the two edges: the first and last cells of a pipe-less row are not padded past their content, because trailing whitespace is invisible and exactly two trailing spaces would be a hard break the padding had invented.
 - **A table is not padded when its rows disagree with its header** — a missing cell is a content error that padding would hide — nor when the delimiter row declares a different number of columns. DET-10 reports both; this rule steps around the table.
 
+**BLK-14 — A block quote is a prefix** · always on
+
+The `>` chain is a prefix, not a wall: what is inside a quote is a document like any other, and every rule that applies outside applies inside. The chain is peeled to find the content and put back byte for byte, so a quoted list is renumbered (BLK-06) and reindented (BLK-08), a quoted table is padded (TBL-01), a quoted thematic break is normalised (BLK-13), and a quoted fence, math block or HTML block is a protected region (SAFE-01 – SAFE-04). Each quote depth is its own document, so `> > 1. a` and `> 1. b` are two lists rather than one sequence, and a quoted list and a top-level list are two lists even when they share a marker.
+
+Two things follow from that and are worth stating:
+
+- **A bare `>` is a blank line.** It renders as one, so the guard reads it as one: a rule may add or remove a blank line inside a quote without the non-blank line count changing, and a `>` line is not counted as content. This is what section 7 item 0 once said was impossible.
+- **The blank-line policy still stands down inside a quote.** Consecutive quoted lines are one block, so there is rarely a gap for BLK-01 to close, and where there is one - around a quoted fence - an *empty* line would end the quote rather than separate two blocks inside it. Writing a `>` line there instead would merge two quotes the author wrote as separate. The policy therefore leaves the author's spacing exactly as written, and `blankLines.insideBlockquotes` remains unbuilt (section 7, item 0).
+
 ### B. Inline structure
 
 **INL-01 — Inline code spacing** (see TYPO-01 for the mechanism)
@@ -387,7 +396,7 @@ Each non-goal is stated precisely, because "we don't do X" is only useful with a
 
 **NG-01 — Prose wrap.** No wrapping, no unwrapping, no reflowing. Lines are never joined and never split. This explicitly excludes the CJK hazard that makes re-printers wrong for this content: because CJK has no spaces to break at, a wrapping printer must split *between CJK characters* (Prettier ships `tests/format/markdown/splitCjkText/` fixtures for exactly this). fuxi-fmt never does it.
 
-**NG-02 — Table padding and alignment.** Cell padding, pipe alignment and column width are untouched. Delimiter-row repair and blank lines around tables are **not** part of this non-goal — they remain goals.
+**NG-02 — Table padding and alignment are not touched by default.** Cell padding, pipe alignment and column width are left as written unless `table.mode: "normalize"` asks for them (TBL-01); the default is the author's layout, which is what this non-goal was protecting. Delimiter-row repair and blank lines around tables are **not** part of this non-goal — they remain goals, and the delimiter row is now reported by DET-10 when its column count disagrees with the header.
 
 **NG-03 — Embedded code formatting.** No language formatter is ever invoked; fence bodies are never touched (SAFE-01).
 
@@ -397,7 +406,7 @@ Each non-goal is stated precisely, because "we don't do X" is only useful with a
 
 **NG-06 — Heading level renumbering.** Levels are not normalized or incremented.
 
-**NG-07 — Emphasis and strong marker normalization.** `_x_` is not rewritten to `*x*` or vice versa. Off by default if implemented at all; note that Prettier's default is underscores and dprint's `emphasisKind` default is also `underscores`.
+**NG-07 — Emphasis and strong markers are not rewritten unless asked.** `_x_` stays `_x_` and `*x*` stays `*x*` under the default, which is `preserve` for every kind (TYPO-12); the option exists because Prettier's default is underscores and dprint's `emphasisKind` default is also `underscores`, so a house style is a real preference rather than a defect. The rewrite never touches a pair the parser would not pair, and never a run of three or more delimiters.
 
 **NG-08 — Reference-link and inline-link conversion.** Authoring intent is preserved.
 
@@ -534,11 +543,14 @@ Everything in this block is implemented.
 
 ## 7. Open items
 
-0. **`blankLines.insideBlockquotes` was withdrawn, not built, and the policy stands down inside
-   quotes.** A blank line inside a blockquote is a `>` line; a `>` line is non-blank; GRT-01 compares
-   the non-blank line count and refuses any change to it. The only mechanism that could implement the
-   option is the one the semantic guard forbids, so the option was withdrawn rather than the guard
-   weakened. What the policy must not do is the opposite: an *empty* line inserted between two quoted
+0. **`blankLines.insideBlockquotes` was withdrawn, and one half of the reason has since been
+   removed.** A blank line inside a blockquote is a `>` line; a `>` line used to count as non-blank,
+   so GRT-01 refused any change to the number of them. That half is fixed: the guard now reads a bare
+   `>` as the blank line it renders as (BLK-14), so a rule may add or remove one. What remains is
+   that consecutive quoted lines are a single block, so there is no gap between two quoted blocks for
+   a policy to work on, and where a gap does exist - around a quoted fence - writing a `>` line would
+   merge two quotes the author kept apart. The policy stands down inside quotes rather than making
+   that call on the author's behalf. What the policy must not do is the opposite: an *empty* line inserted between two quoted
    blocks is invisible to that same count - an empty line is blank - and it still ends the quote, so
    BLK-01 leaves the author's spacing inside a quote exactly as written. A quoted blank line is the
    author's to write.
