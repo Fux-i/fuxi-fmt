@@ -41,6 +41,25 @@ export type QuoteStyle = 'preserve' | 'paired';
  * because length and internal spaces carry no meaning.
  */
 export type ThematicBreak = 'dashes' | 'asterisks' | 'underscores' | 'preserve';
+export type TableMode = 'preserve' | 'normalize';
+export type CjkWidth = 1 | 2;
+
+/**
+ * Table padding and alignment (TBL-01).
+ *
+ * `preserve` is the default because padding rewrites nearly every line of every
+ * table, and a table is the one block whose source layout is its presentation.
+ * `maxWidth` caps the padded width: a row that would exceed it is left exactly as
+ * written, so a few long rows cannot make the rest long with them.
+ * `cjkWidth` is how many columns a wide character occupies in the font being
+ * read - two in a fixed-pitch font, one in a proportional one.
+ */
+export interface TableOptions {
+  readonly mode: TableMode;
+  readonly maxWidth: number | null;
+  readonly cjkWidth: CjkWidth;
+}
+
 export type StrongStyle = 'asterisks' | 'underscores' | 'preserve';
 export type EmStyle = 'asterisk' | 'underscore' | 'preserve';
 export type StrikeStyle = 'double' | 'single' | 'preserve';
@@ -171,6 +190,8 @@ export interface FormatOptions {
   readonly codeBlock: CodeBlockOptions;
   /** The character a thematic break is written with (BLK-13). */
   readonly thematicBreak: ThematicBreak;
+  /** Table padding, alignment and width (TBL-01). */
+  readonly table: TableOptions;
   readonly endOfLine: EndOfLine;
   readonly ignore: IgnoreOptions;
 }
@@ -196,6 +217,12 @@ export interface TypographyInput {
   readonly spacingSymbols?: readonly string[];
 }
 
+export interface TableInput {
+  readonly mode?: TableMode;
+  readonly maxWidth?: number | null;
+  readonly cjkWidth?: CjkWidth;
+}
+
 export interface EmphasisInput {
   readonly strong?: StrongStyle;
   readonly em?: EmStyle;
@@ -217,6 +244,7 @@ export interface FormatOptionsInput {
   readonly list?: ListInput;
   readonly codeBlock?: CodeBlockInput;
   readonly thematicBreak?: ThematicBreak;
+  readonly table?: TableInput;
   readonly endOfLine?: EndOfLine;
   readonly ignore?: IgnoreInput;
 }
@@ -247,6 +275,7 @@ export const defaultOptions: FormatOptions = {
   },
   codeBlock: { fenceChar: 'backticks', fenceLength: true, trimBlankLines: true },
   thematicBreak: 'dashes',
+  table: { mode: 'preserve', maxWidth: null, cjkWidth: 2 },
   endOfLine: 'lf',
   ignore: {
     file: 'fuxi-fmt-ignore-file',
@@ -309,6 +338,15 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
         input?.codeBlock?.trimBlankLines ?? defaultOptions.codeBlock.trimBlankLines,
     },
     thematicBreak: input?.thematicBreak ?? defaultOptions.thematicBreak,
+    table: {
+      mode: input?.table?.mode ?? defaultOptions.table.mode,
+      // null is a meaningful value here too: no cap at all.
+      maxWidth:
+        input?.table?.maxWidth === undefined
+          ? defaultOptions.table.maxWidth
+          : input.table.maxWidth,
+      cjkWidth: input?.table?.cjkWidth ?? defaultOptions.table.cjkWidth,
+    },
     endOfLine: input?.endOfLine ?? defaultOptions.endOfLine,
     ignore: {
       file: input?.ignore?.file ?? defaultOptions.ignore.file,

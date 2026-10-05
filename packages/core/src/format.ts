@@ -20,6 +20,7 @@ import {
 import { normalizeQuotes } from './quotes.ts';
 import { applyTypography } from './typography.ts';
 import { normalizeEmphasis } from './emphasis.ts';
+import { normalizeTables } from './tables.ts';
 import { normalizeFullwidthAlphanumerics, normalizeParens, normalizePunctuation } from './widths.ts';
 
 /** The two characters a block marker may be separated by (BLK-09). */
@@ -270,7 +271,11 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     reindented[change.line] = change.text;
   }
 
-  const blocks = segment(reindented, ranges);
+  // TBL-01 pads table cells. It rewrites lines but never adds or removes one, so
+  // the passes above and below that index by line still see the document they
+  // were built for.
+  const tabled = normalizeTables(reindented, options.table, (index) => protectedLine[index] === true);
+  const blocks = segment(tabled, ranges);
 
   // BLK-03. A blank line between list items decides how the list renders, so the
   // policy is explicit. Removing one is only safe between items of the *same*
@@ -308,8 +313,8 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     const block = blocks[index];
     const previous = blocks[index - 1];
     if (block === undefined || previous === undefined) return false;
-    const before = reindented[previous.end - 1] ?? '';
-    const after = reindented[block.start] ?? '';
+    const before = tabled[previous.end - 1] ?? '';
+    const after = tabled[block.start] ?? '';
     return quotePrefix(before).depth > 0 && quotePrefix(after).depth > 0;
   };
 
@@ -350,7 +355,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
         parts.push('');
         partLines.push(-1);
       }
-      parts.push(reindented[j] ?? texts[j] ?? '');
+      parts.push(tabled[j] ?? texts[j] ?? '');
       partLines.push(j);
     }
   }

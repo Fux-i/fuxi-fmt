@@ -386,6 +386,46 @@
           ],
           "markdownDescription": "%fuxiFmt.typography.emphasis.strikethrough.description%"
         },
+        "fuxiFmt.table.mode": {
+          "keywords": ["fuxi", "fuxi-fmt"],
+          "type": "string",
+          "default": "preserve",
+          "scope": "resource",
+          "enum": [
+            "preserve",
+            "normalize"
+          ],
+          "enumDescriptions": [
+            "%fuxiFmt.table.mode.enum.0%",
+            "%fuxiFmt.table.mode.enum.1%"
+          ],
+          "markdownDescription": "%fuxiFmt.table.mode.description%"
+        },
+        "fuxiFmt.table.maxWidth": {
+          "keywords": ["fuxi", "fuxi-fmt"],
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null,
+          "scope": "resource",
+          "minimum": 1,
+          "markdownDescription": "%fuxiFmt.table.maxWidth.description%"
+        },
+        "fuxiFmt.table.cjkWidth": {
+          "keywords": ["fuxi", "fuxi-fmt"],
+          "enum": [
+            2,
+            1
+          ],
+          "default": 2,
+          "scope": "resource",
+          "enumDescriptions": [
+            "%fuxiFmt.table.cjkWidth.enum.0%",
+            "%fuxiFmt.table.cjkWidth.enum.1%"
+          ],
+          "markdownDescription": "%fuxiFmt.table.cjkWidth.description%"
+        },
         "fuxiFmt.list.orderedStyle": {
           "keywords": ["fuxi", "fuxi-fmt"],
           "type": "string",

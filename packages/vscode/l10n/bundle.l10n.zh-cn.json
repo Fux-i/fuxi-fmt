@@ -5,6 +5,7 @@
   "non-blank line count changed: {0} -> {1}": "非空行数发生了变化：{0} -> {1}",
   "protected region count changed: {0} -> {1}": "受保护区域的数量发生了变化：{0} -> {1}",
   "table row has {0} cells where the header has {1}: the row does not render in the columns above it": "表格这一行有 {0} 个单元格，而表头有 {1} 个：这一行不会按上面的列渲染",
+  "the delimiter row has {0} cells where the header has {1}: the columns cannot be aligned": "表格的分隔行有 {0} 个单元格，而表头有 {1} 个：这些列无法对齐",
   "this list is not reindented: it contains a protected block, and moving code the author placed at a fixed indentation is what SAFE-02 exists to prevent": "这个列表不做缩进调整：其中含有受保护的块，而移动作者固定在某个缩进位置的代码正是 SAFE-02 要防止的",
   "typography.semicolon was removed in favour of typography.punctuationChangeList; it was folded into the list as {0} and the old key will be removed in the next release": "typography.semicolon 已被 typography.punctuationChangeList 取代；它已作为 {0} 并入该列表，旧配置项将在下一个版本中移除",
   "unclosed link destination: the opening parenthesis is never closed, so this is not a link": "链接地址没有闭合：左括号始终没有对应的右括号，因此这不是一个链接",

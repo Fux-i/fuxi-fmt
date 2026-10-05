@@ -83,6 +83,10 @@ export const MESSAGES = {
     en: 'table row has {0} cells where the header has {1}: the row does not render in the columns above it',
     zh: '表格这一行有 {0} 个单元格，而表头有 {1} 个：这一行不会按上面的列渲染',
   },
+  'det.tableHeaderRagged': {
+    en: 'the delimiter row has {0} cells where the header has {1}: the columns cannot be aligned',
+    zh: '表格的分隔行有 {0} 个单元格，而表头有 {1} 个：这些列无法对齐',
+  },
   'det.listItemOrphan': {
     en: 'list item is indented as if nested but belongs to no parent: the indentation reads as a nested list that never becomes one',
     zh: '列表项的缩进看起来是嵌套，实际却不属于任何父项：这个缩进读起来像嵌套列表，但从未真正嵌套',

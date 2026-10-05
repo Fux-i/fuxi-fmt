@@ -32,6 +32,9 @@ import type {
   EmphasisInput,
   StrikeStyle,
   StrongStyle,
+  TableInput,
+  TableMode,
+  CjkWidth,
   TypographyInput,
 } from './options.ts';
 
@@ -45,6 +48,7 @@ interface Sections {
   list?: ListInput;
   codeBlock?: CodeBlockInput;
   thematicBreak?: ThematicBreak;
+  table?: TableInput;
   endOfLine?: EndOfLine;
   ignore?: IgnoreInput;
 }
@@ -208,6 +212,29 @@ function readSections(raw: Raw): FormatOptionsInput {
       'underscores',
       'preserve',
     ]);
+  }
+
+  if (raw.table !== undefined) {
+    const from = section(raw.table, 'table');
+    const to: { mode?: TableMode; maxWidth?: number | null; cjkWidth?: CjkWidth } = {};
+    if (from.mode !== undefined) {
+      to.mode = oneOf<TableMode>(from.mode, 'table.mode', ['preserve', 'normalize']);
+    }
+    if (from.maxWidth !== undefined) {
+      const cap = from.maxWidth;
+      if (cap !== null && (typeof cap !== 'number' || !Number.isInteger(cap) || cap < 1)) {
+        throw new Error('config: table.maxWidth must be a positive integer or null');
+      }
+      to.maxWidth = cap as number | null;
+    }
+    if (from.cjkWidth !== undefined) {
+      const width = from.cjkWidth;
+      if (width !== 1 && width !== 2) {
+        throw new Error('config: table.cjkWidth must be 1 or 2');
+      }
+      to.cjkWidth = width;
+    }
+    out.table = to;
   }
 
   if (raw.endOfLine !== undefined) {
@@ -464,6 +491,11 @@ export function mergeOptions(base: FormatOptionsInput, override: FormatOptionsIn
   if (ignore !== undefined) out.ignore = ignore;
   const thematicBreak = override.thematicBreak ?? base.thematicBreak;
   if (thematicBreak !== undefined) out.thematicBreak = thematicBreak;
+  const table = {
+    ...base.table,
+    ...override.table,
+  };
+  if (Object.keys(table).length > 0) out.table = table;
   const endOfLine = override.endOfLine ?? base.endOfLine;
   if (endOfLine !== undefined) out.endOfLine = endOfLine;
   return out;

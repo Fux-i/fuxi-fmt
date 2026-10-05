@@ -14,6 +14,9 @@
  * Spec references: DET-01, DET-03, GRT-04.
  */
 
+import { contentStartOf } from './blocks.ts';
+
+const BACKSLASH = 92;
 import type { CharRange } from './ignores.ts';
 import { assignParents, scanListItems } from './list-scan.ts';
 import type { MessageArgs, MessageId } from './messages.ts';
@@ -201,37 +204,82 @@ function unclosedInline(
   return out;
 }
 
-/** Cells in a table row: outer pipes stripped, escaped pipes not separators. */
-function cellCount(row: string): number {
-  const body = row.trim().replace(/^\|/, '').replace(/\|$/, '');
-  let cells = 1;
+/**
+ * The cells of a table row, or null when the line is not a row at all.
+ *
+ * Outer pipes are stripped, `\|` is content rather than a separator, and a row
+ * without a leading pipe still counts: GFM's pipes are optional on the outside,
+ * and a formatter that only sees `| a | b |` cannot report anything about
+ * `a | b`. A pipe inside a code span *is* a separator here, which is what GFM does
+ * with it.
+ */
+function tableCells(text: string): string[] | null {
+  const body = text.slice(contentStartOf(text));
+  if (!body.includes('|')) return null;
+  const cells: string[] = [];
+  let cell = '';
   for (let i = 0; i < body.length; i++) {
-    if (body.charCodeAt(i) === PIPE && !isEscaped(body, i)) cells++;
+    const code = body.charCodeAt(i);
+    if (code === BACKSLASH && body.charCodeAt(i + 1) === PIPE) {
+      cell += '\\|';
+      i++;
+      continue;
+    }
+    if (code === PIPE) {
+      cells.push(cell);
+      cell = '';
+      continue;
+    }
+    cell += body.charAt(i);
   }
+  cells.push(cell);
+  if ((cells[0] ?? '').trim().length === 0) cells.shift();
+  if (cells.length > 0 && (cells[cells.length - 1] ?? '').trim().length === 0) cells.pop();
   return cells;
 }
 
-const TABLE_ROW = /^\s{0,3}\|/;
-const TABLE_DELIMITER = /^\s{0,3}\|[-\s:|]+\|\s*$/;
+const TABLE_DELIMITER_CELL = /^\s*:?-+:?\s*$/;
 
-/** DET-10: a row with a different number of cells from the header. */
+function isDelimiterRow(text: string): boolean {
+  const cells = tableCells(text);
+  return cells !== null && cells.length > 0 && cells.every((cell) => TABLE_DELIMITER_CELL.test(cell));
+}
+
+/** DET-10: a row, or the delimiter row, with a different cell count from the header. */
 function raggedTables(lines: readonly SourceLine[], mask: Uint8Array): Detection[] {
   const out: Detection[] = [];
   for (let i = 0; i + 1 < lines.length; i++) {
     const header = lines[i];
-    if (header === undefined || !TABLE_ROW.test(header.text)) continue;
-    if (!TABLE_DELIMITER.test(lines[i + 1]?.text ?? '')) continue;
-    if (mask[header.start] === 1) continue;
-    const cells = cellCount(header.text);
+    if (header === undefined || mask[header.start] === 1) continue;
+    const headerCells = tableCells(header.text);
+    if (headerCells === null || isDelimiterRow(header.text)) continue;
+    if (!isDelimiterRow(lines[i + 1]?.text ?? '')) continue;
+
+    // The delimiter row is the one row that has to agree with the header: the
+    // columns it declares are the columns the table has, so a separator with the
+    // wrong count is a table nothing can align. Nothing else reports it - the row
+    // checks below start after it.
+    const declared = tableCells(lines[i + 1]?.text ?? '') ?? [];
+    if (declared.length !== headerCells.length) {
+      out.push({
+        ruleId: 'DET-10',
+        messageId: 'det.tableHeaderRagged',
+        args: [declared.length, headerCells.length],
+        line: i + 1,
+        severity: 'warning',
+      });
+    }
+
     for (let j = i + 2; j < lines.length; j++) {
       const row = lines[j];
-      if (row === undefined || !TABLE_ROW.test(row.text)) break;
-      const count = cellCount(row.text);
-      if (count === cells) continue;
+      if (row === undefined) break;
+      const cells = tableCells(row.text);
+      if (cells === null) break;
+      if (cells.length === headerCells.length) continue;
       out.push({
         ruleId: 'DET-10',
         messageId: 'det.tableRowRagged',
-        args: [count, cells],
+        args: [cells.length, headerCells.length],
         line: j,
         severity: 'warning',
       });

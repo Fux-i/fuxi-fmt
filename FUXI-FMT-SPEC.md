@@ -158,6 +158,16 @@ A line indented more than three columns past the opener is not a closing fence, 
 
 Two positions are left alone, because there the character is not a style but a different node. Three dashes directly under a paragraph is a **setext heading underline** — `text` followed by `---` is an H2 — which is also why `segment()` keeps those two lines in one block: separating them with a blank line rewrites the heading as a paragraph and a rule, and the guard, which compares line kinds, cannot see the difference. And three dashes on line 1 above a YAML key would open front matter (FM-01). In both, the line keeps the character its author wrote; every other target and every other position is the same node written differently. A break inside a block quote is normalised like any other, with the marker chain peeled and put back byte for byte.
 
+**TBL-01 — Table alignment and padding** · default `preserve`
+
+A GFM table is the one block whose source layout *is* its presentation, so padding is a choice rather than a default: `table.mode: "preserve" | "normalize"`, `table.maxWidth: number | null`, `table.cjkWidth: 2 | 1`.
+
+- **Width is display width.** A column of Han characters only lines up if each of them counts as two columns, which is what a fixed-pitch font does with East Asian Wide and Fullwidth characters. It is a convention and not a law — a proportional font, or one whose CJK glyphs are not exactly two Latin advances, will still look ragged — so `cjkWidth` makes it the reader’s choice. Unicode’s East Asian *Ambiguous* class (Greek, `°`, `±`, box drawing) counts as one column, which is what editor fonts do.
+- **Alignment is read, never invented.** The delimiter row’s colons are the author’s declaration; the rule reproduces them and fills the dashes to the column width. A column with no colon stays left-aligned and does not acquire one.
+- **`maxWidth` skips a line, not the table.** A row whose padded line would exceed the cap is left byte-identical, and the column widths are recomputed from the rows that remain, so one wide cell cannot stretch every other row to its size. Wrapping is not on the table: a GFM row is one line, and a `<br>` would be adding content rather than laying it out. Nothing is reported when a row is skipped — with a cap set, skipping is what was asked for.
+- **A pipe-less table is padded pipe-less.** GFM’s outer pipes are optional, while this formatter’s classifier reads `| a | b |` as a table and `a | b` as a paragraph, so adding the pipes would change what the line is for every pass that reads the classification. The author’s convention is kept, and so are the two edges: the first and last cells of a pipe-less row are not padded past their content, because trailing whitespace is invisible and exactly two trailing spaces would be a hard break the padding had invented.
+- **A table is not padded when its rows disagree with its header** — a missing cell is a content error that padding would hide — nor when the delimiter row declares a different number of columns. DET-10 reports both; this rule steps around the table.
+
 ### B. Inline structure
 
 **INL-01 — Inline code spacing** (see TYPO-01 for the mechanism)
@@ -477,6 +487,11 @@ codeBlock:
   # body, indentation and info string are always verbatim (SAFE-01, SAFE-02)
 
 thematicBreak: dashes     # dashes | asterisks | underscores | preserve
+
+table:
+  mode: preserve            # preserve | normalize
+  maxWidth: null            # null, or a column count
+  cjkWidth: 2               # 2 | 1
 
 typography:
   cjkSpacing: true

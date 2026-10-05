@@ -30,6 +30,17 @@ with release candidates suffixed `-rcN`.
   Runs of three delimiters are left alone; telling `***x***` apart from a run of three is a parser's
   job.
 
+- **TBL-01: tables can be aligned, and the width cap skips a line rather than the table.** `table.mode`
+  (default `preserve`) pads every cell to its column's display width and fills the delimiter row to
+  match, keeping the alignment the colons declare and never inventing one. `table.cjkWidth` (default
+  `2`) is how many columns a wide character occupies in *your* font — two is the fixed-pitch
+  convention, not a law, which is why it is a setting rather than an assumption. `table.maxWidth`
+  leaves a row that would exceed it byte-identical and recomputes the widths from the rows that
+  remain, so a few long rows cannot stretch the rest; nothing is reported, because with a cap set
+  that is what was asked for. Wrapping a cell is not on the table at all: a GFM row is one line.
+  DET-10 now also reports a delimiter row that declares a different number of columns from its
+  header, and both the rule and the detection understand tables written without outer pipes.
+
 ### Changed
 
 - **The settings are findable by the product name.** Searching the Settings UI for `fuxi 标记` used to
