@@ -64,6 +64,46 @@ describe('TYPO-07 no space around full-width punctuation', () => {
   });
 });
 
+/**
+ * A refused document comes back as its own input, so asserting on the output
+ * alone cannot tell "formatted, unchanged" from "not formatted at all". These
+ * cases assert that nothing was reported first.
+ */
+const clean = (src: string): string => {
+  const result = format(src);
+  assert.deepEqual(result.diagnostics, [], 'refused or warned: ' + JSON.stringify(src));
+  return result.output;
+};
+
+describe('TYPO-07 keeps the space a block marker is separated by', () => {
+  test('a list item whose content starts with full-width punctuation stays a list item', () => {
+    assert.equal(clean('- “引用”\n'), '- “引用”\n');
+    assert.equal(clean('1. “引用”\n'), '1. “引用”\n');
+    assert.equal(clean('- 《中文》\n'), '- 《中文》\n');
+  });
+  test('a heading whose text starts with full-width punctuation stays a heading', () => {
+    assert.equal(clean('# “引用”\n'), '# “引用”\n');
+  });
+  test('the inner marker of a list inside a blockquote survives too', () => {
+    assert.equal(clean('> - “引用”\n'), '> - “引用”\n');
+  });
+  test('the marker keeps its space and the rest of the line is still formatted', () => {
+    assert.equal(clean('- “引用”中abc\n'), '- “引用”中 abc\n');
+  });
+  test('a run of spaces after the marker collapses to the one it needs', () => {
+    assert.equal(clean('-   “引用”\n'), '- “引用”\n');
+  });
+  test('an unchanged document is reported as unchanged', () => {
+    const result = format('- “引用”\n');
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.changed, false);
+  });
+  test('prose still loses the space beside full-width punctuation', () => {
+    assert.equal(out('中文 ，“引用”\n'), '中文，“引用”\n');
+    assert.equal(out('中文 - “引用”\n'), '中文 -“引用”\n');
+  });
+});
+
 describe('TYPO-09 hashtags are not spaced', () => {
   test('leaves a CJK hashtag intact', () => {
     assert.equal(out('中文#标签\n'), '中文#标签\n');

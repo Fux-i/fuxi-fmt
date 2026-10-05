@@ -25,6 +25,37 @@ type CharClass = 'cjk' | 'latin' | 'fullpunct' | 'other' | 'space';
 interface Unit {
   readonly text: string;
   readonly cls: CharClass;
+  /** Offset of the unit in the text being formatted. */
+  readonly start: number;
+}
+
+/**
+ * Where the content of a line starts, past the block markers at its head and the
+ * whitespace the last of them is separated by.
+ *
+ * TYPO-07 deletes the whitespace beside full-width punctuation, and at a block
+ * marker that whitespace is syntax rather than spacing: `- “引用”` is a list
+ * item, while `-“引用”` is a paragraph that happens to start with a hyphen. The
+ * two are the same characters with a different meaning, and the formatter is not
+ * free to choose the second. The markers recognised here mirror the
+ * classification in blocks.ts; what is needed is where the marker chain ends, not
+ * whether the line is one.
+ */
+const BLOCKQUOTE_MARKER = /^[ \t]*>/;
+const LIST_MARKER = /^[ \t]*(?:[-*+]|\d{1,9}[.)])(?=[ \t]|$)/;
+const HEADING_MARKER = /^[ \t]*#{1,6}(?=[ \t]|$)/;
+
+function contentStartOf(line: string): number {
+  let at = 0;
+  for (;;) {
+    const rest = line.slice(at);
+    const match =
+      BLOCKQUOTE_MARKER.exec(rest) ?? LIST_MARKER.exec(rest) ?? HEADING_MARKER.exec(rest);
+    if (match === null) break;
+    at += match[0].length;
+  }
+  const spaces = /^[ \t]*/.exec(line.slice(at))?.[0] ?? '';
+  return at + spaces.length;
 }
 
 function classOf(ch: string, options: TypographyOptions): CharClass {
@@ -41,7 +72,10 @@ function classOf(ch: string, options: TypographyOptions): CharClass {
 /**
  * The separator to emit between two adjacent units.
  *
- * Full-width punctuation always wins: nothing is ever placed next to it.
+ * Full-width punctuation always wins: nothing is ever placed next to it. The one
+ * exception is the whitespace that separates a block marker from its content, and
+ * it is granted by the caller rather than here: whether a space is syntax or
+ * spacing is a fact about the line, not about the two units being joined.
  * A CJK to non-CJK boundary collapses whatever whitespace was present to one
  * space, inserting one when there was none. Everything else keeps the
  * author's whitespace verbatim, so collapsing never leaks outside the boundary.
@@ -68,7 +102,7 @@ function tokenize(
       let j = i;
       while (j < to && mask[j] === 1) j++;
       // A protected span behaves as one opaque Latin word (SAFE-03).
-      units.push({ text: text.slice(i, j), cls: 'latin' });
+      units.push({ text: text.slice(i, j), cls: 'latin', start: i });
       i = j;
       continue;
     }
@@ -76,11 +110,11 @@ function tokenize(
     if (ch === ' ' || ch === '\t') {
       let j = i;
       while (j < to && (text.charAt(j) === ' ' || text.charAt(j) === '\t')) j++;
-      units.push({ text: text.slice(i, j), cls: 'space' });
+      units.push({ text: text.slice(i, j), cls: 'space', start: i });
       i = j;
       continue;
     }
-    units.push({ text: ch, cls: classOf(ch, options) });
+    units.push({ text: ch, cls: classOf(ch, options), start: i });
     i++;
   }
   return units;
@@ -90,6 +124,8 @@ function formatLine(
   text: string,
   from: number,
   to: number,
+  /** Offset of the first content character, past the block markers (see markerHead). */
+  contentStart: number,
   mask: Uint8Array,
   blockMask: Uint8Array,
   options: TypographyOptions,
@@ -115,7 +151,17 @@ function formatLine(
       else pending = unit.text;
       continue;
     }
-    out += prev === null ? unit.text : separator(prev, unit, pending) + unit.text;
+    if (prev === null) {
+      out += unit.text;
+    } else {
+      let sep = separator(prev, unit, pending);
+      // TYPO-07 takes the whitespace from beside full-width punctuation, but not
+      // the whitespace that separates a block marker from its content: taking
+      // that one is what turns a list item into a paragraph. One space stays
+      // rather than the run the author wrote, because a separator is one space.
+      if (sep.length === 0 && pending.length > 0 && unit.start === contentStart) sep = ' ';
+      out += sep + unit.text;
+    }
     prev = unit;
     pending = '';
   }
@@ -154,8 +200,9 @@ export function applyTypography(
     if (line === undefined) continue;
     const next = lines[li + 1];
     const newline = text.slice(line.end, next === undefined ? text.length : next.start);
+    const contentStart = line.start + contentStartOf(text.slice(line.start, line.end));
     out +=
-      formatLine(text, line.start, line.end, mask, blockMask, options) +
+      formatLine(text, line.start, line.end, contentStart, mask, blockMask, options) +
       newline;
   }
   return out;

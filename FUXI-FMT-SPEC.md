@@ -219,6 +219,10 @@ Half-width punctuation in Chinese context converts to full-width. `punctuationSt
 
 Full-width punctuation (`，。！？；：、（）【】「」《》""''`) is a **boundary**, never a spacing target, and is never separated from its neighbours on either side.
 
+Except at a **block marker**, where the space is not spacing but syntax. `- “引用”` is a list item and `-“引用”` is a paragraph that happens to start with a hyphen; the two are the same characters and different documents, so the marker keeps its separator. The exemption is one boundary wide: one space is kept where the author wrote a run, the rest of the line is formatted as usual, and prose is untouched — `中文 ，“引用”` still becomes `中文，“引用”`. `# “标题”` and `1. （一）` are the same case as the list item, and `> - “引用”` is why the whole marker chain is peeled rather than only the first marker.
+
+Without this, the space TYPO-07 deleted was the space the block syntax is made of: the formatter refused the document (GRT-01 reports the list item that came back a paragraph), and inside a blockquote, where the line kind does not change, it silently rewrote `> - “引用”` as `> -“引用”` and flattened the inner list.
+
 **TYPO-08 — Parenthesis width follows the surrounding text** · default `mixed`
 
 A pair takes the width of the text it sits in, decided by the first non-blank character before the

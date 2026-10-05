@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases are tagged using the Linux kernel convention: `vMAJOR.MINOR[.PATCH]`,
 with release candidates suffixed `-rcN`.
 
+## [Unreleased]
+
+### Fixed
+
+- **A list item, a heading or any nested marker that starts with full-width punctuation is no longer
+  refused.** TYPO-07 deletes the space beside full-width punctuation, and at a block marker that
+  space is the syntax: `- “引用”` is a list item and `-“引用”` is a paragraph that happens to start
+  with a hyphen. The formatter made the second out of the first and then refused the file, naming the
+  line and reporting that the list item had come back a paragraph. Inside a blockquote the same edit
+  drew no complaint at all: `> - “引用”` came back as `> -“引用”`, the inner list flattened, and the
+  guard — which compares line kinds, and both lines are a blockquote — had nothing to compare. The
+  space a marker is separated by is now treated as syntax rather than spacing, so it is kept (one
+  space, where the author wrote a run) and the rest of the line is formatted as before; prose is
+  unaffected, and `中文 ，“引用”` still becomes `中文，“引用”`.
+
 ## [0.26.0] - 2026-10-04
 
 ### Added
@@ -609,7 +624,7 @@ First milestone.
 - **Block segmentation** with a blank-line policy (BLK-01, BLK-02, BLK-03).
 - **Marker spacing** (BLK-04, BLK-05, BLK-09).
 
-[Unreleased]: https://example.invalid/fuxi-fmt/compare/v0.7.0...HEAD
+[Unreleased]: https://example.invalid/fuxi-fmt/compare/v0.26.0...HEAD
 [0.7.0]: https://example.invalid/fuxi-fmt/compare/v0.6.0...v0.7.0
 [0.6.0]: https://example.invalid/fuxi-fmt/compare/v0.5.0...v0.6.0
 [0.5.0]: https://example.invalid/fuxi-fmt/compare/v0.4.0...v0.5.0
