@@ -51,8 +51,20 @@ describe('BLK-09 blockquote marker spacing', () => {
   test('inserts a space after the marker', () => {
     assert.equal(out('>quote\n'), '> quote\n');
   });
-  test('collapses extra spaces', () => {
-    assert.equal(out('>   quote\n'), '> quote\n');
+  // The whitespace after the marker's one space is the content's own
+  // indentation, not spacing: collapsing it decides whether a quoted list is
+  // nested or flat, and whether a quoted line is indented code.
+  test('keeps the indentation the content is written with', () => {
+    assert.equal(out('>   quote\n'), '>   quote\n');
+    assert.equal(out('>     indented code\n'), '>     indented code\n');
+  });
+  test('does not flatten a nested list inside a quote', () => {
+    const src = '> - a\n>   - b\n> - c\n';
+    assert.equal(out(src), src);
+  });
+  test('does not flatten a nested ordered list inside a quote', () => {
+    const src = '> 1. a\n>    1. b\n';
+    assert.equal(out(src), src);
   });
   test('handles adjacent nested markers', () => {
     assert.equal(out('>>nested\n'), '>> nested\n');

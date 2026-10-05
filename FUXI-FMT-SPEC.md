@@ -126,9 +126,9 @@ git-diff-friendly style; `preserve` changes no number at all.
 - **A top-level item keeps the offset it was written with**, because snapping an already-indented fragment to column 0 is the bug this scanner was written to replace. "Top-level" means the item opened the list.
 - **An item that falls out of an open ancestor is dedented to its container.** An item written shallower than the item above it cannot be that item's child, so it ends the list - and it used to keep the indent that made it look like a child anyway, which is how `1. 333` / `  - ok` stayed looking nested when it was not. Falling out means closing an item *shallower* than itself: closing a sibling at the same indent is ordinary list structure and changes nothing. The two situations look alike in the parent array and are not the same.
 
-**BLK-09 — Blockquote marker spacing**
+**BLK-09 — One space after the block quote marker**
 
-`>text` becomes `> text`; extra spaces after `>` collapse to one.
+`>text` becomes `> text`. That one space is the separator and the only whitespace this rule owns: everything after it is the content's own indentation and is left exactly as written. Collapsing it was a bug rather than a tidy-up — `> - a` followed by `>   - b` is a nested item, and `> - a` followed by `> - b` is two siblings — and the same spaces are what make an indented code block inside a quote code, which the guard cannot see because every quoted line is the same block kind. Adjacent markers (`>>`) stay adjacent; only whitespace between markers means the author wrote the spaced form (`> >`).
 
 **BLK-10 — Code fence delimiter normalization** · default `backticks`
 

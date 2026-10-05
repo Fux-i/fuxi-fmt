@@ -12,7 +12,10 @@ const UNORDERED = /^(\s*)([-*+])([ \t]+)([\s\S]*)$/;
 const HEADING = /^(\s{0,3})(#{1,6})(?!#)([ \t]*)([\s\S]*)$/;
 const LIST = /^(\s*)([-*+]|\d{1,9}[.)])([ \t]+)([\s\S]*)$/;
 const TASK = /^\[([ xX])\]([ \t]+)([\s\S]*)$/;
-const QUOTE = /^(\s*)((?:>+[ \t]*)+)([\s\S]*)$/;
+// BLK-09: one marker, at most one space after it, then the content. The old
+// pattern swallowed every space after every marker, which is why the content's
+// own indentation could not survive.
+const QUOTE = /^(\s*)((?:>[ \t]?)+)([\s\S]*)$/;
 
 /**
  * BLK-07. Thematic breaks and emphasis are excluded by asking the block
@@ -55,14 +58,16 @@ export function normalizeMarkers(text: string): string {
     const indent = quote[1] ?? '';
     const markers = quote[2] ?? '';
     const rest = quote[3] ?? '';
-    const count = (markers.match(/>/g) ?? []).length;
-    if (count === 1) return indent + '> ' + rest;
-    // Adjacent markers ('>>') stay adjacent; only whitespace *between* markers
-    // means the author wrote the spaced form ('> >'). Trailing whitespace after
-    // the last marker is the content gap, not a separator, and treating it as
-    // one made this rule non-idempotent: '>> nested' became '> > nested'.
-    const adjacent = /^>+[ \t]*$/.test(markers);
-    return indent + (adjacent ? '>'.repeat(count) + ' ' : '> '.repeat(count)) + rest;
+    // BLK-09 is one space between the marker chain and its content, and it is
+    // only that space. Everything after it is the content's own indentation, and
+    // that indentation is what makes a quoted list nested rather than flat and a
+    // quoted line an indented code block. Collapsing it - which is what this
+    // rule used to do - turned '> - a / >   - b' into two sibling items, and the
+    // guard could not see it, because every quoted line is the same block kind.
+    // Adjacent markers ('>>') stay adjacent; only whitespace between markers
+    // means the author wrote the spaced form ('> >').
+    if (rest.length === 0) return indent + markers.trimEnd();
+    return indent + markers + (/[ \t]$/.test(markers) ? '' : ' ') + rest;
   }
 
   return text;

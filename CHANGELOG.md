@@ -22,6 +22,13 @@ with release candidates suffixed `-rcN`.
   space, where the author wrote a run) and the rest of the line is formatted as before; prose is
   unaffected, and `中文 ，“引用”` still becomes `中文，“引用”`.
 
+- **A nested list inside a block quote is no longer flattened.** BLK-09 collapsed every space after
+  `>` to one, and inside a quote those spaces are the content's indentation: `> - a` followed by
+  `>   - b` is a child item, and it came back as a sibling — silently, because every quoted line is
+  the same block kind and the guard compares kinds. The same spaces are what makes an indented code
+  block inside a quote code. The rule now owns exactly one space after the marker chain: it inserts a
+  missing one, and the content keeps the indentation the author wrote.
+
 ## [0.26.0] - 2026-10-04
 
 ### Added
