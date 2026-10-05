@@ -70,6 +70,7 @@ const SAMPLES: Record<string, unknown> = {
   'codeBlock.fenceChar': 'tildes',
   'codeBlock.fenceLength': false,
   'codeBlock.trimBlankLines': false,
+  thematicBreak: 'asterisks',
   endOfLine: 'crlf',
   'ignore.file': 'no-format-file',
   'ignore.start': 'no-format-start',

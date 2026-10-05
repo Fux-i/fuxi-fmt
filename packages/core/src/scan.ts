@@ -196,6 +196,11 @@ const LIST_ITEM = /^\s*(?:[-*+]|\d{1,9}[.)])\s/;
 /** A YAML mapping key: `title:`, `tags:`, `draft :`. The FM-02 heuristic. */
 const YAML_KEY = /^\s*[A-Za-z_][\w.-]*\s*:/;
 
+/** Whether a line reads as a YAML mapping key, which is what opens front matter. */
+export function looksLikeYamlKey(text: string): boolean {
+  return YAML_KEY.test(text);
+}
+
 function runLength(source: string, index: number, code: number): number {
   let n = 0;
   while (index + n < source.length && source.charCodeAt(index + n) === code) n++;

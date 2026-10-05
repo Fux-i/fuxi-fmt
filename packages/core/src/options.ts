@@ -33,6 +33,14 @@ export type ContextMode = 'line' | 'adjacent';
  * without guessing, so nothing is guessed.
  */
 export type QuoteStyle = 'preserve' | 'paired';
+/**
+ * Which character a thematic break is written with (BLK-13).
+ *
+ * `preserve` leaves the author's choice of character and run length alone; the
+ * other three normalise every break to exactly three of the chosen character,
+ * because length and internal spaces carry no meaning.
+ */
+export type ThematicBreak = 'dashes' | 'asterisks' | 'underscores' | 'preserve';
 
 export interface TypographyOptions {
   /** Insert one space at every CJK to non-CJK boundary (TYPO-01). */
@@ -141,6 +149,8 @@ export interface FormatOptions {
   readonly typography: TypographyOptions;
   readonly list: ListOptions;
   readonly codeBlock: CodeBlockOptions;
+  /** The character a thematic break is written with (BLK-13). */
+  readonly thematicBreak: ThematicBreak;
   readonly endOfLine: EndOfLine;
   readonly ignore: IgnoreOptions;
 }
@@ -179,6 +189,7 @@ export interface FormatOptionsInput {
   readonly typography?: TypographyInput;
   readonly list?: ListInput;
   readonly codeBlock?: CodeBlockInput;
+  readonly thematicBreak?: ThematicBreak;
   readonly endOfLine?: EndOfLine;
   readonly ignore?: IgnoreInput;
 }
@@ -207,6 +218,7 @@ export const defaultOptions: FormatOptions = {
     unorderedMarker: 'dashes',
   },
   codeBlock: { fenceChar: 'backticks', fenceLength: true, trimBlankLines: true },
+  thematicBreak: 'dashes',
   endOfLine: 'lf',
   ignore: {
     file: 'fuxi-fmt-ignore-file',
@@ -261,6 +273,7 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
       trimBlankLines:
         input?.codeBlock?.trimBlankLines ?? defaultOptions.codeBlock.trimBlankLines,
     },
+    thematicBreak: input?.thematicBreak ?? defaultOptions.thematicBreak,
     endOfLine: input?.endOfLine ?? defaultOptions.endOfLine,
     ignore: {
       file: input?.ignore?.file ?? defaultOptions.ignore.file,

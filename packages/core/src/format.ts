@@ -1,4 +1,4 @@
-import { quotePrefix, segment, type AtomicRange, type BlockKind } from './blocks.ts';
+import { classifyContent, quotePrefix, segment, type AtomicRange, type BlockKind } from './blocks.ts';
 import { detect, type Detection } from './detect.ts';
 import { checkSemantics } from './guard.ts';
 import { english, type MessageArgs, type MessageId } from './messages.ts';
@@ -6,13 +6,24 @@ import { hasIgnoreFile, ignoreLines, ignoreRanges, type CharRange } from './igno
 import { applyEndOfLine, normalizeInput, trimTrailingWhitespace, type Eol } from './hygiene.ts';
 import { renumberOrderedLists } from './lists.ts';
 import { normalizeFences, trimFenceBlanks } from './fences.ts';
-import { normalizeMarkers, normalizeUnorderedMarker } from './markers.ts';
+import { normalizeMarkers, normalizeThematicBreak, normalizeUnorderedMarker } from './markers.ts';
 import { resolveOptions, type FormatOptions, type FormatOptionsInput } from './options.ts';
 import { assignParents, findExcludedLists, planListIndent, scanListItems } from './list-scan.ts';
-import { protectedMask, scanRegions, splitSourceLines, type Region, type SourceLine } from './scan.ts';
+import {
+  looksLikeYamlKey,
+  protectedMask,
+  scanRegions,
+  splitSourceLines,
+  type Region,
+  type SourceLine,
+} from './scan.ts';
 import { normalizeQuotes } from './quotes.ts';
 import { applyTypography } from './typography.ts';
 import { normalizeFullwidthAlphanumerics, normalizeParens, normalizePunctuation } from './widths.ts';
+
+/** The two characters a block marker may be separated by (BLK-09). */
+const SPACE = 32;
+const TAB = 9;
 
 /** 0-based line number containing `offset`. */
 function lineOf(text: string, offset: number): number {
@@ -133,6 +144,23 @@ function atomicRanges(lines: readonly SourceLine[], regions: readonly Region[]):
     ranges.push({ start, end: last + 1, kind });
   }
   return ranges;
+}
+
+/**
+ * Whether a '-' run written directly under this line would be a setext underline.
+ *
+ * The paragraph may be inside a list item or a block quote, so the marker chain is
+ * peeled first - and only the marker chain: a heading or a table row above a break
+ * is a different block, and a break under either is still a break. Being wrong in
+ * the safe direction costs a rewrite that did not happen.
+ */
+function opensParagraph(text: string): boolean {
+  if (text.trim().length === 0) return false;
+  const afterQuote = text.slice(quotePrefix(text).end);
+  const item = /^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+/.exec(afterQuote);
+  const body = item === null ? afterQuote : afterQuote.slice(item[0].length);
+  if (body.trim().length === 0) return false;
+  return classifyContent(body) === 'paragraph';
 }
 
 export function format(source: string, input?: FormatOptionsInput): FormatResult {
@@ -326,7 +354,43 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     }
   }
 
-  const structural = parts.length === 0 ? '' : parts.join('\n') + '\n';
+  /**
+   * BLK-13. A thematic break is three of the chosen character.
+   *
+   * This runs on the assembled lines rather than in the per-line pass above,
+   * because the blank-line policy is what decides whether the rewrite is safe.
+   * Three dashes directly under a paragraph is a setext heading underline (which is
+   * why segment() keeps those two lines together) and three dashes on line 1 above
+   * a YAML key open front matter; both would turn a break into a different node.
+   * Once the policy has put a blank line between two separate blocks, the first
+   * hazard is gone - and inside a block quote, where the policy stands down, it is
+   * not, so the check stays.
+   */
+  const trimmed = options.thematicBreak === 'preserve' ? parts : parts.map((text, index) => {
+    const inputLine = partLines[index];
+    if (inputLine === undefined || inputLine < 0 || protectedLine[inputLine] === true) return text;
+    // A break inside a block quote is still a break - the marker chain is a prefix,
+    // not a wall - so it is peeled, checked and put back byte for byte.
+    const quote = quotePrefix(text);
+    const after = text.charCodeAt(quote.end);
+    const head =
+      quote.depth > 0 && (after === SPACE || after === TAB)
+        ? text.slice(0, quote.end + 1)
+        : text.slice(0, quote.end);
+    const body = text.slice(head.length);
+    if (classifyContent(body) !== 'break') return text;
+    if (options.thematicBreak === 'dashes') {
+      const above = index > 0 ? parts[index - 1] : undefined;
+      if (above !== undefined && above.trim().length > 0 && opensParagraph(above)) return text;
+      if (index === 0) {
+        const below = parts.slice(1).find((line) => line.trim().length > 0);
+        if (below !== undefined && looksLikeYamlKey(below)) return text;
+      }
+    }
+    return head + normalizeThematicBreak(body, options.thematicBreak);
+  });
+
+  const structural = trimmed.length === 0 ? '' : trimmed.join('\n') + '\n';
   const structuralLines = splitSourceLines(structural);
   /**
    * The input line an offset into the rebuilt text sits on.

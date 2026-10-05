@@ -152,6 +152,12 @@ A line indented more than three columns past the opener is not a closing fence, 
 
 **This is the one intentional difference to SAFE-01 in the whole tool.** It has to be declared rather than inferred from a config key, so the specification says it here and the guard names it where the guarantee is checked: the exception is granted only when this option is on, so a bug that deleted fence bytes is still a violation when it is off. A fence with no closing delimiter is never trimmed — its last line is code, and trimming it because it looked like a body edge would delete what the author wrote.
 
+**BLK-13 — Thematic break character** · default `dashes`
+
+`thematicBreak: "dashes" | "asterisks" | "underscores" | "preserve"` (default `dashes`). `---`, `***` and `___` are the same node, and so are `-----` and `* * *`: the canonical form is exactly three of the chosen character, with the author's indentation, and `preserve` keeps both the character and the run length as written.
+
+Two positions are left alone, because there the character is not a style but a different node. Three dashes directly under a paragraph is a **setext heading underline** — `text` followed by `---` is an H2 — which is also why `segment()` keeps those two lines in one block: separating them with a blank line rewrites the heading as a paragraph and a rule, and the guard, which compares line kinds, cannot see the difference. And three dashes on line 1 above a YAML key would open front matter (FM-01). In both, the line keeps the character its author wrote; every other target and every other position is the same node written differently. A break inside a block quote is normalised like any other, with the marker chain peeled and put back byte for byte.
+
 ### B. Inline structure
 
 **INL-01 — Inline code spacing** (see TYPO-01 for the mechanism)
@@ -460,6 +466,8 @@ codeBlock:
   fenceLength: true
   trimBlankLines: true
   # body, indentation and info string are always verbatim (SAFE-01, SAFE-02)
+
+thematicBreak: dashes     # dashes | asterisks | underscores | preserve
 
 typography:
   cjkSpacing: true

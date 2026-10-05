@@ -158,6 +158,25 @@
           ],
           "markdownDescription": "%fuxiFmt.blankLines.insideLists.description%"
         },
+        "fuxiFmt.thematicBreak": {
+          "keywords": ["fuxi", "fuxi-fmt"],
+          "type": "string",
+          "default": "dashes",
+          "scope": "resource",
+          "enum": [
+            "dashes",
+            "asterisks",
+            "underscores",
+            "preserve"
+          ],
+          "enumDescriptions": [
+            "%fuxiFmt.thematicBreak.enum.0%",
+            "%fuxiFmt.thematicBreak.enum.1%",
+            "%fuxiFmt.thematicBreak.enum.2%",
+            "%fuxiFmt.thematicBreak.enum.3%"
+          ],
+          "markdownDescription": "%fuxiFmt.thematicBreak.description%"
+        },
         "fuxiFmt.typography.cjkSpacing": {
           "keywords": ["fuxi", "fuxi-fmt"],
           "type": "boolean",

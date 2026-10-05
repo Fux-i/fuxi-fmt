@@ -42,6 +42,8 @@ const BLOCKQUOTE = /^\s*>/;
 const HEADING = /^ {0,3}#{1,6}(?:[ \t]|$)/;
 const LIST_ITEM = /^\s*(?:[-*+]|\d{1,9}[.)])(?:\s+|$)/;
 const TABLE = /^\s*\|/;
+/** A setext heading underline: a run of dashes that closes the paragraph above it. */
+const SETEXT_UNDERLINE = /^ {0,3}-+[ \t]*$/;
 
 /** Classification of a line that is known not to be blank. */
 export function classifyContent(text: string): ContentKind {
@@ -148,7 +150,16 @@ export function segment(texts: readonly string[], atomic: readonly AtomicRange[]
 
     const kind = classifyContent(text);
     let j = i + 1;
-    while (j < texts.length) {
+    let setext = false;
+    // A '-' run directly under a paragraph is a setext heading underline, not a
+    // thematic break: 'text' followed by '---' is an H2, and a blank line inserted
+    // between the two would rewrite it as a paragraph and a horizontal rule. They
+    // are one block, so nothing separates them.
+    if (kind === 'paragraph' && !inside.has(i + 1) && SETEXT_UNDERLINE.test(texts[i + 1] ?? '')) {
+      j = i + 2;
+      setext = true;
+    }
+    while (!setext && j < texts.length) {
       const candidate = texts[j] ?? '';
       if (candidate.trim().length === 0 || inside.has(j)) break;
       if (!extendsBlock(kind, classifyContent(candidate))) break;

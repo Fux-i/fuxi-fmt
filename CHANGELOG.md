@@ -9,6 +9,18 @@ with release candidates suffixed `-rcN`.
 
 ## [Unreleased]
 
+### Added
+
+- **BLK-13: a thematic break is written with the character you choose.** `---`, `***` and `___` are
+  the same node, and so are `-----` and `* * *`, so `thematicBreak` (default `dashes`) normalises
+  every break to exactly three of the chosen character, and `preserve` leaves both the character and
+  the run length alone. Two positions keep what the author wrote, because there the character decides
+  what the line *is*: three dashes under a paragraph is a setext heading underline, and three dashes
+  on line 1 above a YAML key open front matter. Fixing the first of those turned up a real bug — this
+  formatter used to insert a blank line between a paragraph and the `---` under it, quietly turning an
+  H2 into a paragraph and a horizontal rule — and the guard could not see it, because both lines keep
+  the same block kind. A break inside a block quote is normalised too, marker chain included.
+
 ### Changed
 
 - **The settings are findable by the product name.** Searching the Settings UI for `fuxi 标记` used to

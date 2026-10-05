@@ -6,7 +6,7 @@
  */
 
 import { classifyContent } from './blocks.ts';
-import type { UnorderedMarker } from './options.ts';
+import type { ThematicBreak, UnorderedMarker } from './options.ts';
 
 const UNORDERED = /^(\s*)([-*+])([ \t]+)([\s\S]*)$/;
 const HEADING = /^(\s{0,3})(#{1,6})(?!#)([ \t]*)([\s\S]*)$/;
@@ -28,6 +28,27 @@ export function normalizeUnorderedMarker(text: string, marker: UnorderedMarker):
   if (match === null) return text;
   const want = marker === 'dashes' ? '-' : '*';
   return (match[1] ?? '') + want + (match[3] ?? ' ') + (match[4] ?? '');
+}
+
+const BREAK_CHAR: Readonly<Record<Exclude<ThematicBreak, 'preserve'>, string>> = {
+  dashes: '-',
+  asterisks: '*',
+  underscores: '_',
+};
+
+/**
+ * BLK-13. A thematic break is exactly three of the chosen character.
+ *
+ * `-----`, `* * *` and `___` are the same node as `---`, so the canonical form is
+ * the shortest one and the indent is the author's. Whether the rewrite is *safe*
+ * is the caller's decision: it depends on the lines around the break, and only
+ * the caller can see them.
+ */
+export function normalizeThematicBreak(text: string, target: ThematicBreak): string {
+  if (target === 'preserve') return text;
+  if (classifyContent(text) !== 'break') return text;
+  const indent = /^ {0,3}/.exec(text)?.[0] ?? '';
+  return indent + BREAK_CHAR[target].repeat(3);
 }
 
 export function normalizeMarkers(text: string): string {

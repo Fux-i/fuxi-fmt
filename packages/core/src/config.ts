@@ -27,6 +27,7 @@ import type {
   EndOfLine,
   FormatOptionsInput,
   ListInput,
+  ThematicBreak,
   TypographyInput,
 } from './options.ts';
 
@@ -39,6 +40,7 @@ interface Sections {
   typography?: TypographyInput;
   list?: ListInput;
   codeBlock?: CodeBlockInput;
+  thematicBreak?: ThematicBreak;
   endOfLine?: EndOfLine;
   ignore?: IgnoreInput;
 }
@@ -194,6 +196,15 @@ export function parseConfig(text: string): FormatOptionsInput {
 
 function readSections(raw: Raw): FormatOptionsInput {
   const out: Sections = {};
+
+  if (raw.thematicBreak !== undefined) {
+    out.thematicBreak = oneOf(raw.thematicBreak, 'thematicBreak', [
+      'dashes',
+      'asterisks',
+      'underscores',
+      'preserve',
+    ]);
+  }
 
   if (raw.endOfLine !== undefined) {
     out.endOfLine = oneOf(raw.endOfLine, 'endOfLine', ['lf', 'crlf', 'auto']);
@@ -406,6 +417,8 @@ export function mergeOptions(base: FormatOptionsInput, override: FormatOptionsIn
   if (codeBlock !== undefined) out.codeBlock = codeBlock;
   const ignore = mergeSection(base.ignore, override.ignore);
   if (ignore !== undefined) out.ignore = ignore;
+  const thematicBreak = override.thematicBreak ?? base.thematicBreak;
+  if (thematicBreak !== undefined) out.thematicBreak = thematicBreak;
   const endOfLine = override.endOfLine ?? base.endOfLine;
   if (endOfLine !== undefined) out.endOfLine = endOfLine;
   return out;

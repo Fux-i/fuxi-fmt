@@ -19,8 +19,11 @@ describe('BLK-07 unordered list marker normalisation', () => {
   test('can preserve the author marker', () => {
     assert.equal(out('+ item\n', { list: { unorderedMarker: 'preserve' } }), '+ item\n');
   });
-  test('does not touch a thematic break', () => {
-    assert.equal(out('* * *\n'), '* * *\n');
+  test('does not turn a thematic break into a list item', () => {
+    // What this test guards is BLK-07: a break is not a list, whatever character
+    // it is written with. BLK-13 then rewrites the character, which is its job.
+    assert.equal(out('* * *\n', { thematicBreak: 'preserve' }), '* * *\n');
+    assert.equal(out('* * *\n'), '---\n');
   });
   test('does not touch emphasis', () => {
     assert.equal(out('*emphasis* text\n'), '*emphasis* text\n');
@@ -99,5 +102,46 @@ describe('BLK-10 code fence delimiter normalisation', () => {
     const result = format(src);
     assert.equal(result.output, src);
     assert.equal(result.diagnostics[0]?.ruleId, 'DET-01');
+  });
+});
+
+describe('BLK-13 thematic break character', () => {
+  test('normalises every form to three dashes by default', () => {
+    for (const src of ['***', '___', '-----', '* * *', '_ _ _', '- - -']) {
+      assert.equal(out(src + '\n'), '---\n');
+    }
+  });
+  test('keeps the indentation the author wrote', () => {
+    assert.equal(out('  ***\n'), '  ---\n');
+  });
+  test('can use asterisks, underscores, or preserve', () => {
+    assert.equal(out('---\n', { thematicBreak: 'asterisks' }), '***\n');
+    assert.equal(out('---\n', { thematicBreak: 'underscores' }), '___\n');
+    assert.equal(out('*****\n', { thematicBreak: 'preserve' }), '*****\n');
+  });
+  test('leaves a setext heading underline alone', () => {
+    // 'text' + '---' is an H2, and the two lines are one block so that nothing
+    // inserts a blank line between them and rewrites the heading.
+    assert.equal(out('text\n---\n'), 'text\n---\n');
+    assert.equal(out('标题\n---\n'), '标题\n---\n');
+  });
+  test('normalises a break that the blank-line policy has separated', () => {
+    // Separate blocks, so a blank line comes first and the dashes are then safe.
+    assert.equal(out('text\n***\n'), 'text\n\n---\n');
+    assert.equal(out('text\n\n* * *\n'), 'text\n\n---\n');
+  });
+  test('does not turn the first line into front matter', () => {
+    assert.equal(out('***\ntitle: x\n\nbody\n'), '***\n\ntitle: x\n\nbody\n');
+  });
+  test('normalises a break inside a block quote, and stops where it would not be one', () => {
+    assert.equal(out('> ***\n'), '> ---\n');
+    assert.equal(out('> > ***\n'), '> > ---\n');
+    // Inside a quote no blank line is inserted, so the underline would form.
+    assert.equal(out('> text\n> ***\n'), '> text\n> ***\n');
+  });
+  test('settles in one pass', () => {
+    const src = '***\n\ntext\n\n* * *\n\n> ___\n\n标题\n---\n';
+    const once = out(src);
+    assert.equal(out(once), once);
   });
 });
