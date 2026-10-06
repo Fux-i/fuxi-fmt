@@ -2,7 +2,7 @@
   "name": "fuxi-fmt-vscode",
   "displayName": "fuxi-fmt",
   "description": "%extension.description%",
-  "version": "0.26.0",
+  "version": "0.27.0",
   "private": true,
   "publisher": "Fux-i",
   "license": "MIT",

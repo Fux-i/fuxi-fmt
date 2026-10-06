@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases are tagged using the Linux kernel convention: `vMAJOR.MINOR[.PATCH]`,
 with release candidates suffixed `-rcN`.
 
-## [Unreleased]
+## [0.27.0] - 2026-10-06
 
 ### Added
 
@@ -701,7 +701,8 @@ First milestone.
 - **Block segmentation** with a blank-line policy (BLK-01, BLK-02, BLK-03).
 - **Marker spacing** (BLK-04, BLK-05, BLK-09).
 
-[Unreleased]: https://example.invalid/fuxi-fmt/compare/v0.26.0...HEAD
+[Unreleased]: https://example.invalid/fuxi-fmt/compare/v0.27.0...HEAD
+[0.27.0]: https://example.invalid/fuxi-fmt/compare/v0.26.0...v0.27.0
 [0.7.0]: https://example.invalid/fuxi-fmt/compare/v0.6.0...v0.7.0
 [0.6.0]: https://example.invalid/fuxi-fmt/compare/v0.5.0...v0.6.0
 [0.5.0]: https://example.invalid/fuxi-fmt/compare/v0.4.0...v0.5.0
