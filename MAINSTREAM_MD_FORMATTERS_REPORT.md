@@ -19,7 +19,7 @@
 **具体的规范化行为**（全部位于 [src/language-markdown/](https://github.com/prettier/prettier/tree/main/src/language-markdown)）
 
 - 无序列表：主轴 `-`，相邻列表用 `*` 交替；任务项 `[x]`/`[ ]`（list.js）。
-- 有序列表：首项打印原文的起始编号，后续项打印 `start+index`；标记 `.`/`)` 在相邻列表间交替；对 git diff 友好的列表（≥2 项、第 2 项为 1，且第 1 项不为 0 或第 3 项为 1）每一项都打印成 `1.`；数值上限 999,999,999(list.js、utilities.js)。嵌套列表各自独立编号。
+- 有序列表：首项打印原文的起始编号，后续项打印 `start+index`；标记 `.`/`)` 在相邻列表间交替；对 git diff 友好的列表（≥2 项、第 2 项为 1，且第 1 项不为 0 或第 3 项为 1）每一项都打印成 `1.`；数值上限 999,999,999（list.js、utilities.js）。嵌套列表各自独立编号。
 - 强调默认 `_`，在紧邻单词字符、嵌套于强调中、或加粗紧邻单词时改用 `*`；加粗永远是 `**`；GFM 删除线是 `~~`（mdast.js）。
 - 分隔线 `---`；当它是根节点的第一个节点时用 `***`（这样不会被读成 front matter），在列表内交替时也用 `***`（mdast.js）。
 - 标题：样式保留而不转换 —— setext 标题按原来的 `=`/`-` 下划线重新输出；ATX 输出为 `#` 乘上深度再加一个空格（[print/heading.js](https://github.com/prettier/prettier/blob/main/src/language-markdown/print/heading.js)）。
@@ -45,7 +45,7 @@
 
 | 选项 | 默认值 | 取值 / 含义 |
 |---|---|---|
-| `lineWidth` | 80(全局回退值) | 最大行宽 |
+| `lineWidth` | 80（全局回退值）| 最大行宽 |
 | `newLineKind` | `lf` | `auto`/`crlf`/`lf`/`system` |
 | `textWrap` | `maintain` | `always`、`maintain`（保留换行）、`maintainAndWrap`（保留换行但把过长行断开）、`never`、`sentence`（每句一行）|
 | `wrapUnspacedScripts` | false | 折行时允许在 CJK 这类无空格文字内部断开 |
@@ -53,7 +53,7 @@
 | `emphasisKind` | `underscores` | `asterisks` / `underscores` |
 | `strongKind` | `asterisks` | `asterisks` / `underscores` |
 | `hardBreakKind` | `backslash` | `backslash` / `doubleSpace` |
-| `maxBlankLines` | 1(最小 1) | 块之间保留的连续空行上限 |
+| `maxBlankLines` | 1（最小 1）| 块之间保留的连续空行上限 |
 | `heading.kind`（旧名 `headingKind`）| `atx` | `atx` / `setext`（setext 只用于 1–2 级）|
 | `heading.blankLinesAbove` | 未设置 | 标题上方的固定空行数（最小 1）；未设置时保留原文空行，上限为 `maxBlankLines` |
 | `list.unorderedMarker`（旧名 `unorderedListKind`）| `dashes` | `dashes` / `asterisks`（另一个字符用作交替标记）|
@@ -65,8 +65,8 @@
 | `codeBlock.useTabs` | 未设置 | 覆盖代码格式化器的 `useTabs` |
 | `codeBlock.indentWidth` | 未设置 | 覆盖代码格式化器的 `indentWidth` |
 | `html.skipFormat` | false | 行内与块级 HTML 的排版保持原样 |
-| `html.useTabs` | false(全局值) | 用制表符缩进 HTML |
-| `html.indentWidth` | 2(全局值) | HTML 缩进宽度 |
+| `html.useTabs` | false（全局值）| 用制表符缩进 HTML |
+| `html.indentWidth` | 2（全局值）| HTML 缩进宽度 |
 | `html.selfClosingSpace` | true | `<br />` 还是 `<br/>` |
 | `html.preferSingleLine` | false | 放得下的多行 HTML 折叠成一行 |
 | `table.skipFormat` | false | 不对齐表格 |
@@ -88,17 +88,17 @@
 - 代码围栏：默认反引号；info string 里含反引号时改用波浪号；围栏长度超过内容中最长的围栏字符连续串；除非设置了 `codeBlock.preserve*`，首尾空白被裁掉、代码取消缩进；列表之后的缩进代码块会变成围栏代码（generate.rs）。
 - 转义：段落行首的转义防止文本被读成块；`escape_title` 转义 `"` 与反斜杠（generate.rs）。
 
-## 3. mdformat(Python)与插件
+## 3. mdformat（Python）与插件
 
 文档：[style](https://mdformat.readthedocs.io/en/stable/users/style.html)、[plugins](https://mdformat.readthedocs.io/en/stable/users/plugins.html)、[config file](https://mdformat.readthedocs.io/en/stable/users/configuration_file.html)、[README/CLI](https://github.com/hukkin/mdformat)。
 
 - 命令行与选项：`--check`、`--no-validate`、`--number`（默认 false）、`--wrap {keep,no,INTEGER}`（默认 `keep`）、`--end-of-line {lf,crlf,keep}`（默认 `lf`）、`--exclude`（3.13+）、`--extensions/--no-extensions`（默认：所有已安装的）、`--codeformatters/--no-codeformatters`。`.mdformat.toml` 一一对应：`wrap`、`number`、`end_of_line`、`validate`、`extensions`、`codeformatters`、`exclude`。
 - 插件机制（entry points，见 [contributing](https://github.com/hukkin/mdformat/blob/master/docs/contributors/contributing.md)）：`mdformat.parser_extension` 用于实现 `mdformat.plugins.ParserExtensionInterface` 的解析器与渲染器扩展（建立在 markdown-it-py 之上）；`mdformat.codeformatter` 用于 `Callable[[str, str], str]` 形式的代码块格式化器。已安装的插件默认启用；每个插件的选项放在 `[plugin.<name>]` 下。
-- 样式（默认是纯 CommonMark）：只用 ATX(setext 转成 ATX)；项目符号 `-`，相邻列表用 `-`/`*` 交替；有序列表每一项都用 `1.`/`1)`（「不编号」，为最小 diff），除非给了 `--number`，相邻有序列表之间用 `.`/`)` 交替；只用围栏代码（缩进代码转成围栏）；行内代码收缩为最小反引号串并去掉多余的空格填充；行内链接的尖括号去掉；所有链接引用定义移到文档末尾、按标签排序，未使用与重复的定义删除；分隔线变成 70 个下划线；单一 EOL、块之间单一空行（紧凑列表：单一换行）、结尾单一换行；硬换行用反斜杠。
+- 样式（默认是纯 CommonMark）：只用 ATX（setext 转成 ATX）；项目符号 `-`，相邻列表用 `-`/`*` 交替；有序列表每一项都用 `1.`/`1)`（「不编号」，为最小 diff），除非给了 `--number`，相邻有序列表之间用 `.`/`)` 交替；只用围栏代码（缩进代码转成围栏）；行内代码收缩为最小反引号串并去掉多余的空格填充；行内链接的尖括号去掉；所有链接引用定义移到文档末尾、按标签排序，未使用与重复的定义删除；分隔线变成 70 个下划线；单一 EOL、块之间单一空行（紧凑列表：单一换行）、结尾单一换行；硬换行用反斜杠。
 - Front matter：只能通过 `frontmatter` 扩展（[mdformat-frontmatter](https://github.com/butler54/mdformat-frontmatter)）；**只支持 YAML**，且必须位于开头若干行；它会格式化 YAML front matter。不支持 TOML 与 JSON。
 - 解析器扩展插件：[mdformat-frontmatter](https://github.com/butler54/mdformat-frontmatter)（YAML front matter）；[mdformat-gfm](https://github.com/hukkin/mdformat-gfm)（`gfm` 与 `tables`；GFM 表格、任务列表、删除线、autolink；附带 `--compact-tables` / `[plugin.tables] compact_tables`）；[mdformat-tables](https://github.com/executablebooks/mdformat-tables)（已并入 mdformat-gfm；对齐表格，例如 `| a | b |` 补成等宽）；[mdformat-footnote](https://github.com/executablebooks/mdformat-footnote)（Pandoc 风格脚注）；`mdformat-deflist`（Pandoc 定义列表）；[mdformat-mkdocs](https://github.com/KyleKing/mdformat-mkdocs)（MkDocs；列表缩进 4 空格）；`mdformat-toc`（自动生成目录）；`mdformat-myst`、`mdformat-admon`、`mdformat-gfm-alerts`、`mdformat-simple-breaks`（三短横线分隔线）、`mdformat-pyproject`。
 - 代码块格式化器插件：`mdformat-black` / `*-ruff`（python）、`mdformat-shfmt` / `*-beautysh`、`mdformat-gofmt`、`mdformat-rustfmt`、`mdformat-web`（js/css/html/xml）、`mdformat-config`（json/toml/yaml）。
-- 安全：`validate` 比较格式化前后渲染出的 HTML，AST 变了就拒绝写入；它自述的目标是「只改样式，不改内容」，理由是最小 diff(全 1 编号、定义排序)。
+- 安全：`validate` 比较格式化前后渲染出的 HTML，AST 变了就拒绝写入；它自述的目标是「只改样式，不改内容」，理由是最小 diff（全 1 编号、定义排序）。
 
 ## 4. remark / remark-stringify / remark-lint
 
@@ -198,7 +198,7 @@
 - Markdown 里的代码块交给已注册的 dprint 代码块插件格式化；忽略指令是 `<!-- deno-fmt-ignore -->`、`<!-- deno-fmt-ignore-start/end -->`、`<!-- deno-fmt-ignore-file -->`。
 - .editorconfig 填补未设置的选项（优先级从高到低：命令行参数、deno.json、.editorconfig、默认值）。
 
-**markdownfmt(Go)** —— [shurcooL/markdownfmt](https://github.com/shurcooL/markdownfmt)，自称「像 gofmt，但用于 Markdown」；基于 blackfriday 的渲染器（[markdown/main.go](https://github.com/shurcooL/markdownfmt/blob/master/markdown/main.go)）。
+**markdownfmt（Go）** —— [shurcooL/markdownfmt](https://github.com/shurcooL/markdownfmt)，自称「像 gofmt，但用于 Markdown」；基于 blackfriday 的渲染器（[markdown/main.go](https://github.com/shurcooL/markdownfmt/blob/master/markdown/main.go)）。
 
 - 只有 `-d`（diff）、`-l`（列出）、`-w`（写回）三个参数；没有任何配置或样式选项。
 - 输出样式：1、2 级标题用 setext（`=`/`-` 下划线），3 级及以上用 ATX；无序标记 `-`；有序列表从 1 重新编号（`1.`、`2.`……）；水平分隔线 `---`；表格对齐。
@@ -210,7 +210,7 @@
 
 **cbfmt** —— [lukas-reineke/cbfmt](https://github.com/lukas-reineke/cbfmt)：用按语言配置的命令格式化 markdown、org 与 reStructuredText 里的代码块；配置 `.cbfmt.toml` 的 `[languages]`；不碰非代码部分。与 mdsf 一样，它自己不规范化 Markdown。
 
-**tidy-markdown** —— [slang800/tidy-markdown](https://github.com/slang800/tidy-markdown)：美化 Markdown，并把基础 HTML 与 Unicode 转换成等价的 Markdown(基于 Carrot Creative 的风格指南，构建在 Marked 之上)；命令行走 STDIN/STDOUT。
+**tidy-markdown** —— [slang800/tidy-markdown](https://github.com/slang800/tidy-markdown)：美化 Markdown，并把基础 HTML 与 Unicode 转换成等价的 Markdown（基于 Carrot Creative 的风格指南，构建在 Marked 之上）；命令行走 STDIN/STDOUT。
 
 其它值得注意的：`Panache`（面向 Quarto/Pandoc/Markdown 的 dprint 插件，列在 [dprint plugins](https://dprint.dev/plugins/panache/)）；`mdfmt`（加了 front matter 的 markdownfmt 分支）；`Flowmark`（YAML frontmatter、折行）；`remark-toc` / `mdformat-toc` 用于生成目录。
 

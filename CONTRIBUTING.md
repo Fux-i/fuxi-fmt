@@ -4,7 +4,7 @@
 
 ## 环境
 
-Node.js >= 22.18(推荐 24 LTS)。没有构建步骤：Node 原生剥离 TypeScript 类型。
+Node.js >= 22.18（推荐 24 LTS）。没有构建步骤：Node 原生剥离 TypeScript 类型。
 
 ## 常用命令
 
