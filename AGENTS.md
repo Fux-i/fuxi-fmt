@@ -184,3 +184,14 @@ git tag -n          # verify
   Markdown; the spec's own rule table is authoritative.
 - Weaken a guarantee to make a test pass.
 - Push without an explicit request.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live as GitHub issues on `Fux-i/fuxi-fmt`, driven with the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical triage roles use their default label strings. See `docs/agents/triage-labels.md`.
+
