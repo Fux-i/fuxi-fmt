@@ -529,8 +529,8 @@ ignore:
   line: fuxi-fmt-ignore
 ```
 
-**Implementation status.** **Not implemented at all:** `typography.collapseBoundarySpaces`.
-**Partially implemented:** `list.orderedIndent` / `list.unorderedIndent`, which today only controls how
+**Implementation status.** <!-- fuxi-fmt:not-implemented --> `typography.collapseBoundarySpaces`.
+<!-- fuxi-fmt:partially-implemented --> `list.orderedIndent` / `list.unorderedIndent`, which today only controls how
 hard tabs are expanded, and also sets the minimum indent width that list reindentation targets. Everything else in this
 block is implemented.
 

@@ -340,7 +340,7 @@ rather than implied by a config key.
 | **Extension host** | The bundle runs against a stubbed `vscode` module in tests. It has never been loaded by a real editor. |
 | **The corpus** | `packages/core/test/fixtures/corpus/` is a byte-exact corpus: the author's own stress document and a zoo of every protected region the scanner knows, with the region comparison verified rather than assumed and a test that fails if any region kind goes uncovered. It is still not a real Chinese technical article. |
 
-**Not implemented at all:** `typography.collapseBoundarySpaces`. The specification declares the
+**Not implemented at all:** <!-- fuxi-fmt:not-implemented --> `typography.collapseBoundarySpaces`. The specification declares the
 same set, and a test asserts the two lists agree.
 
 The table is the handoff. It has drifted before — it listed `typography.semicolon` and

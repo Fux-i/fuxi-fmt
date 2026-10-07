@@ -20,15 +20,24 @@ const spec = readFileSync(join(root, 'FUXI-FMT-SPEC.md'), 'utf8');
 const readme = readFileSync(join(root, 'README.md'), 'utf8');
 const changelog = readFileSync(join(root, 'CHANGELOG.md'), 'utf8');
 
+/**
+ * Markers, not prose. A check that matches an English sentence breaks the day
+ * the document is written in another language - which is what happened here.
+ * An HTML comment is invisible in the rendered document and survives every
+ * rewrite of the sentence around it. Mid-line on purpose: a comment at the
+ * start of a line is an HTML block, and these documents are their own test
+ * corpus.
+ */
+const NOT_IMPLEMENTED = '<!-- fuxi-fmt:not-implemented -->';
+const PARTIALLY_IMPLEMENTED = '<!-- fuxi-fmt:partially-implemented -->';
+
 describe('documentation stays true to the code', () => {
   test('everything the specification calls unimplemented really is', () => {
-    // Anchored on an explicit phrase rather than on prose, so a partially
-    // implemented option can be described honestly without tripping the check.
-    const marker = spec.indexOf('**Not implemented at all:**');
-    assert.ok(marker > -1, 'the specification has no "not implemented at all" note');
-
-    const after = spec.slice(marker + '**Not implemented at all:**'.length);
-    const paragraph = after.split('**Partially implemented:**')[0] ?? '';
+    // Anchored on a marker rather than on prose, so a partially implemented
+    // option can be described honestly without tripping the check, and so the
+    // check still reads the document after the sentence is rewritten.
+    const after = anchoredAfter(spec, NOT_IMPLEMENTED);
+    const paragraph = after.split(PARTIALLY_IMPLEMENTED)[0] ?? '';
     // An empty list is legitimate: it means everything is implemented. What
     // matters is that nothing named here is secretly present in the defaults.
     const claimed = [...paragraph.matchAll(/`(typography|list)\.([A-Za-z]+)`/g)];
@@ -115,11 +124,9 @@ describe('documentation stays true to the code', () => {
     assert.ok(block.length > 0, 'the specification has no config block');
 
     const declared = new Set(
-      [
-        ...(spec.slice(spec.indexOf('**Not implemented at all:**')).split('\n\n')[0] ?? '').matchAll(
-          /`([A-Za-z]+)\.([A-Za-z]+)`/g,
-        ),
-      ].map((match) => (match[1] ?? '') + '.' + (match[2] ?? '')),
+      [...anchoredAfter(spec, NOT_IMPLEMENTED).matchAll(/`([A-Za-z]+)\.([A-Za-z]+)`/g)].map(
+        (match) => (match[1] ?? '') + '.' + (match[2] ?? ''),
+      ),
     );
 
     const bags = defaultOptions as unknown as Record<string, Record<string, unknown>>;
@@ -150,15 +157,19 @@ describe('documentation stays true to the code', () => {
     assert.ok(checked >= 20, 'expected to check many keys, saw ' + String(checked));
   });
 
+  /** The text that follows an anchor, up to the blank line that ends its paragraph. */
+  function anchoredAfter(text: string, anchor: string): string {
+    const marker = text.indexOf(anchor);
+    assert.ok(marker > -1, 'no "' + anchor + '" anchor found');
+    return text.slice(marker + anchor.length).split('\n\n')[0] ?? '';
+  }
+
   /** The options a document declares as not implemented at all. */
   function declaredMissing(text: string): string[] {
-    const marker = text.indexOf('**Not implemented at all:**');
-    assert.ok(marker > -1, 'no "not implemented at all" note found');
-    const after = text.slice(marker + '**Not implemented at all:**'.length);
-    // Stop at a blank line or at the sentence that follows in the same
-    // paragraph, whichever comes first: the specification puts "partially
-    // implemented" right after the list, and the readme keeps prose below it.
-    const paragraph = after.split(/\n\n|\*\*Partially/)[0] ?? '';
+    // Stop at the anchor that follows in the same paragraph: the specification
+    // puts "partially implemented" right after the list, and the readme keeps
+    // prose below it.
+    const paragraph = anchoredAfter(text, NOT_IMPLEMENTED).split(PARTIALLY_IMPLEMENTED)[0] ?? '';
     return [...paragraph.matchAll(/`([A-Za-z]+)\.([A-Za-z]+)`/g)]
       .map((match) => (match[1] ?? '') + '.' + (match[2] ?? ''))
       .sort();
