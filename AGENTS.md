@@ -108,11 +108,13 @@ Every commit that changes behaviour updates, **in the same commit**:
 - `CHANGELOG.md`, if the change is visible to a user.
 
 Tests already enforce most of this, and they are the reason to trust it: `docs.test.ts` fails when
-the specification and the readme disagree about what is unimplemented, when a documented option does
-not exist, when a core option is neither a setting nor declared as deliberately unexposed, when a
-locale is missing a string the manifest references, or when the changelog says nothing while feature
-commits are unreleased. `settings.test.ts` fails when the manifest and the core's option surface are
-not identical.
+the specification's anchored "not implemented" list names an option that is implemented, when any
+document other than the specification carries a list of what is missing, when a documented option
+does not exist, when a core option is neither a setting nor declared as deliberately unexposed, when
+a locale is missing a string the manifest references, or when the changelog says nothing while
+feature commits are unreleased. `settings.test.ts` fails when the manifest and the core's option
+surface are not identical. The developer commands and the remaining-work table live in
+`CONTRIBUTING.md`; the readme is for users.
 
 What no test can check is prose that is not a claim about something checkable. For that, the rule is
 the one that has cost this repository the most rounds: **find the sentence your change makes false,

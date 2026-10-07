@@ -18,6 +18,7 @@ import { defaultOptions } from './options.ts';
 const root = new URL('../../../', import.meta.url).pathname;
 const spec = readFileSync(join(root, 'FUXI-FMT-SPEC.md'), 'utf8');
 const readme = readFileSync(join(root, 'README.md'), 'utf8');
+const contributing = readFileSync(join(root, 'CONTRIBUTING.md'), 'utf8');
 const changelog = readFileSync(join(root, 'CHANGELOG.md'), 'utf8');
 
 /**
@@ -30,6 +31,8 @@ const changelog = readFileSync(join(root, 'CHANGELOG.md'), 'utf8');
  */
 const NOT_IMPLEMENTED = '<!-- fuxi-fmt:not-implemented -->';
 const PARTIALLY_IMPLEMENTED = '<!-- fuxi-fmt:partially-implemented -->';
+/** A document that admits it has gaps carries this. */
+const WORK_IN_PROGRESS = '<!-- fuxi-fmt:work-in-progress -->';
 
 describe('documentation stays true to the code', () => {
   test('everything the specification calls unimplemented really is', () => {
@@ -80,16 +83,20 @@ describe('documentation stays true to the code', () => {
     return versions.sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).at(-1) ?? null;
   }
 
-  test('the readme does not call an implemented option outstanding', () => {
+  test('no document calls shipped work unfinished', () => {
     // The specification was checked from the start; the readme was not, and it
     // drifted: it listed four typography options as outstanding long after each
     // had shipped, and still claimed 173 tests at 254.
     //
-    // Narrow by construction: it only sees lines that use the word, and only option
-    // names on them. A table headed "Not implemented" and a claim naming rule IDs
-    // both slipped past it for two releases, so the rule-ID half is checked here too.
-    const lines = readme.split('\n').filter((line) => /outstanding|still to do/i.test(line));
-    assert.ok(lines.length > 0, 'expected the readme to state what is outstanding');
+    // The readme no longer keeps a list at all - the specification's anchored
+    // list is the only one - so what is left to check is the prose. A sentence
+    // admitting unfinished work must not name an option or a rule that has
+    // shipped. Narrow by construction: it only sees lines that use the phrase,
+    // and only option names and rule IDs on them.
+    const admits = (text: string) =>
+      text.split('\n').filter((line) => /未实现|尚未实现|待实现|还没实现/.test(line));
+    const lines = [...admits(readme), ...admits(contributing)];
+    assert.ok(lines.length > 0, 'expected a document to admit what is not finished');
 
     for (const line of lines) {
       for (const match of line.matchAll(/`([A-Za-z]+)\.([A-Za-z]+)`/g)) {
@@ -100,18 +107,18 @@ describe('documentation stays true to the code', () => {
         assert.equal(
           present,
           false,
-          'the readme calls ' + section + '.' + name + ' outstanding, but it is implemented',
+          'a document calls ' + section + '.' + name + ' unfinished, but it is implemented',
         );
       }
-      // A rule ID on such a line is the same claim in a form this test could not
-      // read. Every rule the specification declares is implemented, so an ID here
-      // means the sentence is stale - and if a rule is ever genuinely withdrawn,
-      // this assertion is where that has to be said out loud.
+      // A rule ID on such a line is the same claim in a form that is easy to
+      // miss. Every rule the specification declares is implemented, so an ID
+      // here means the sentence is stale - and if a rule is ever genuinely
+      // withdrawn, this assertion is where that has to be said out loud.
       const rules = [...line.matchAll(/\b([A-Z]{2,4}-\d{2})\b/g)].map((m) => m[1] ?? '');
       assert.deepEqual(
         rules,
         [],
-        'the readme calls ' + rules.join(', ') + ' outstanding; if a rule really is unfinished, say so in the specification first',
+        'a document calls ' + rules.join(', ') + ' unfinished; if a rule really is unfinished, say so in the specification first',
       );
     }
   });
@@ -175,17 +182,24 @@ describe('documentation stays true to the code', () => {
       .sort();
   }
 
-  test('the readme and the specification agree on what is missing', () => {
+  test('only the specification enumerates what is missing', () => {
     // Two documents claiming the same thing is exactly the arrangement that
-    // drifts. Requiring them to agree means neither can rot alone.
-    assert.deepEqual(declaredMissing(readme), declaredMissing(spec));
+    // drifts, and this pair drifted twice. The specification's anchored list is
+    // checked against the defaults above; it is the only list, and this is what
+    // keeps it that way.
+    assert.ok(!readme.includes(NOT_IMPLEMENTED), 'the readme must not carry the missing list');
+    assert.ok(
+      !contributing.includes(NOT_IMPLEMENTED),
+      'CONTRIBUTING.md must not carry the missing list',
+    );
   });
 
-  test('every command the readme names actually exists', () => {
-    // The readme's development block had drifted: it said 'npm install' where CI
-    // runs 'npm ci', described typecheck as 'tsc --noEmit', and never mentioned
+  test('every command the contributor guide names actually exists', () => {
+    // The development block had drifted: it said 'npm install' where CI runs
+    // 'npm ci', described typecheck as 'tsc --noEmit', and never mentioned
     // 'npm run build' at all. None of that fails a test, and all of it misleads
-    // a reader. This is the cheapest possible check for that class.
+    // a reader. This is the cheapest possible check for that class. The block
+    // lives in CONTRIBUTING.md now; the readme is for users.
     const parsed = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as {
       scripts?: Record<string, string>;
     };
@@ -195,33 +209,38 @@ describe('documentation stays true to the code', () => {
     // An npm script name may contain a digit - 'l10n' is the conventional one for
     // this job - and the pattern used to stop at the first one, reading it as 'l'
     // and then claiming the readme named a script that does not exist.
-    for (const match of readme.matchAll(/npm run ([a-z][a-z0-9:._-]*)/g)) required.add(match[1] ?? '');
-    if (/npm test\b/.test(readme)) required.add('test');
+    for (const match of contributing.matchAll(/npm run ([a-z][a-z0-9:._-]*)/g)) {
+      required.add(match[1] ?? '');
+    }
+    if (/npm test\b/.test(contributing)) required.add('test');
 
     // 'npm ci' and 'npm install' are npm's own subcommands, not scripts.
-    assert.ok(required.size >= 3, 'expected the readme to name several commands');
+    assert.ok(required.size >= 3, 'expected the guide to name several commands');
 
     for (const name of required) {
-      assert.ok(scripts.has(name), 'the readme names "npm run ' + name + '" but no such script exists');
+      assert.ok(
+        scripts.has(name),
+        'the guide names "npm run ' + name + '" but no such script exists',
+      );
     }
   });
 
-  test('the readme installs the way CI installs', () => {
+  test('the contributor guide installs the way CI installs', () => {
     // I claimed last round that this had no mechanical check. It does: the
-    // workflow file says which command CI runs, and the readme says which one a
+    // workflow file says which command CI runs, and the guide says which one a
     // contributor should run. They are two statements of the same fact.
     const workflow = readFileSync(join(root, '.github', 'workflows', 'ci.yml'), 'utf8');
     const ciUses = /npm ci\b/.test(workflow) ? 'npm ci' : /npm install\b/.test(workflow) ? 'npm install' : null;
     assert.ok(ciUses !== null, 'the CI workflow installs nothing?');
 
-    const readmeMentions = new RegExp(ciUses.replace(' ', '\\s+') + '\\b');
+    const guideMentions = new RegExp(ciUses.replace(' ', '\\s+') + '\\b');
     assert.ok(
-      readmeMentions.test(readme),
-      'CI runs "' + ciUses + '" but the readme never mentions it',
+      guideMentions.test(contributing),
+      'CI runs "' + ciUses + '" but the guide never mentions it',
     );
   });
 
-  test('the readme documents every script CI runs', () => {
+  test('the contributor guide documents every script CI runs', () => {
     const workflow = readFileSync(join(root, '.github', 'workflows', 'ci.yml'), 'utf8');
     const scripts = new Set(
       Object.keys(
@@ -236,8 +255,8 @@ describe('documentation stays true to the code', () => {
       if (!scripts.has(name)) continue;
       seen++;
       assert.ok(
-        new RegExp('npm run ' + name + '\\b').test(readme),
-        'CI runs "npm run ' + name + '" but the readme does not document it',
+        new RegExp('npm run ' + name + '\\b').test(contributing),
+        'CI runs "npm run ' + name + '" but the guide does not document it',
       );
     }
     assert.ok(seen > 0, 'expected CI to run at least one script');
@@ -291,19 +310,22 @@ describe('documentation stays true to the code', () => {
     assert.ok(checked >= 15, 'expected to check many options, saw ' + String(checked));
   });
 
-  test('the readme opening does not claim completeness it contradicts below', () => {
+  test('a document with gaps says so where a reader looks first', () => {
     // Every other check here compares one artifact to another: spec to readme,
-    // manifests to tags, workflow to readme. None compares a document to itself,
-    // which is how the status line came to say "every option it names" while five
-    // unimplemented options were listed four paragraphs below it. This is the
-    // narrow half of that gap: if gaps are declared, the opening must admit them.
-    const missing = declaredMissing(readme);
-    if (missing.length === 0) return;
+    // manifests to tags, workflow to readme. This one compares a document to
+    // itself, which is how the status line once came to say "every option it
+    // names" while five unimplemented options were listed four paragraphs below
+    // it. The narrow half of that gap: if the specification declares gaps, the
+    // documents a reader opens first must admit them.
+    if (declaredMissing(spec).length === 0) return;
 
-    const opening = readme.slice(0, readme.indexOf('## Remaining work'));
     assert.ok(
-      /do not|not implemented|unimplemented|incomplete/i.test(opening),
-      'the readme declares ' + String(missing.length) + ' missing options but its opening does not say so',
+      readme.includes(WORK_IN_PROGRESS),
+      'the specification declares gaps but the readme does not admit being unfinished',
+    );
+    assert.ok(
+      contributing.includes(WORK_IN_PROGRESS),
+      'the specification declares gaps but CONTRIBUTING.md does not admit being unfinished',
     );
   });
 

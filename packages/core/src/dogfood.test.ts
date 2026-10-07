@@ -17,6 +17,7 @@ import { checkSemantics } from './guard.ts';
 const root = new URL('../../../', import.meta.url).pathname;
 const FILES = [
   'README.md',
+  'CONTRIBUTING.md',
   'AGENTS.md',
   'FUXI-FMT-SPEC.md',
   'CHANGELOG.md',
