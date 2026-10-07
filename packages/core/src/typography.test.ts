@@ -204,3 +204,34 @@ describe('TYPO-12 one delimiter per emphasis kind', () => {
     assert.equal(emph(once, options), once);
   });
 });
+
+describe('SAFE-06 link and image syntax survives the typography passes', () => {
+  // Every one of these used to be rewritten, silently and with exit 0: the
+  // syntax characters are not in the protected mask, so the punctuation, paren
+  // and quote passes treated them as prose. The damage is not cosmetic - a
+  // destination whose parentheses became full width is not a link any more, and
+  // an image whose "!" became "！" is not an image.
+  test('leaves a relative destination alone', () => {
+    assert.equal(out('中文[链接](a.md)中文\n'), '中文[链接](a.md)中文\n');
+  });
+  test('leaves the image marker and its destination alone', () => {
+    assert.equal(out('中文 ![图](a.png) 中文\n'), '中文 ![图](a.png) 中文\n');
+  });
+  test('leaves a link title alone', () => {
+    const src = '中文 [a](b.md "标题, 中文") 中文\n';
+    assert.equal(out(src), src);
+  });
+  test('leaves an escaped parenthesis in a destination alone', () => {
+    const src = '中文 [a](a\\)b.md) 中文\n';
+    assert.equal(out(src), src);
+  });
+  test('leaves a reference definition alone', () => {
+    const src = '[标签]: a.md "标题"\n';
+    assert.equal(out(src), src);
+  });
+  test('still formats the prose around the syntax', () => {
+    // Protection must not become an excuse to stop working: the text outside the
+    // link is still spaced and still gets full-width punctuation.
+    assert.equal(out('中文[链接](a.md)中文,后面\n'), '中文[链接](a.md)中文，后面\n');
+  });
+});

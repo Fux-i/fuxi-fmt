@@ -65,6 +65,7 @@ function tokenize(
   from: number,
   to: number,
   mask: Uint8Array,
+  syntaxMask: Uint8Array,
   options: TypographyOptions,
 ): Unit[] {
   const units: Unit[] = [];
@@ -73,8 +74,22 @@ function tokenize(
     if (mask[i] === 1) {
       let j = i;
       while (j < to && mask[j] === 1) j++;
-      // A protected span behaves as one opaque Latin word (SAFE-03).
-      units.push({ text: text.slice(i, j), cls: 'latin', start: i });
+      // A protected span usually behaves as one opaque Latin word (SAFE-03), so
+      // an inline code span gains the spaces that make it a word in the
+      // sentence. Punctuation that delimits a link is not a word: treating the
+      // destination as one put a space inside the link text and
+      // another after the destination, which is a change the author never asked
+      // for and a rule that never wanted to make it. It takes the class the
+      // markup characters take, which is to say neither side of it is a
+      // boundary.
+      let k = i;
+      while (k < j) {
+        const syntax = syntaxMask[k] === 1;
+        let end = k;
+        while (end < j && (syntaxMask[end] === 1) === syntax) end++;
+        units.push({ text: text.slice(k, end), cls: syntax ? 'other' : 'latin', start: k });
+        k = end;
+      }
       i = j;
       continue;
     }
@@ -99,6 +114,7 @@ function formatLine(
   /** Offset of the first content character, past the block markers (see markerHead). */
   contentStart: number,
   mask: Uint8Array,
+  syntaxMask: Uint8Array,
   blockMask: Uint8Array,
   options: TypographyOptions,
 ): string {
@@ -112,7 +128,7 @@ function formatLine(
   }
   if (allBlock) return text.slice(from, to);
 
-  const units = tokenize(text, from, to, mask, options);
+  const units = tokenize(text, from, to, mask, syntaxMask, options);
   let out = '';
   let prev: Unit | null = null;
   let pending = '';
@@ -151,6 +167,14 @@ export function applyTypography(
   const regions = scanRegions(text);
   const mask = new Uint8Array(text.length);
   const blockMask = new Uint8Array(text.length);
+  /**
+   * Protected characters that are punctuation rather than a word: the
+   * delimiters of a link or an image. They are protected either way; the
+   * distinction is only about spacing, and it is needed because SAFE-03's model
+   * - a protected span is one opaque Latin word - is right for an inline code
+   * span and wrong for a bracket.
+   */
+  const syntaxMask = new Uint8Array(text.length);
   for (const range of extra) {
     for (let i = range.start; i < range.end; i++) {
       mask[i] = 1;
@@ -159,8 +183,10 @@ export function applyTypography(
   }
   for (const region of regions) {
     const block = isBlockRegionKind(region.kind);
+    const syntax = region.kind === 'linkSyntax';
     for (let i = region.start; i < region.end; i++) {
       mask[i] = 1;
+      if (syntax) syntaxMask[i] = 1;
       if (block) blockMask[i] = 1;
     }
   }
@@ -174,7 +200,7 @@ export function applyTypography(
     const newline = text.slice(line.end, next === undefined ? text.length : next.start);
     const contentStart = line.start + contentStartOf(text.slice(line.start, line.end));
     out +=
-      formatLine(text, line.start, line.end, contentStart, mask, blockMask, options) +
+      formatLine(text, line.start, line.end, contentStart, mask, syntaxMask, blockMask, options) +
       newline;
   }
   return out;

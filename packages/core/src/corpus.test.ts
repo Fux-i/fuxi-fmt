@@ -29,20 +29,28 @@ const files = readdirSync(DIR)
 
 const read = (name: string) => readFileSync(new URL(name, DIR), 'utf8');
 
-/** Every kind of protected region the scanner can report. */
-const ALL_KINDS: readonly RegionKind[] = [
-  'frontMatter',
-  'fencedCode',
-  'indentedCode',
-  'htmlBlock',
-  'htmlComment',
-  'inlineCode',
-  'inlineMath',
-  'mathBlock',
-  'url',
-  'wikilink',
-  'mdx',
-];
+/**
+ * Every kind of protected region the scanner can report.
+ *
+ * Written as a record that must have a key for each member of the union, so
+ * adding a region kind without adding it here - and therefore without adding a
+ * fixture that exercises it - is a compile error rather than a quietly weaker
+ * corpus.
+ */
+const ALL_KINDS: readonly RegionKind[] = Object.keys({
+  frontMatter: true,
+  fencedCode: true,
+  indentedCode: true,
+  htmlBlock: true,
+  htmlComment: true,
+  inlineCode: true,
+  inlineMath: true,
+  mathBlock: true,
+  url: true,
+  wikilink: true,
+  mdx: true,
+  linkSyntax: true,
+} satisfies Record<RegionKind, true>) as RegionKind[];
 
 describe('the fixture corpus', () => {
   test('has inputs to run, or this file is checking nothing', () => {

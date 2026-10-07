@@ -24,7 +24,17 @@ export type RegionKind =
   | 'mathBlock'
   | 'url'
   | 'wikilink'
-  | 'mdx';
+  | 'mdx'
+  /**
+   * The delimiters that make a link or an image one: an image's leading
+   * exclamation mark and bracket, a link's destination in parentheses, and a
+   * reference definition's colon, destination and title. SAFE-06 calls a
+   * destination byte-verbatim, and the delimiters around it are syntax in
+   * exactly the same sense; without them here TYPO-05, TYPO-08 and TYPO-11
+   * rewrote them, which does not spoil the look of a link - it stops the line
+   * being one.
+   */
+  | 'linkSyntax'
 
 export interface Region {
   readonly kind: RegionKind;
@@ -402,6 +412,16 @@ function scanInline(source: string, mask: Uint8Array, regions: Region[]): void {
   scanPattern(source, mask, regions, /\[\[[^\]\n]*\]\]/g, 'wikilink');
   scanPattern(source, mask, regions, /\{\{[^}\n]*\}\}/g, 'mdx');
   scanPattern(source, mask, regions, /<[A-Z][A-Za-z0-9.]*(?:\s[^<>]*?)?\/?>/g, 'mdx');
+  // Before the url pattern, not after: an absolute destination belongs to its
+  // link, and letting url claim the inside of it first would leave the
+  // parentheses that delimit it unmasked - which is the bug this closes.
+  scanPattern(
+    source,
+    mask,
+    regions,
+    /!\[|\]\((?:[^()\n\\]|\\.|\([^()\n]*\))*\)|\]:(?:[ \t]+)(?:<[^<>\n]*>|\S+)(?:[ \t]+(?:"[^"\n]*"|'[^'\n]*'|\([^()\n]*\)))?/g,
+    'linkSyntax',
+  );
   scanPattern(source, mask, regions, /https?:\/\/[^\s<>()[\]{}"'\u3000-\u303f\uff00-\uffef]+/g, 'url');
   scanMath(source, mask, regions);
 }

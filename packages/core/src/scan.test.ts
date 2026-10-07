@@ -104,9 +104,12 @@ describe('scan: verbatim link and markup destinations (SAFE-04, SAFE-05, SAFE-06
     assert.deepEqual(slices(src), [['url', 'https://example.com/a_b?q=1']]);
   });
 
-  test('detects an inline link destination but not its text', () => {
+  test('detects an inline link destination, delimiters included, but not its text', () => {
+    // The destination belongs to its link, parentheses and all. Protecting only
+    // the URL inside it is what left the delimiters to the parenthesis rule, and
+    // a relative destination has no URL to protect at all.
     const src = '[中文](https://example.com/路径) 后\n';
-    assert.deepEqual(slices(src), [['url', 'https://example.com/路径']]);
+    assert.deepEqual(slices(src), [['linkSyntax', '](https://example.com/路径)']]);
   });
 
   test('detects an HTML comment', () => {
@@ -132,6 +135,42 @@ describe('scan: verbatim link and markup destinations (SAFE-04, SAFE-05, SAFE-06
   test('detects a `{{ }}` shortcode', () => {
     const src = '见 {{< figure src="a.png" >}} 处\n';
     assert.deepEqual(slices(src), [['mdx', '{{< figure src="a.png" >}}']]);
+  });
+
+  test('detects a relative destination, not only an absolute one', () => {
+    // The url pattern below only claims http(s)://, so the parentheses around a
+    // relative destination were unmasked and TYPO-08 rewrote them to full width,
+    // which stops the line being a link at all. SAFE-06 says a destination is
+    // byte-verbatim whatever it points at.
+    const src = '中文[链接](a.md)中文\n';
+    assert.deepEqual(slices(src), [['linkSyntax', '](a.md)']]);
+  });
+
+  test('detects the image marker as syntax', () => {
+    const src = '中文 ![图](a.png) 中文\n';
+    assert.deepEqual(slices(src), [
+      ['linkSyntax', '!['],
+      ['linkSyntax', '](a.png)'],
+    ]);
+  });
+
+  test('detects a link title inside the destination', () => {
+    const src = '中文 [a](b.md "标题, 中文") 中文\n';
+    assert.deepEqual(slices(src), [['linkSyntax', '](b.md "标题, 中文")']]);
+  });
+
+  test('detects an escaped parenthesis in a destination', () => {
+    const src = '中文 [a](a\\)b.md) 中文\n';
+    assert.deepEqual(slices(src), [['linkSyntax', '](a\\)b.md)']]);
+  });
+
+  test('detects a reference definition', () => {
+    const src = '[标签]: a.md "标题"\n';
+    assert.deepEqual(slices(src), [['linkSyntax', ']: a.md "标题"']]);
+  });
+
+  test('does not mistake a less-than sign in prose for syntax', () => {
+    assert.deepEqual(slices('a < b and c > d\n'), []);
   });
 });
 
