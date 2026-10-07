@@ -119,6 +119,19 @@ the one that has cost this repository the most rounds: **find the sentence your 
 and change it in the same commit.** Five separate rounds were spent correcting documents that a
 previous commit had quietly invalidated.
 
+## Before every commit
+
+Run the full check — typecheck and the whole suite — not the package you happened to touch, and
+redirect it rather than piping it (the reason is under *Before tagging a release*):
+
+```sh
+npm run ci > /tmp/ci.log 2>&1 || { tail -20 /tmp/ci.log; exit 1; }
+```
+
+A commit is made on a green suite or not at all. Then apply *Documentation moves with the code*
+above: a commit that leaves a document saying something it has just made false is not finished,
+even when every test passes.
+
 ## Commits
 
 [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/):
