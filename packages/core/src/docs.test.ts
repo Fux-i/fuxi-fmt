@@ -341,10 +341,12 @@ describe('documentation stays true to the code', () => {
     const newest = newestTag();
     if (newest === null) return;
     const version = newest.replace(/^v/, '');
-    assert.ok(
-      changelog.includes('## [' + version + ']'),
-      'the changelog has no entry for ' + newest,
-    );
+    // The heading now links to its own diff, so the version is followed by
+    // "](url)" rather than by "]" - the old substring test read false on every
+    // release once that landed. Anchored at the line start and with the dots
+    // escaped, because an unescaped version is a regex.
+    const heading = new RegExp('^## \\[' + version.replace(/\./g, '\\.') + '\\]', 'm');
+    assert.ok(heading.test(changelog), 'the changelog has no entry for ' + newest);
   });
 
   test('an older version is what the tag check rejects', () => {

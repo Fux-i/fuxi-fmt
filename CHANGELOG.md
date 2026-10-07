@@ -1,712 +1,350 @@
-# Changelog
-
-All notable changes to this project are documented here.
-
-The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-Releases are tagged using the Linux kernel convention: `vMAJOR.MINOR[.PATCH]`,
-with release candidates suffixed `-rcN`.
-
-## [0.27.0] - 2026-10-06
-
-### Added
-
-- **BLK-13: a thematic break is written with the character you choose.** `---`, `***` and `___` are
-  the same node, and so are `-----` and `* * *`, so `thematicBreak` (default `dashes`) normalises
-  every break to exactly three of the chosen character, and `preserve` leaves both the character and
-  the run length alone. Two positions keep what the author wrote, because there the character decides
-  what the line *is*: three dashes under a paragraph is a setext heading underline, and three dashes
-  on line 1 above a YAML key open front matter. Fixing the first of those turned up a real bug — this
-  formatter used to insert a blank line between a paragraph and the `---` under it, quietly turning an
-  H2 into a paragraph and a horizontal rule — and the guard could not see it, because both lines keep
-  the same block kind. A break inside a block quote is normalised too, marker chain included.
-
-- **TYPO-12: emphasis uses the delimiter you choose.** `**x**` and `__x__` are the same node, `*x*`
-  and `_x_` are the same node, and one tilde is strikethrough in the dialects that accept it as well
-  as two, so `typography.emphasis` chooses the spelling of each and `preserve` (the default) leaves
-  every delimiter as written. Only a pair CommonMark would pair is respelled — `snake_case_name` and
-  `中文_斜体_中文` contain no emphasis to respell — and the target is tested the same way, so
-  `中文**加粗**中文` is left alone rather than turned into `__` marks that would not be emphasis at all.
-  Runs of three delimiters are left alone; telling `***x***` apart from a run of three is a parser's
-  job.
-
-- **TBL-01: tables can be aligned, and the width cap skips a line rather than the table.** `table.mode`
-  (default `preserve`) pads every cell to its column's display width and fills the delimiter row to
-  match, keeping the alignment the colons declare and never inventing one. `table.cjkWidth` (default
-  `2`) is how many columns a wide character occupies in *your* font — two is the fixed-pitch
-  convention, not a law, which is why it is a setting rather than an assumption. `table.maxWidth`
-  leaves a row that would exceed it byte-identical and recomputes the widths from the rows that
-  remain, so a few long rows cannot stretch the rest; nothing is reported, because with a cap set
-  that is what was asked for. Wrapping a cell is not on the table at all: a GFM row is one line.
-  DET-10 now also reports a delimiter row that declares a different number of columns from its
-  header, and both the rule and the detection understand tables written without outer pipes.
-
-- **BLK-14: a block quote is a prefix, not a wall.** What is inside a quote is a document like any
-  other, and the rules now act on it as one: a quoted list is reindented to the canonical width
-  (a quoted item used to not be an item at all, so BLK-08 never saw one), a quoted list and a
-  top-level list are two lists even when they share a marker, and the table, thematic-break and
-  emphasis rules all reach inside. This builds on the protection fix in this release, which is what
-  made the interiors safe to touch. Two supporting changes came with it: the semantic guard compares
-  a quoted line by its *content*, so a nested list flattened inside a quote is a violation rather
-  than an invisible kind-preserving edit, and a bare `>` counts as the blank line it renders as, so
-  a rule may add or remove one without the non-blank line count objecting. The blank-line policy still
-  stands down inside quotes, for the reason recorded in section 7 item 0.
-
-### Changed
-
-- **The settings are findable by the product name.** Searching the Settings UI for `fuxi 标记` used to
-  find nothing while `标记` alone found the settings, because VS Code matches every word of a query
-  inside one field: the setting id answers `fuxi`, the description answers `标记`, and a query of both
-  is never satisfied by the two together. Every setting now carries
-  `keywords: ["fuxi", "fuxi-fmt"]`, a searchable field of its own that is never shown to the user.
-  A per-setting `title` cannot do this — VS Code's settings model does not read one.
-
-### Removed
-
-- **The benchmark harness (`.bench/`) is no longer in the tree.** Appendix B of the specification keeps
-  the method and section 1.3 keeps its numbers, both now marked as measurements taken at the time
-  rather than results this project re-runs; the harness itself stays in the history if they need
-  re-deriving. Nothing referenced it but those two documents — no script, no test, no workflow — and a
-  generated 372 KB fixture, two scripts and a Rust crate is a lot of tree for that.
-
-### Fixed
-
-- **A list item, a heading or any nested marker that starts with full-width punctuation is no longer
-  refused.** TYPO-07 deletes the space beside full-width punctuation, and at a block marker that
-  space is the syntax: `- “引用”` is a list item and `-“引用”` is a paragraph that happens to start
-  with a hyphen. The formatter made the second out of the first and then refused the file, naming the
-  line and reporting that the list item had come back a paragraph. Inside a blockquote the same edit
-  drew no complaint at all: `> - “引用”` came back as `> -“引用”`, the inner list flattened, and the
-  guard — which compares line kinds, and both lines are a blockquote — had nothing to compare. The
-  space a marker is separated by is now treated as syntax rather than spacing, so it is kept (one
-  space, where the author wrote a run) and the rest of the line is formatted as before; prose is
-  unaffected, and `中文 ，“引用”` still becomes `中文，“引用”`.
-
-- **A nested list inside a block quote is no longer flattened.** BLK-09 collapsed every space after
-  `>` to one, and inside a quote those spaces are the content's indentation: `> - a` followed by
-  `>   - b` is a child item, and it came back as a sibling — silently, because every quoted line is
-  the same block kind and the guard compares kinds. The same spaces are what makes an indented code
-  block inside a quote code. The rule now owns exactly one space after the marker chain: it inserts a
-  missing one, and the content keeps the indentation the author wrote.
-
-- **A fenced code block, a display math block or an HTML block inside a block quote is now protected,
-  and an unterminated one refuses the document.** The scanner looked for block markers at the start of
-  the line and never past a `>`, so a quoted fence was not a region at all: its body was spaced like
-  prose - a code body was edited - and the report named an unmatched backtick instead of the fence
-  that never closed. Quoted regions are now found by peeling the marker chain, and the markers stay
-  inside the region, byte-verbatim. A quote also ends where CommonMark says it does, so a quoted
-  fence with a blank line in it is unterminated (DET-01) rather than swallowing the next quote. In
-  the same change: BLK-01 no longer inserts a blank line between two quoted blocks, because an empty
-  line ends the quote and the guard cannot see an *empty* line in its non-blank count.
-
-## [0.26.0] - 2026-10-04
-
-### Added
-
-- **Diagnostics are Chinese when the editor's display language is Chinese.** The sentences come from
-  one catalogue in the core and are rendered through `vscode.l10n` against a bundle generated from
-  that catalogue, so the editor and the command line share one set of sentences instead of drifting
-  apart; the CLI is unchanged for now. Values keep their place —
-  `表格这一行有 3 个单元格，而表头有 2 个` — and rule ids, configuration key names and JSON
-  payloads stay Latin in every language, because those are what the documentation, the spec and
-  `--explain` are keyed on. The two warnings about a stray delimiter also say how to write one:
-  escape it with a backslash, so a backtick becomes a backslash and a backtick, and a dollar sign
-  becomes a backslash and a dollar sign. English is the fallback when no bundle is loaded, which is
-  what VS Code reports in the default language.
-
-- **The command line takes `--lang zh`**, falling back to `LC_ALL` and `LANG` when nothing is asked
-  for. The sentences come from the same catalogue as the editor's, so there is one set of them; the
-  default is English because a CI log is read by more than the person who wrote it, and a language
-  with no translation falls back to English rather than to a key.
-
-### Changed
-
-- **The editor's output panel logs one block per document instead of one line per diagnostic.** A
-  run is a header naming the file and the time it started, then one line per diagnosis:
-  `=====docs/guide.md 16:20:01=====` followed by `WARNING[12] DET-06 …` and, for a refused
-  document, `ERROR DET-02 …`. The file is relative to the workspace folder, the path is no longer
-  repeated on every line, and a clean document writes nothing at all — the old format printed an
-  absolute path per line with nothing to tell one run from the next, which is what made it hard to
-  read. The severity words and rule ids stay Latin so one search finds a rule in either log. The CLI
-  is unchanged: it still prints `path:line: severity: RULE message`, which is what a compiler log is
-  read for.
-
-## [0.25.0] - 2026-10-04
-
-### Added
-
-- **Detection: the formatter now says when it had to guess.** fuxi-fmt protects a region by parsing
-  the document, and a parse that goes wrong in a way the parse cannot see left the author with a
-  formatter that quietly did less than they asked. Four rules ship here. An unterminated code
-  fence (**DET-01**), front matter that opens and never closes (**DET-02**), an HTML comment with
-  no closing marker (**DET-03**) and a display-math block that never closes (**DET-04**) are
-  **errors**: everything
-  after the mistake was read as part of it, so the document is refused whole — input returned
-  unchanged, exit 2 from the CLI, no edits in the editor — and the refusal names the line. An
-  unclosed fence is legal CommonMark, so this is a deliberate over-reaction in favour of being told;
-  the alternative is the silent half-formatting that this project's own reports describe twice.
-- **Seven warnings for a parse that terminated but is doubtful** (DET-06 … DET-12): an unmatched
-  backtick, an unmatched dollar sign, an unclosed wikilink or link destination, a table row whose
-  cell count disagrees with its header, a list item indented as if nested that belongs to no parent,
-  and a list left alone because it contains a protected block. They format the document and say so.
-  In the editor each has its own switch, because DET-07 cannot tell a price from an unclosed formula
-  and DET-06 fires on a deliberate literal backtick. **DET-12** has been promised by section 7 item 1
-  since the first draft — `list-scan.ts` even carried a comment saying the caller reports it — and
-  no code ever emitted it.
-
-- **One switch per warning rule in the editor** (`fuxiFmt.diagnostics.*`, all on by default). A
-  warning that cannot be turned off is a warning that gets the whole feature turned off. Errors have
-  no switch, because a refused document is refused for a reason, and the CLI still prints every
-  diagnostic — a build log that omits what the editor would show makes the two disagree.
-
-### Changed
-
-- **A diagnostic says where the problem is, in the file the author has.** The line was carried as
-  data *and* written into the message, so anything printing both printed it twice in two different
-  bases; and it was counted in the text the formatter had already inserted blank lines into, so a
-  document whose heading gained a blank line had its unpaired quote reported one line too low and
-  the editor drew the squiggle on the blank. The line is now data only, mapped back to the input
-  through the blank-line policy's own record of what it invented, and `undefined` when the
-  complaint is about the document as a whole — every guard refusal used to point at line 1.
-- **The CLI prints one machine-readable line per diagnostic**: `path:line: severity: RULE message`,
-  the shape an editor, a CI log and a human can all read. The `fuxi-fmt:` prefix is gone; the path
-  identifies the file and the summary line names the tool.
-
-### Fixed
-
-- **A list containing a code block is no longer refused.** The blank-line policy inserted a blank
-  line after the closing fence, and a deeply indented item following a blank line is an indented code
-  block — so the tidied document parsed differently from the written one and the guard refused it
-  with `protected region count changed: 1 -> 2`. Four lines were enough: a list item, a fenced code
-  block under it, and an over-indented item after the block. A list containing a protected block is
-  now left alone by the blank-line policy as well as by the indentation plan, and DET-12 says why.
-- **A code span whose content is a backslash never closed.** Escapes do not work inside a code
-  span, so the closing backtick of a span containing a backslash is a delimiter even though a
-  backslash precedes it. The scanner skipped it as escaped and left the span open across the rest of
-  the document, shifting the pairing of every backtick after it; one occurrence in the prior-art
-  report surfaced as a single unmatched backtick forty lines later. Two authoring bugs in that
-  report were found by the new rules while writing them.
-- **An escaped pipe in a table row is content.** The cell counter split on every pipe, so a row
-  containing an escaped pipe looked like it had an extra column.
-- **Unterminated front matter is protected instead of reformatted.** The scanner only claimed
-  front matter when it found the closing delimiter, so `---` followed by YAML and no closing line
-  was a thematic break followed by prose: `title: 我的,笔记` came out as `title: 我的，笔记`, and
-  the metadata a static site generator reads was no longer the file the author wrote. FM-02 has
-  promised the opposite since the first draft. The block is now claimed and **DET-02** refuses the
-  document; a `---` whose first non-blank line is not a YAML key is still a thematic break, so a
-  horizontal rule at the top of a file is not turned into a false alarm.
-- **Display math is protected, which it never was.** The inline matcher claimed the two `$$`
-  markers as separate spans and left the body in prose, so a display-math block containing
-  `f(x), 中文(零)` came out as `f(x)，中文（零）` — LaTeX does not survive that, and the
-  README has claimed since its first draft that math is a protected region. A `$$` line now
-  delimits a protected region (SAFE-03) and is formatted nowhere.
-- **Guard violations name the lines they are about.** A changed region reports its own line, and a
-  changed non-blank line count reports the last line the two documents still agreed on — the line
-  that went missing — instead of an index into the non-blank-filtered array, which was not a line
-  in the file at all.
-- `--explain` counted every diagnostic as a warning. Only warnings are warnings.
-
-## [0.24.0] - 2026-10-02
-
-### Added
-
-- **A byte-exact fixture corpus, which the repository has claimed to have since its first draft.**
-  `packages/core/test/fixtures/corpus/` holds two documents: the author's own stress file — the one
-  this round's reports came from — and a zoo containing every one of the ten protected region kinds
-  the scanner knows. Each is compared byte for byte, checked for idempotence, and checked for
-  protection by comparing the regions themselves rather than trusting the golden file. A test fails
-  if any region kind is uncovered, so the corpus cannot quietly stop being a corpus (GRT-01, GRT-02).
-  Building it immediately paid for itself: it showed that the list-indent bug below was still
-  unfixed after four rounds of believing otherwise.
-
-### Fixed
-
-- **An item that falls out of a list is dedented to the level it actually occupies.** `1. 333` with
-  `   - yes` under it and `  - ok` written shallower than both used to come out untouched: the item
-  was correctly read as belonging to no parent, and every parentless item kept the offset it was
-  written with. That policy exists so an already-indented *fragment* is not snapped to column 0, and
-  it was being applied to a different situation. Falling out means closing an item shallower than
-  itself — closing a sibling is ordinary structure — and the two are now told apart, so the snippet
-  becomes the tree it already had: `- ok` at column 0 and its children under it (BLK-08).
-
-### Changed
-
-- **Punctuation and parenthesis width now share one rule, and the default is the whole line
-  rather than the character next to the mark.** New `typography.context: "line" | "adjacent"`,
-  default `line`. `这就是**自信**(confidence)的体现` kept half-width parentheses because the
-  character before `(` was `*`, while the identical sentence without the asterisks converted —
-  each rule answered the same question its own way and each got a different case wrong.
-  Two bounds keep the wider rule honest. A quoted span is its own scope, so an English sentence
-  inside Chinese quotation marks keeps English punctuation, and the rule stays idempotent once
-  those quotes are curly. A mark written tight against a Latin letter or digit belongs to that
-  word, which is what keeps `1,000`, `3.14`, `10:30`, `e.g.` and `foo(bar)` intact with no
-  exception list for any of them. CJK directly beside a mark still wins, so `abc,中文` converts.
-  Spaces no longer hide a mark either: `中文 , 后面` becomes `中文，后面`. Parentheses read only
-  the character outside the pair, never the bracketed term, so `English(中文)English` keeps
-  half-width parens while `中文(English)文` does not. `adjacent` is the narrower rule for anyone
-  who wants it, and now looks through emphasis markers as well (TYPO-05, TYPO-08).
-- **Straight double quotes become paired Chinese quotation marks.** New
-  `typography.quotes: "paired" | "preserve"`, default `paired`. `这就是"自信"的体现` becomes
-  `这就是“自信”的体现`, and `他说 "hello, world" 这句话` becomes `他说“hello, world”这句话` — the
-  quotation is a context scope, so the English sentence inside keeps its own comma. Only the
-  double quote is converted; the apostrophe is never touched, because `don't` cannot be told from
-  an opening single quote without guessing. Pairing is per paragraph and all-or-nothing: a
-  paragraph with an odd number of straight quotes is left exactly as written and reported once, as
-  a warning naming the line, which does not stop the format from succeeding. The paragraph rather
-  than the line, because a quotation may wrap across a line break. An inch mark is not a quotation:
-  `12" x 8"` is untouched (TYPO-11).
-- **Two options are renamed, and the old names keep working for one release.**
-  `codeBlock.normalizeLength` becomes `codeBlock.fenceLength`, because it controls the number of
-  delimiter characters and nothing else. The old name read as "tidy the block up", which is a
-  different job on different bytes, and the user duly reported that it seems not to work. A name
-  that invites that reading is a defect in the name. `typography.symbolWhitelist` becomes
-  `typography.spacingSymbols`, which says what the set is for rather than what it is. Setting either
-  old name still works and produces a notice until the next release (CFG-07).
-- **The editor now says what happened.** Diagnostics from the core become editor diagnostics at their line — a squiggle and a Problems entry — and a configuration notice or warning is written to a `Fuxi Fmt` output channel, which is revealed only when something was refused or warned about. Until now the adapter computed diagnostics and threw them away, so a refused document simply did not format and nothing explained it. Related: the adapter used to withhold the edits for *any* diagnostic, so the first warning this tool produced would have stopped the editor formatting any document containing an unpaired quote; only an error withholds them now (CFG-06).
-- **A retired option name is now reported instead of silently ignored.** Every name this project
-  has retired is still read for one release, and the configuration reader says which old name it saw
-  and what it became: `symbolWhitelist`, `punctuationAllowlist`, `normalizeLength`, plus three whose
-  shape changed — `blankLines.insideLists` (boolean → three-way), `typography.semicolon` (folded
-  into the change list) and `list.indentWidth` (split into two indents). A key that is not an option
-  at all is reported too, while still being ignored so a newer configuration loads. This is the
-  failure mode the round started from: a config file that quietly does less than its author asked
-  for (CFG-07).
-- **New `codeBlock.trimBlankLines`, default on.** Blank lines at the start and end of a fenced
-  code block are removed; blank lines inside it are kept, because those are code. This is what
-  `normalizeLength` was expected to do and never did. It is the only rule in the tool that changes
-  protected bytes, so it is declared as BLK-12 in the specification and named in the guard where
-  the guarantee is checked - and the exception is granted only while the option is on (BLK-12).
-### Fixed
-
-- **Three documents claimed shipped work was unfinished, and the check that should have caught it
-  could only read one kind of sentence.** The specification's comparison table listed four
-  unimplemented options when two had shipped and one had been withdrawn; the readme carried a 25-line
-  build plan for `symbolWhitelist` describing work that had already landed, and named in-document
-  ignore directives and list reindentation as outstanding. The same fact was written down in four
-  places and checked in one. The duplicates are gone — each document now points at the authoritative
-  status note instead of restating it — and the readme check reads rule IDs as well as option names,
-  which is the form the two oldest of those claims were written in (GRT-04).
-- **A closing fence indented more than three columns past the opener no longer suppresses
-  formatting for the whole document.** The scanner never accepted such a line as a closer and
-  left the block unterminated, but the fence normalizer rewrote it anyway. That changed protected
-  bytes, which trips SAFE-01, and a guard failure refuses the entire document — so one malformed
-  fence silently left every block *before* it unformatted. With a blank line after the same line
-  there was no rewrite and no diagnostic at all: the same input, two outcomes, neither of them
-  intended. The normalizer now applies the scanner's own indentation test (BLK-10, SAFE-01).
-- **Ordered lists inside a blockquote are renumbered.** The list grammar anchors at the start of the
-  line, so `> 1. a` matched nothing and a broken sequence in a quote kept its wrong numbers
-  forever. The blockquote prefix is now split off, matched against and put back, and the prefix is
-  part of the list's identity: each quote depth is its own list, a quoted paragraph ends the list
-  above it, and a heading in a quote ends it as well. A bare `>` is treated as the blank line it
-  is (BLK-06).
-
-## [0.23.0] - 2026-09-30
-
-### Changed
-
-- **BREAKING: `blankLines.insideLists` is now `remove` | `one` | `preserve` and defaults
-  to `remove`.** It was a boolean that could only ever insert a blank, so a tight list could be
-  made loose but never the reverse; and a blank between list items decides how the list renders,
-  which is not a thing to leave half-controlled. `remove` collapses a loose list to tight, `one`
-  expands a tight list to loose, and `preserve` leaves the author's spacing alone. It applies only
-  between items of the same list — a blank between different markers separates two lists, and
-  merging them would change the document (BLK-03).
-- **`typography.punctuationAllowlist` became `typography.punctuationChangeList`**, and `;` is
-  now in it by default. `typography.semicolon` is deleted: it could only ever append `;` to the list,
-  so once `;` is a default it does nothing, and two controls for one decision is one too many. The
-  list is still the escape hatch — remove `;` from it to keep semicolons half-width (TYPO-05).
-- **`list.indentWidth` became `list.orderedIndent` and `list.unorderedIndent`.** The old name
-  described neither of the two jobs the option was doing. Each is `aligned` (the default) or an
-  explicit width; `aligned` puts a nested item's marker at its parent's content column, and an
-  explicit width is a floor that can widen nesting but never break it (BLK-08).
-- **`list.tabWidth`** carries the hard-tab expansion the old option also did. It is settable from
-  `fuxi-fmt.json` but is not a fuxi-fmt setting: VS Code's own `editor.tabSize` governs it there.
-- **`list.orderedStyle` offers three behaviours instead of two.** `renumber` numbers sequentially
-  from the declared start; `keep-all-ones` — the new default, and what `increment` used to do —
-  leaves a list the author wrote as all ones alone; `preserve` changes no number at all. `lazy-one`
-  is gone: forcing every item to 1 is not something anyone chose. `increment` is now
-  `keep-all-ones`, so the default behaves exactly as before (BLK-06).
-- **Parenthesis width now follows the surrounding text, not the contents.** `中文（English）文` was
-  being rewritten to `中文(English)文`, because the rule read only what sat between the parens. A
-  pair now takes the width of the text before its opening parenthesis, and both parens of a pair take
-  that one decision. `English（中文）English` narrows symmetrically as a result (TYPO-08).
-
-### Fixed
-
-- **An ellipsis is no longer turned into a full stop and two stray dots.** `等等...` became
-  `等等。..`, because the rule converted any allowlisted mark with a CJK neighbour on either side
-  and the first dot of an ellipsis follows CJK. A `.` now converts only when it stands alone - no dot
-  on either side - and follows CJK. `1.5`, `a.b` and `e.g.` are untouched, and `中文.后面还有字`
-  still converts to `中文。后面还有字` (TYPO-05).
-- **`ignore.*` and `typography.symbolWhitelist` could not be set in a `fuxi-fmt.json`.**
-  `readSections` had no branch for either, and `mergeOptions` dropped `ignore` outright - so the
-  editor's own settings layer lost it too, at the merge step. Four directive names and one symbol
-  list worked only when `format()` was called directly with an input object, which is to say in
-  tests and not for anyone using the CLI or the extension.
-
-### Added
-
-- **Simplified Chinese for every setting description**, and for the extension's own description in
-  the Marketplace. VS Code localises a package through `package.nls.json` and
-  `package.nls.zh-cn.json`; the manifest now references `%keys%` instead of literal English. A test
-  asserts that both locales define every referenced string, that neither defines an unused one, and
-  that the Chinese strings contain Chinese — without which a translation drifts behind silently and
-  the Settings panel shows a raw `%key%`.
-- **Every option is now a VS Code setting.** `fuxiFmt.typography.cjkSpacing` and the rest — 24 in
-  all — appear in the Settings UI with their defaults, their enums and the specification rule each
-  one implements. They sit in a layer **below** the project `fuxi-fmt.json`, so a personal
-  preference fills in what a project does not state without making the editor disagree with
-  `fuxi-fmt --check`. `fuxiFmt.config` keeps its existing behaviour as an explicit override above
-  the file. See "Settings" in the readme for the full precedence.
-
-### Changed
-
-- **The VS Code extension is publishable.** It gained an icon, a Marketplace listing README, a
-  changelog and a licence, plus the manifest fields the Marketplace requires. `npm run vsix`
-  packages it reproducibly.
-
-### Removed
-
-- **`blankLines.insideBlockquotes` withdrawn.** A blank line inside a blockquote is a `>` line, a
-  `>` line is non-blank, and GRT-01 refuses any change to the non-blank line count - so the only
-  mechanism that could implement the option is the one the semantic guard forbids. The guard was
-  kept and the option withdrawn. Setting it has never done anything.
-
-### Added
-
-- **`typography.symbolWhitelist`**: which characters CJK spacing treats as word-like is now
-  configurable. The default set is unchanged, so nothing moves unless it is set.
-
-## [0.22.0] - 2026-09-28
-
-Making an option honest rather than adding a feature.
-
-### Changed
-
-- **`list.indentWidth`** now also sets the minimum indent width that list reindentation targets,
-  as a floor under the parent's content column. Default behaviour is unchanged: at width 2 the
-  content column always wins, so a long ordered marker like `10. ` still keeps its own column.
-
-### Notes
-
-- Three documented options remain unimplemented: `blankLines.insideLists`,
-  `blankLines.insideBlockquotes` and `typography.symbolWhitelist`.
-
-## [0.21.0] - 2026-09-28
-
-The last behavioural rule in the specification. Every rule it states is now implemented, and every
-configuration directive works.
-
-### Added
-
-- **BLK-08 list reindentation.** A nested list item's marker moves under its parent's content
-  column, computed top-down so the result settles in one pass. An item with no parent keeps the
-  offset it was written at, so a fragment is never snapped to column zero. A list containing a
-  protected block is excluded entirely (spec section 7 item 1, option b).
-
-### Notes
-
-- Five documented options remain unimplemented, all in the specification's implementation-status
-  note and the readme's remaining-work table, which a test keeps in agreement.
-
-## [0.20.0] - 2026-09-28
-
-Two measured performance changes rather than features. Between them they recover 18% of format
-time on a 9,996-line document, and both were found by profiling rather than by guessing.
-
-### Changed
-
-- One protected-region mask is shared by `normalizeFullwidthAlphanumerics`,
-  `normalizePunctuation` and `normalizeParens`, which each rewrite one character
-  for one character so offsets never move. **11.8%** faster on a 9,996-line,
-  1164 KB document. The property it depends on is pinned by a test written before
-  the change existed.
-- A document containing no ignore directives no longer scans itself five times per
-  format to discover that. **7%** on the same document.
-
-## [0.19.0] - 2026-09-28
-
-### Added
-
-- **`diffEdits`** in `@fuxi-fmt/core`: minimal character-range edits between two documents,
-  aligned line by line and returned in ascending non-overlapping order, with `applyEdits` so the
-  round trip is testable.
-
-### Changed
-
-- The CLI's `--diff` and the extension's edit computation now share that one alignment
-  (`core/diff.ts`) instead of each approximating it separately. Two implementations of one
-  question is how they drift apart.
-- `--diff` resynchronises line by line rather than reporting every line after an insertion as
-  rewritten and re-added.
-- The adapter tightens each changed region to the characters that actually differ, so a document
-  edited in several places yields several small edits rather than one wide one. This also fixes
-  "format selection" silently doing nothing when a document had changed at both ends: one wide
-  edit lay outside the selection and `editsInRange` discarded it.
-
-## [0.18.0] - 2026-09-28
-
-CFG-03 is complete. An author can now say *not this file*, *not this range*, *not this line* -
-and the last is the one that matters, because a false positive is usually one paragraph rather
-than a whole document or a range marked out in advance.
-
-### Added
-
-- **`ignore.line`**, the last of the four directives. A comment whose body is
-  `fuxi-fmt-ignore` leaves the next block as written: the following non-blank
-  lines, ending at the first blank one.
-
-### Changed
-
-- `ignoreRanges` is derived from `ignoreLines` rather than scanning separately,
-  so the two views of the same decision cannot disagree.
-
-## [0.17.0] - 2026-09-28
-
-The escape hatch is now usable where it matters. A false positive is usually local, and until
-this release the only way to suppress one was to switch the formatter off for the whole file.
-
-### Added
-
-- **`ignore.start` and `ignore.end`** (CFG-03, two more of four). Lines between the
-  directives are copied verbatim: no reindentation, no renumbering, no punctuation
-  or width conversion, no CJK spacing, no trailing-whitespace trimming. An
-  unterminated range runs to the end of the document, because an ignore should
-  fail safe.
-
-### Notes
-
-- Three of the four directives now work. `ignore.line`, the next-block form, is
-  the range directive with a computed end and is declared missing in both the
-  specification and the README.
-
-## [0.16.0] - 2026-09-28
-
-### Added
-
-- **`ignore.file`** (CFG-03, first of four directives). A document whose body is
-  nothing but `fuxi-fmt-ignore-file` in an HTML comment is returned byte for
-  byte, byte order mark and line endings included. The directive must be the
-  entire comment body, or the specification - which documents the directive -
-  would opt itself out. The name is configurable.
-
-### Notes
-
-- `ignore.start`, `ignore.end` and `ignore.line` remain unimplemented and are
-  declared as such in both the specification and the README, which a test keeps
-  in agreement.
-
-## [0.15.0] - 2026-09-28
-
-Closes CFG-01: a configuration file with per-directory discovery, a preset
-layer, and editor settings as the override above it.
-
-### Added
-
-- **`fuxiFmt.config`** in VS Code settings, merged over the project's
-  `fuxi-fmt.json`. Editor settings win, so a personal preference does not
-  require editing a committed file.
-
-### Fixed
-
-- The extension host test built the bundle only when the bundle was missing, so
-  it could run against a stale build and silently verify the previous revision.
-  It now rebuilds every run. The first attempt at this release's feature
-  appeared to do nothing because of it.
-
-## [0.14.0] - 2026-09-28
-
-### Added
-
-- **Configuration presets** (CFG-01): `preset` in `fuxi-fmt.json`, resolved
-  *below* the project's own settings so a preset supplies values and anything
-  stated explicitly wins. `default` and `strict-commonmark` ship;
-  `strict-commonmark` switches off every rule that rewrites an author's choice
-  and keeps CJK spacing, which is the point of the tool rather than an opinion.
-- An unknown preset is rejected with the list of known names, rather than
-  silently ignored.
-
-### Removed
-
-- The `zhihu`, `hugo`, `vitepress` and `obsidian` presets named in an early
-  draft of the specification. Their intended behaviour was never defined, and a
-  preset called `hugo` that does not match what a Hugo author expects is worse
-  than no preset. They can return when their meaning is decided.
-
-### Fixed
-
-- All four manifests declared `0.1.0` while thirteen releases had been tagged.
-  They now track the newest tag, enforced by a test.
-
-## [0.13.0] - 2026-09-28
-
-Every typography option named in the specification is now implemented. The
-"not implemented at all" list in the specification is empty for the first time.
-
-### Added
-
-- **`typography.cjkClasses`**, defaulting to Han alone. Kana, Hangul, Bopomofo
-  and enclosed CJK can be opted into. Opt-in rather than guessed at: enabling
-  kana turns `テレビabc` from untouched into `テレビ abc`, which is right for
-  Japanese and wrong for a Chinese article quoting a Japanese product name.
-
-### Notes
-
-- The documentation check failed on this change before the specification was
-  updated, exactly as intended: the option now exists in the defaults, so
-  leaving it in the "not implemented" list would have shipped a false claim.
-  Second time the check has caught a stale document.
-
-## [0.12.0] - 2026-09-28
-
-### Added
-
-- **`typography.semicolon`** (TYPO-05), off by default. AutoCorrect excludes the
-  semicolon from its conversion set deliberately, annotating the decision
-  "danger": in prose it separates list items and a wrong full-width semicolon is
-  hard to spot. The escape hatch is now available for authors who want it.
-
-### Notes
-
-- The documentation test added in 0.11.0 covers this change. Removing
-  `typography.semicolon` from the specification's "not implemented at all" list
-  was not optional: had it been missed, the check would have failed, because the
-  option is now present in the defaults. That is the check doing its job on the
-  first change to touch it.
-
-## [0.11.0] - 2026-09-28
-
-### Added
-
-- **Parenthesis width** (TYPO-08): `typography.parenStyle: mixed | fullwidth |
-  halfwidth | preserve`, defaulting to `mixed` — full-width `（）` around Han,
-  half-width `()` around Latin or digits. Deliberately conservative: a pair
-  spanning a line break, touching a protected region, or containing another
-  opener is left exactly as written rather than guessed at, because a wrong
-  parenthesis is worse than a wide one.
-
-### Fixed
-
-- The specification still listed `typography.hashtag` as unimplemented, three
-  releases after it shipped.
-
-## [0.10.0] - 2026-09-28
-
-### Added
-
-- **Opt-in hashtag spacing** (TYPO-09): `typography.hashtag`, off by default
-  because `中文#标签` becoming `中文 # 标签` breaks the tag wherever it is
-  published.
-
-## [0.9.0] - 2026-09-28
-
-### Fixed
-
-- **Inline code spans were paired across blank lines.** A single unmatched
-  backtick in prose found a partner paragraphs later and invented a span
-  covering half the file, after which the semantic guard refused to format the
-  document at all. CommonMark forbids a code span from containing a blank line.
-  Found by formatting this repository's own documentation.
-
-## [0.8.0] - 2026-09-28
-
-### Added
-
-- **VS Code activation entry.** Registers a document formatter and a range
-  formatter for Markdown. The range provider matters: Format Selection has no
-  fallback to the document formatter, so without it `Ctrl+K Ctrl+F` silently
-  does nothing.
-- **Extension build**: `npm run build` bundles the extension and the inlined core
-  into `packages/vscode/dist/extension.cjs` with esbuild.
-- `offsetToPosition`, tested separately from the editor API.
-
-### Notes
-
-- Loading the bundle in a real extension host has **not** been verified. There
-  is no VS Code instance here. What is verified: the bundle parses
-  (`node --check`), it contains both provider registrations, and the core is
-  inlined. Treat the extension as buildable but unproven until someone installs
-  it.
-
-## [0.7.0] - 2026-09-28
-
-### Added
-
-- **Minimal edit computation** (GRT-06) in `packages/vscode`. The core returns a
-  whole document; the adapter reduces it to the smallest differing character
-  range, so a format-on-save does not force the editor to re-diff, re-tokenise
-  and re-analyse the entire file.
-- `editsInRange`, so a selection receives only the edits inside it.
-- The extension package manifest, declaring `onLanguage:markdown` activation,
-  `untrustedWorkspaces: supported` — which is honest, because the formatter
-  executes nothing from the workspace — and the `fuxiFmt.enable` setting.
-
-### Fixed
-
-- **Blockquote normalisation was not idempotent.** `>>nested` became
-  `>> nested`, and formatting that again produced `> > nested`, because the
-  check for author-spaced markers counted the trailing space after the last
-  marker as a separator. Adjacent markers now stay adjacent. Found by the
-  adapter's round-trip test; the core's own test only formatted that input once.
-
-### Notes
-
-- The extension cannot be installed yet: there is no activation entry and no
-  bundling step. The manifest records the intended shape rather than a finished
-  artefact.
-
-## [0.6.0] - 2026-09-28
-
-### Added
-
-- **Command line interface**: `--check`, `--diff`, `--write`, `--help`, with
-  exit codes 0 / 1 / 2.
-
-## [0.5.0] - 2026-09-28
-
-### Added
-
-- **Configuration loading** (CFG-01). `fuxi-fmt.json` discovered by walking
-  upwards; comments and trailing commas accepted.
-
-## [0.4.0] - 2026-09-28
-
-### Added
-
-- **Unordered marker normalisation** (BLK-07).
-- **Code fence delimiter normalisation** (BLK-10).
-
-## [0.3.0] - 2026-09-28
-
-### Added
-
-- **Punctuation width** (TYPO-05), **character width** (TYPO-06), **file hygiene**
-  (BLK-11).
-
-## [0.2.0] - 2026-09-28
-
-### Added
-
-- **CJK typography** (TYPO-01, TYPO-02, TYPO-03, TYPO-07, TYPO-09).
-- **Ordered list renumbering** (BLK-06).
-- **Semantic-preservation guard** (GRT-01, GRT-04).
-
-## [0.1.0] - 2026-09-28
-
-First milestone.
-
-### Added
-
-- **Protected-region scanner** (SAFE-01 – SAFE-06, FM-01).
-- **Block segmentation** with a blank-line policy (BLK-01, BLK-02, BLK-03).
-- **Marker spacing** (BLK-04, BLK-05, BLK-09).
-
-[Unreleased]: https://example.invalid/fuxi-fmt/compare/v0.27.0...HEAD
-[0.27.0]: https://example.invalid/fuxi-fmt/compare/v0.26.0...v0.27.0
-[0.7.0]: https://example.invalid/fuxi-fmt/compare/v0.6.0...v0.7.0
-[0.6.0]: https://example.invalid/fuxi-fmt/compare/v0.5.0...v0.6.0
-[0.5.0]: https://example.invalid/fuxi-fmt/compare/v0.4.0...v0.5.0
-[0.4.0]: https://example.invalid/fuxi-fmt/compare/v0.3.0...v0.4.0
-[0.3.0]: https://example.invalid/fuxi-fmt/compare/v0.2.0...v0.3.0
-[0.2.0]: https://example.invalid/fuxi-fmt/compare/v0.1.0...v0.2.0
-[0.1.0]: https://example.invalid/fuxi-fmt/releases/tag/v0.1.0
+# 变更日志
+
+本项目所有值得注意的改动都记录在这里。
+
+格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，本项目遵循[语义化版本](https://semver.org/spec/v2.0.0.html)。发布使用 Linux 内核的标签约定：`vMAJOR.MINOR[.PATCH]`，候选版本以 `-rcN` 结尾。
+
+## [0.27.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.26.0...v0.27.0) - 2026-10-06
+
+### 新增
+
+- **BLK-13：分隔线用你选定的字符书写。** `---`、`***` 与 `___` 是同一个节点，`-----` 与 `* * *` 也是，所以 `thematicBreak`（默认 `dashes`）把每条分隔线规范成所选字符恰好三个，而 `preserve` 连字符与连续长度都不动。有两个位置保留作者的写法，因为在那里字符决定这一行*是*什么：紧贴段落下面的三个短横线是 setext 标题下划线，第 1 行的三个短横线位于 YAML 键之上则会开启 front matter。修好第一处又揪出一个真 bug —— 这个格式化器过去会在段落与它下面的 `---` 之间插入空行，把 H2 悄悄变成段落加一条水平线 —— 而守卫看不见它，因为两行保持着相同的块类型。引用块内部的分隔线同样会被规范化，标记链一并处理。
+
+- **TYPO-12：强调使用你选定的分隔符。** `**x**` 与 `__x__` 是同一个节点，`*x*` 与 `_x_` 是同一个节点，而一个波浪号在接受它的方言里和两个一样是删除线，所以 `typography.emphasis` 为每一种选择拼法，而 `preserve`（默认）让每个分隔符保持原样。只有 CommonMark 会配对的成对分隔符才被改写 —— `snake_case_name` 与 `中文_斜体_中文` 里没有可改写的强调 —— 目标也按同样方式测试，所以 `中文**加粗**中文` 原样保留，而不会被变成根本不是强调的 `__` 标记。三个连续分隔符不动；把 `***x***` 与三个一组区分开是解析器的工作。
+
+- **TBL-01：表格可以对齐，而宽度上限跳过的是行而不是整张表。** `table.mode`（默认 `preserve`）把每个单元格补到它所在列的显示宽度，并把分隔行补齐到一致，保留冒号声明的对齐方式，也从不发明一种。`table.cjkWidth`（默认 `2`）表示一个宽字符在*你的*字体里占几列 —— 二是等宽字体的约定而不是定律，所以它是设置而不是假设。`table.maxWidth` 让会超过它的那一行逐字节保持原样，并用剩下的行重新计算列宽，所以少数长行无法把其余行撑开；不报告任何东西，因为设了上限，这就是要求本身。折单元格根本不在讨论范围内：GFM 的一行就是一行。DET-10 现在还会报告列数与表头不一致的分隔行，而规则与检测都看得懂不写外侧竖线的表格。
+
+- **BLK-14：引用块是一个前缀，不是一堵墙。** 引用内部的内容和别处一样是一篇文档，规则现在把它当作一篇文档来处理：被引用的列表按规范宽度重新缩进（被引用的项过去根本不算项，所以 BLK-08 从未见过它），被引用的列表与顶层列表即使共用标记也是两个列表，而表格、分隔线与强调规则都伸得进去。这建立在本次发布的保护修复之上，正是它让内部变得可以安全触碰。随之而来还有两处支撑性改动：语义守卫按*内容*比较被引用的行，所以在引用内部被压平的嵌套列表是违规，而不是一次看不见的保类型编辑；裸 `>` 算作它所渲染出的空行，于是规则可以增删一个而不触发非空行计数的反对。空行策略在引用内部依旧让位，理由记录在第 7 节第 0 条。
+
+### 变更
+
+- **设置可以按产品名搜到。** 在设置界面里搜 `fuxi 标记` 过去什么都搜不到，而单搜 `标记` 能搜到，因为 VS Code 把查询里的每个词都匹配在*同一个*字段内：设置 id 回答 `fuxi`，描述回答 `标记`，两词一起查永远不会被两者共同满足。现在每个设置都带 `keywords: ["fuxi", "fuxi-fmt"]`，一个自己的、可搜索且从不展示给用户的字段。每个设置的 `title` 做不到这件事 —— VS Code 的设置模型不读它。
+
+### 移除
+
+- **基准测量装置（`.bench/`）不再留在仓库里。** 规范的附录 B 保留方法，1.3 节保留数字，两者现在都标注为当时测得的测量值，而不是本项目会重跑的结果；如果数字需要重新推导，装置本身仍在历史里。除那两份文档外没有任何东西引用它 —— 没有脚本、没有测试、没有工作流 —— 而一个生成的 372 KB fixture、两个脚本和一个 Rust crate 为了这一点占了太多地方。
+
+### 修复
+
+- **以全角标点开头的列表项、标题或任何嵌套标记不再被拒绝。** TYPO-07 删除全角标点旁边的空格，而在块标记处，那个空格就是语法：`- “引用”` 是一个列表项，`-“引用”` 是一个恰好以连字符开头的段落。格式化器把后者从前者的形态做出来，然后拒绝整个文件，点名那一行并报告列表项变回了段落。在引用块内部，同一次编辑连一句抱怨都没有：`> - “引用”` 回来成了 `> -“引用”`，内层列表被压平，而守卫 —— 它比较行类型，而两行都是引用块 —— 根本没有可比较的东西。标记用来分隔的空格现在被当作语法而不是间距，于是它被保留（作者写了连续空格就保留一个），行内其余部分照常格式化；散文不受影响，`中文 ，“引用”` 仍然变成 `中文，“引用”`。
+
+- **引用块内部的嵌套列表不再被压平。** BLK-09 把 `>` 之后的每个空格都合并成一个，而在引用内部，那些空格是内容的缩进：`> - a` 后面接 `>   - b` 是子项，它却变回兄弟项 —— 而且是静默的，因为每一行被引用的行都是同一种块类型，守卫比较的是类型。同样这些空格决定了引用内部的缩进代码块确实是代码。这条规则现在只拥有标记链之后的恰好一个空格：缺了就补，内容保留作者写下的缩进。
+
+- **引用块内部的围栏代码块、显示公式块或 HTML 块现在受保护，而未终止的那一个会拒绝整篇文档。** 扫描器只在行首寻找块标记，从不越过 `>`，所以被引用的围栏根本不算区域：它的正文被当作散文加空格 —— 代码正文被改动了 —— 而报告点的是一个未配对的反引号，而不是那个从未闭合的围栏。现在通过剥掉标记链来找到被引用的区域，标记留在区域内部并逐字节保持原样。引用也在 CommonMark 说它结束的地方结束，所以内部有空行的被引用围栏是未终止的（DET-01），而不是把下一个引用吞掉。同一批改动里：BLK-01 不再在两个被引用的块之间插入空行，因为空行会结束引用，而守卫在它的非空计数里看不见*空*行。
+
+## [0.26.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.25.0...v0.26.0) - 2026-10-04
+
+### 新增
+
+- **当编辑器的显示语言是中文时，诊断就是中文。** 这些句子来自核心中的一份目录，并通过 `vscode.l10n` 对着由该目录生成的 bundle 渲染，所以编辑器与命令行共用一套句子，而不会各自漂移；命令行暂时不变。值保持自己的位置 —— `表格这一行有 3 个单元格，而表头有 2 个` —— 而规则 id、配置键名与 JSON 载荷在任何语言里都保持拉丁字母，因为文档、规范与 `--explain` 都以它们为键。关于游离分隔符的两条警告还说明怎么写一个：用反斜杠转义，于是反引号写作反斜杠加反引号，美元符号写作反斜杠加美元符号。没有加载 bundle 时回退到英文，也就是 VS Code 在默认语言下报告的语言。
+
+- **命令行接受 `--lang zh`**，什么都没指定时回退到 `LC_ALL` 与 `LANG`。这些句子与编辑器的来自同一份目录，所以只有一套；默认是英文，因为读 CI 日志的不只是写它的人，而没有翻译的语言会回退到英文而不是回退到一个键。
+
+### 变更
+
+- **编辑器的输出面板每篇文档记录一个块，而不是每条诊断一行。** 一次运行是一个表头，写明文件与开始时间，然后每条诊断一行：`=====docs/guide.md 16:20:01=====`，后面跟着 `WARNING[12] DET-06 …`，被拒绝的文档则是 `ERROR DET-02 …`。文件名相对于工作区文件夹，路径不再在每一行重复，而干净的文档什么都不写 —— 旧格式每行打印绝对路径，而且没有任何东西能把一次运行与下一次区分开，这就是它难读的原因。严重级别的词与规则 id 保持拉丁字母，于是一次搜索能在任一日志里找到某条规则。命令行不变：仍然打印 `path:line: severity: RULE message`，编译器日志就是照这个来读的。
+
+## [0.25.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.24.0...v0.25.0) - 2026-10-04
+
+### 新增
+
+- **检测：格式化器现在会说自己在哪里不得不猜。** fuxi-fmt 通过解析文档来保护区域，而一次以解析自身看不见的方式出错的解析，会让作者拿到一个静默地做得比要求更少的格式化器。本次发布四条规则。未终止的代码围栏（**DET-01**）、开了却从不闭合的 front matter（**DET-02**）、没有闭合标记的 HTML 注释（**DET-03**）以及从不闭合的显示公式块（**DET-04**）都是**错误**：出错处之后的一切都被读成它的一部分，于是整篇文档被拒绝 —— 原样返回输入、命令行退出码 2、编辑器里没有编辑 —— 而拒绝会点名那一行。未闭合的围栏是合法的 CommonMark，所以这是一种为了被告知而刻意的过度反应；替代方案是这个项目自己的报告描述过两次的静默半格式化。
+- **针对「终止了但不可信」的解析的七条警告**（DET-06 … DET-12）：未配对的反引号、未配对的美元符号、未闭合的 wikilink 或链接目标、单元格数与表头不一致的表格行、缩进得像嵌套却不属于任何父项的列表项，以及因含有受保护块而被留下的列表。它们照常格式化文档并把话说出来。在编辑器里每条都有自己的开关，因为 DET-07 分不清价格与未闭合的公式，而 DET-06 会在一个刻意写下的字面反引号上触发。**DET-12** 从初稿起就被第 7 节第 1 条承诺过 —— `list-scan.ts` 里甚至有一条注释说由调用方报告它 —— 却从来没有代码发出过它。
+
+- **编辑器里每条警告规则一个开关**（`fuxiFmt.diagnostics.*`，默认全开）。一条关不掉的警告，会让人把整个特性关掉。错误没有开关，因为被拒绝的文档有其原因，而命令行仍然打印每一条诊断 —— 一份省略了编辑器会显示内容的构建日志，会让两者产生分歧。
+
+### 变更
+
+- **诊断说明问题在作者手中那份文件的哪里。** 行号过去既作为数据携带，*又*写进消息里，于是任何同时打印两者的人会用两种进制打印两遍；而且它是在格式化器已经插入空行之后的文本里计数的，所以一个标题多出空行的文档，其未配对引号会报低一行，编辑器把波浪线画在空行上。行号现在只是数据，通过空行策略自己关于它造了什么的记录映射回输入；当抱怨针对整篇文档时是 `undefined` —— 过去每一次守卫拒绝都指向第 1 行。
+- **命令行每条诊断打印一行机器可读的输出**：`path:line: severity: RULE message`，一种编辑器、CI 日志与人人都能读的形状。`fuxi-fmt:` 前缀去掉了；路径标识文件，摘要行点名工具。
+
+### 修复
+
+- **含代码块的列表不再被拒绝。** 空行策略在闭合围栏之后插入了一个空行，而空行之后一个缩进很深的项就是缩进代码块 —— 于是整理后的文档与写下的文档解析结果不同，守卫以 `protected region count changed: 1 -> 2` 拒绝了它。四行就够了：一个列表项、它下面的围栏代码块，以及块之后一个缩进过深的项。现在含受保护块的列表既被缩进方案放过，也被空行策略放过，而 DET-12 说明原因。
+- **内容是一个反斜杠的代码 span 永不闭合。** 转义在代码 span 内不生效，所以内容含反斜杠的 span 的闭合反引号仍然是分隔符，即使它前面是反斜杠。扫描器把它当作已转义而跳过，让这个 span 一直开到文档其余部分，并移动了它之后每一个反引号的配对；先例报告里的一处就表现为四十行之后一个孤立的未配对反引号。写这些规则时，新的规则在那份报告里找出两个写作错误。
+- **表格行里被转义的竖线是内容。** 单元格计数器在每个竖线上切分，所以含转义竖线的行看起来多了一列。
+- **未终止的 front matter 被保护，而不是被重新格式化。** 扫描器只在找到闭合分隔符时才认领 front matter，所以 `---` 后面跟 YAML 而没有闭合行时，是一个分隔线后面跟散文：`title: 我的,笔记` 出来成了 `title: 我的，笔记`，静态站点生成器读的元数据不再是作者写的文件。FM-02 从初稿起就承诺了相反的事。现在该块被认领，并由 **DET-02** 拒绝整篇文档；第一个非空行不是 YAML 键的 `---` 仍然是分隔线，所以文件顶部的水平线不会被变成一场虚惊。
+- **显示公式受保护，而它过去从来不是。** 行内匹配器把两个 `$$` 标记认领成两个独立的 span，把正文留在散文里，所以含 `f(x), 中文(零)` 的显示公式块出来成了 `f(x)，中文（零）` —— LaTeX 经不起这个，而 README 从初稿起就声称公式是受保护区域。现在一个 `$$` 行界定一个受保护区域（SAFE-03），任何地方都不格式化它。
+- **守卫违规会点名它针对的行。** 被改动的区域报告它自己的行，而被改动的非空行计数报告两份文档仍然一致的最后一个行 —— 也就是消失的那一行 —— 而不是非空过滤后数组里的下标，那个下标根本不是文件里的行。
+- `--explain` 把每条诊断都算成警告。只有警告才是警告。
+
+## [0.24.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.23.0...v0.24.0) - 2026-10-02
+
+### 新增
+
+- **一个逐字节精确的 fixture 语料库，而仓库从初稿起就声称拥有它。** `packages/core/test/fixtures/corpus/` 存放两份文档：作者自己的压力测试文件 —— 也就是本轮报告的来源 —— 以及一个动物园，包含扫描器认识的十种受保护区域中的每一种。每一份都逐字节比较、检查幂等，并通过比较区域本身而不是相信金标准文件来检查保护是否生效。任何一种区域没被覆盖，测试就会失败，所以语料库无法悄悄不再是一个语料库（GRT-01、GRT-02）。把它建起来立刻回本：它显示下面那个列表缩进 bug 在四轮自以为已修之后仍然没修。
+
+### 修复
+
+- **掉出列表的项会被反缩进到它实际占据的层级。** `1. 333` 下面有 `   - yes`，而 `  - ok` 写得比两者都浅，过去出来原样不动：该项被正确地读成不属于任何父项，而每个无父项的项都保留它被写下时的偏移。那条策略的存在，是为了不让一个本就缩进过的*片段*被吸附到第 0 列，而它被用在了另一种情形上。掉出意味着闭合一个比自身更浅的项 —— 闭合兄弟项是正常结构 —— 现在两者被区分开，于是那个片段变成了它本来就有的树：`- ok` 在第 0 列，它的子项在它下面（BLK-08）。
+
+### 变更
+
+- **标点与括号宽度现在共用一条规则，默认读整行，而不是读紧邻标点的那一个字符。** 新增 `typography.context: "line" | "adjacent"`，默认 `line`。`这就是**自信**(confidence)的体现` 过去保持半角括号，因为 `(` 之前是 `*`，而去掉星号的同一句话却会转换 —— 每条规则按自己的方式回答同一个问题，各自把不同的情形弄错。两条边界让更宽的规则保持诚实。被引号包起来的 span 是它自己的作用域，所以中文引号里的英文句子保留英文标点，而在那些引号变成弯引号之后规则仍然幂等。紧贴拉丁字母或数字写下的标点属于那个词，这正是让 `1,000`、`3.14`、`10:30`、`e.g.` 与 `foo(bar)` 完好无损、且不需要为它们中任何一个列例外的原因。紧邻标点的 CJK 仍然获胜，所以 `abc,中文` 会转换。空格也不再能藏住标点：`中文 , 后面` 变成 `中文，后面`。括号只读括号外侧的字符，绝不读括号里的术语，所以 `English(中文)English` 保持半角括号而 `中文(English)文` 不保持。`adjacent` 是给想要它的人的更窄规则，而且现在也会看穿强调标记（TYPO-05、TYPO-08）。
+- **直双引号变成成对的中文引号。** 新增 `typography.quotes: "paired" | "preserve"`，默认 `paired`。`这就是"自信"的体现` 变成 `这就是“自信”的体现`，而 `他说 "hello, world" 这句话` 变成 `他说“hello, world”这句话` —— 引文是一个语境作用域，所以里面的英文句子保留自己的逗号。只转换双引号；撇号永不触碰，因为不猜测就无法把 `don't` 与开单引号区分开。配对按段落进行且全有或全无：直引号为奇数个的段落逐字节原样保留并报告一条警告，点名该行，这不影响格式化成功。按段落而不是按行，因为引文可能跨过换行。英寸符号不是引文：`12" x 8"` 不动（TYPO-11）。
+- **两个选项改名，旧名再工作一个发布周期。** `codeBlock.normalizeLength` 变成 `codeBlock.fenceLength`，因为它控制的只是分隔符字符的数量。旧名读起来像「把这个块收拾整齐」，那是针对不同字节的另一件事，而用户也如实地报告说它似乎不起作用。一个会招来这种读法的名字，是名字本身的缺陷。`typography.symbolWhitelist` 变成 `typography.spacingSymbols`，它说的是这组符号用来干什么，而不是它是什么。设置任一旧名仍然有效，并产生一条提示，直到下一个发布周期（CFG-07）。
+- **编辑器现在会说发生了什么。** 来自核心的诊断变成落在对应行的编辑器诊断 —— 一条波浪线加一条 Problems 条目 —— 而一条配置提示或警告写进 `Fuxi Fmt` 输出通道，该通道只在有内容被拒绝或被警告时显示。直到现在，适配器算出诊断又把它们丢掉，于是被拒绝的文档干脆不格式化，也没有任何东西解释它。相关：适配器过去会因为*任何*诊断而扣下编辑，所以这个工具产生的第一条警告就会让编辑器停止格式化任何含未配对引号的文档；现在只有错误才扣下它们（CFG-06）。
+- **退役的选项名现在会被报告，而不是静默忽略。** 本项目退役的每个名字仍会被读取一个发布周期，配置读取器会说明它看到了哪个旧名以及它变成了什么：`symbolWhitelist`、`punctuationAllowlist`、`normalizeLength`，外加三个形状改变了的 —— `blankLines.insideLists`（布尔 → 三态）、`typography.semicolon`（并入变更表）与 `list.indentWidth`（拆成两个缩进）。根本不是选项的键也会被报告，同时仍被忽略，这样更新的配置还能加载。这就是本轮开始时的那个失败模式：一个悄悄做得比作者要求更少的配置文件（CFG-07）。
+- **新增 `codeBlock.trimBlankLines`，默认开。** 围栏代码块首尾的空行被删除；块内部的空行保留，因为那些是代码。这正是 `normalizeLength` 曾被期待做却从未做过的事。它是这个工具里唯一会改变受保护字节的规则，所以在规范里被声明为 BLK-12，并在检查保证的地方被守卫点名 —— 而例外只在选项打开时授予（BLK-12）。
+
+### 修复
+
+- **三份文档声称已发布的工作未完成，而本该抓住它的检查只读得懂一种句子。** 规范的对比表列了四个未实现的选项，而其中两个已发布、一个已撤回；readme 带着一份 25 行的 `symbolWhitelist` 构建计划，描述的是已经落地的工作，还把文档内忽略指令与列表重新缩进列为未完成。同一个事实被写在四个地方，只在一个地方被检查。重复的都没了 —— 现在每份文档都指向权威的状态注记，而不是复述它 —— 而 readme 检查既读规则 ID 也读选项名，那两条最老的声明正是用规则 ID 写的（GRT-04）。
+- **闭合围栏比开头行缩进多出三列以上时，不再让整篇文档停止格式化。** 扫描器从不接受这样的行作为闭合符，并让该块保持未终止，但围栏规范化器还是改写了它。那改变了受保护字节，触发 SAFE-01，而一次守卫失败会拒绝整篇文档 —— 于是一个畸形的围栏会静默地让它*之前*的每个块都不被格式化。同一行后面如果有个空行，则既不发生改写也没有任何诊断：同样的输入，两种结果，没有一种是有意的。规范化器现在应用扫描器自己的缩进判定（BLK-10、SAFE-01）。
+- **引用块内部的有序列表会被重新编号。** 列表文法锚定在行首，所以 `> 1. a` 什么都匹配不到，引用里断掉的编号就永远保持错误的数字。现在引用前缀先被拆下来、参与匹配、再放回去，而前缀是列表身份的一部分：每个引用深度是一个独立的列表，被引用的段落会结束它上面的列表，引用里的标题同样会结束它。裸 `>` 被当作它所是的空行（BLK-06）。
+
+## [0.23.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.22.0...v0.23.0) - 2026-09-30
+
+### 变更
+
+- **破坏性变更：`blankLines.insideLists` 现在是 `remove` | `one` | `preserve`，默认 `remove`。** 它过去是一个只能插入空行的布尔值，所以紧凑列表可以被弄成宽松，反过来永远不行；而列表项之间的空行决定列表如何渲染，这不是该半管着的事。`remove` 把宽松列表压成紧凑，`one` 把紧凑列表展开成宽松，`preserve` 保留作者的间距。它只作用于同一个列表的项之间 —— 不同标记之间的空行分隔两个列表，合并它们会改变文档（BLK-03）。
+- **`typography.punctuationAllowlist` 变成 `typography.punctuationChangeList`**，而 `;` 现在默认在里面。`typography.semicolon` 被删除：它只能往表里追加 `;`，所以一旦 `;` 成为默认它就什么都不做，而一个决定配两个控制点就是多了一个。这张表仍然是逃生口 —— 把 `;` 从它里面去掉就保持分号半角（TYPO-05）。
+- **`list.indentWidth` 变成 `list.orderedIndent` 与 `list.unorderedIndent`。** 旧名既没描述这个选项做的两件事中的哪一件。每个取 `aligned`（默认）或一个显式宽度；`aligned` 把嵌套项的标记放在父项的内容列上，而显式宽度是一个下限，它能加宽嵌套，却永远不会弄坏嵌套（BLK-08）。
+- **`list.tabWidth`** 承接旧选项也在做的硬制表符展开。它可以从 `fuxi-fmt.json` 设置，但不是 fuxi-fmt 的设置项：那里的宽度由 VS Code 自己的 `editor.tabSize` 决定。
+- **`list.orderedStyle` 提供三种行为而不是两种。** `renumber` 从声明的起始编号顺序编号；`keep-all-ones` —— 新的默认，也是 `increment` 过去做的事 —— 让作者写成全 1 的列表保持原样；`preserve` 一个数字都不改。`lazy-one` 没了：强迫每一项都变成 1 不是任何人选过的东西。`increment` 现在是 `keep-all-ones`，所以默认行为与之前完全一致（BLK-06）。
+- **括号宽度现在跟随周围文本，而不是内容。** `中文（English）文` 过去被改写成 `中文(English)文`，因为规则只读括号之间的东西。现在一对括号取它开括号之前那段文本的宽度，而一对里的两个括号取同一个决定。于是 `English（中文）English` 对称地变窄（TYPO-08）。
+
+### 修复
+
+- **省略号不再被变成句号加两个游离的点。** `等等...` 过去变成 `等等。..`，因为规则会转换任何两侧有 CJK 邻居的白名单标点，而省略号的第一个点跟在 CJK 之后。现在 `.` 只在单独成点 —— 两侧都不是点 —— 且跟在 CJK 之后时才转换。`1.5`、`a.b` 与 `e.g.` 不动，而 `中文.后面还有字` 仍然转成 `中文。后面还有字`（TYPO-05）。
+- **`ignore.*` 与 `typography.symbolWhitelist` 无法在 `fuxi-fmt.json` 里设置。** `readSections` 对两者都没有分支，而 `mergeOptions` 直接把 `ignore` 丢掉 —— 所以在合并那一步，编辑器自己的设置层也丢了它。四个指令名与一份符号表只在直接以输入对象调用 `format()` 时有效，也就是说只在测试里有效，对任何使用命令行或扩展的人无效。
+
+### 新增
+
+- **每一条设置说明都有简体中文**，扩展在应用市场的描述也有。VS Code 通过 `package.nls.json` 与 `package.nls.zh-cn.json` 本地化一个包；清单现在引用 `%keys%` 而不是字面英文。一条测试断言两个语言包都定义了每个被引用的字符串、都没有定义未使用的字符串、且中文字符串里含中文 —— 没有它，翻译会静默落后，设置面板就显示一个裸 `%key%`。
+- **每个选项现在都是一个 VS Code 设置。** `fuxiFmt.typography.cjkSpacing` 及其余 —— 共 24 个 —— 出现在设置界面里，带默认值、枚举值以及它实现的是哪条规范规则。它们位于项目 `fuxi-fmt.json` **之下**的一层，所以个人偏好会填补项目没有声明的东西，而不会让编辑器与 `fuxi-fmt --check` 产生分歧。`fuxiFmt.config` 保持它既有行为，作为文件之上的显式覆盖。完整的优先级见 readme 的「设置」一节。
+
+### 变更
+
+- **VS Code 扩展可以发布了。** 它获得了图标、一份市场列表用的 README、一份变更日志与一份许可证，外加应用市场要求的清单字段。`npm run vsix` 可以可复现地打包它。
+
+### 移除
+
+- **撤回 `blankLines.insideBlockquotes`。** 引用块内部的空行是一个 `>` 行，`>` 行是非空行，而 GRT-01 拒绝任何对非空行计数的改变 —— 所以唯一能实现该选项的机制，正是语义守卫禁止的那一个。守卫被保留，选项被撤回。设置它从来没有任何作用。
+
+### 新增
+
+- **`typography.symbolWhitelist`**：CJK 间距把哪些字符当作类词字符，现在可配置。默认集合不变，所以除非设置它，什么都不会动。
+
+## [0.22.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.21.0...v0.22.0) - 2026-09-28
+
+把选项变诚实，而不是加一个特性。
+
+### 变更
+
+- **`list.indentWidth`** 现在也设定列表重新缩进所瞄准的最小缩进宽度，作为父项内容列之下的下限。默认行为不变：宽度为 2 时内容列总是获胜，所以像 `10. ` 这样的长有序标记仍然保住自己的列。
+
+### 备注
+
+- 仍有三个写进文档的选项未实现：`blankLines.insideLists`、`blankLines.insideBlockquotes` 与 `typography.symbolWhitelist`。
+
+## [0.21.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.20.0...v0.21.0) - 2026-09-28
+
+规范中最后一条行为规则。它陈述的每条规则现在都已实现，每个配置指令都有效。
+
+### 新增
+
+- **BLK-08 列表重新缩进。** 嵌套列表项的标记移动到父项内容列之下，自顶向下计算，所以结果一次收敛。没有父项的项保留它被写下时的偏移，所以片段永远不会被吸附到第 0 列。含受保护块的列表被完全排除（规范第 7 节第 1 条，选项 b）。
+
+### 备注
+
+- 仍有五个写进文档的选项未实现，全部位于规范的实现状态注记与 readme 的剩余工作表里，由一条测试保持两者一致。
+
+## [0.20.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.19.0...v0.20.0) - 2026-09-28
+
+两处实测的性能改动，而不是特性。它们合计在一份 9,996 行的文档上收回 18% 的格式化时间，而且两者都是靠 profiling 而不是靠猜找到的。
+
+### 变更
+
+- 一份受保护区域掩码由 `normalizeFullwidthAlphanumerics`、`normalizePunctuation` 与 `normalizeParens` 共用，它们都只做一字符换一字符的改写，所以偏移量从不移动。在一份 9,996 行、1164 KB 的文档上快 **11.8%**。它所依赖的性质由一条在该改动存在之前就写好的测试钉住。
+- 不含任何忽略指令的文档，不再为了发现这一点而在每次格式化时扫描自己五遍。同一份文档上快 **7%**。
+
+## [0.19.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.18.0...v0.19.0) - 2026-09-28
+
+### 新增
+
+- **`diffEdits`** 进入 `@fuxi-fmt/core`：两份文档之间的最小字符范围编辑，按行对齐，按升序且互不重叠返回，并带 `applyEdits`，所以往返可测试。
+
+### 变更
+
+- 命令行的 `--diff` 与扩展的编辑计算现在共用那一份对齐（`core/diff.ts`），而不是各自近似一份。同一个问题有两份实现，就是它们分道扬镳的方式。
+- `--diff` 按行重新同步，而不是把插入之后的每一行都报告成被改写并重新添加。
+- 适配器把每个改动区域收紧到真正不同的字符，所以多处编辑过的文档产出若干个小组编辑而不是一个宽编辑。这也修好了当文档两端都发生变化时「格式化选区」静默什么都不做的问题：一个宽编辑落在选区之外，被 `editsInRange` 丢弃了。
+
+## [0.18.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.17.0...v0.18.0) - 2026-09-28
+
+CFG-03 完成。作者现在可以说*不是这个文件*、*不是这个范围*、*不是这一行* —— 而最后一个是关键的那个，因为误报通常是一个段落，而不是整篇文档或事先圈定的范围。
+
+### 新增
+
+- **`ignore.line`**，四个指令中的最后一个。正文是 `fuxi-fmt-ignore` 的注释让下一个块保持原样：其后的非空行，直到第一个空行结束。
+
+### 变更
+
+- `ignoreRanges` 由 `ignoreLines` 推导而来，而不是单独扫描，所以同一个决定的两个视图不会互相矛盾。
+
+## [0.17.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.16.0...v0.17.0) - 2026-09-28
+
+逃生口现在在真正要紧的地方可用。误报通常是局部的，而在这次发布之前，压制它的唯一办法是为整个文件关掉格式化器。
+
+### 新增
+
+- **`ignore.start` 与 `ignore.end`**（CFG-03，四个中的另外两个）。两个指令之间的行逐字节复制：不重新缩进、不重新编号、不做标点或宽度转换、不加 CJK 空格、不裁行尾空白。未终止的范围一直延伸到文档结尾，因为忽略应当失败得安全。
+
+### 备注
+
+- 四个指令中的三个现在可用。`ignore.line`，即下一块形式，是末端由计算得出的范围指令，在规范与 README 里都被声明为缺失。
+
+## [0.16.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.15.0...v0.16.0) - 2026-09-28
+
+### 新增
+
+- **`ignore.file`**（CFG-03，四个指令中的第一个）。正文只有一个 HTML 注释里的 `fuxi-fmt-ignore-file` 的文档，会逐字节返回，包括字节序标记与行尾。指令必须是整个注释正文，否则规范 —— 它记录了这个指令 —— 会把自己排除掉。名字可配置。
+
+### 备注
+
+- `ignore.start`、`ignore.end` 与 `ignore.line` 仍未实现，并在规范与 README 里都被如此声明，由一条测试保持两者一致。
+
+## [0.15.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.14.0...v0.15.0) - 2026-09-28
+
+收尾 CFG-01：带按目录发现的配置文件、一个预设层，以及作为其之上覆盖的编辑器设置。
+
+### 新增
+
+- **`fuxiFmt.config`**，位于 VS Code 设置中，合并覆盖项目的 `fuxi-fmt.json`。编辑器设置获胜，所以个人偏好不需要去改一个已提交的文件。
+
+### 修复
+
+- 扩展宿主测试只在 bundle 缺失时构建它，所以它可能跑在一次陈旧的构建上，静默地验证上一个修订。现在每次运行都重新构建。本次发布的功能第一次尝试看起来毫无作用，原因就在这里。
+
+## [0.14.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.13.0...v0.14.0) - 2026-09-28
+
+### 新增
+
+- **配置预设**（CFG-01）：`fuxi-fmt.json` 里的 `preset`，解析在项目自身设置*之下*，所以预设提供值，而任何显式声明的东西获胜。发布 `default` 与 `strict-commonmark`；`strict-commonmark` 关掉每一条改写作者选择的规则并保留 CJK 间距 —— 那是这个工具的意义，不是一个观点。
+- 未知预设会被拒绝并列出已知名称，而不是静默忽略。
+
+### 移除
+
+- 规范早期草稿里点名的 `zhihu`、`hugo`、`vitepress` 与 `obsidian` 预设。它们预期的行为从未被定义，而一个叫 `hugo` 却不匹配 Hugo 作者预期的预设，比没有预设更糟。等它们的含义定下来，它们可以回来。
+
+### 修复
+
+- 四个清单都声明 `0.1.0`，而当时已经打了十三个发布标签。它们现在跟随最新的标签，由一条测试强制。
+
+## [0.13.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.12.0...v0.13.0) - 2026-09-28
+
+规范里点名的每个排版选项现在都已实现。规范里的「完全未实现」清单第一次为空。
+
+### 新增
+
+- **`typography.cjkClasses`**，默认只有汉字。假名、谚文、注音符号与带圈 CJK 可以选择加入。选择加入而不是猜测：启用假名会把 `テレビabc` 从原样不动变成 `テレビ abc`，这对日语是对的，对一篇引用了日本产品名的中文文章是错的。
+
+### 备注
+
+- 在这次改动上，文档检查在规范更新之前就失败了，完全如预期：这个选项现在存在于默认值里，把它留在「未实现」清单里就会发布一个错误的声明。这是检查第二次抓住陈旧的文档。
+
+## [0.12.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.11.0...v0.12.0) - 2026-09-28
+
+### 新增
+
+- **`typography.semicolon`**（TYPO-05），默认关闭。AutoCorrect 有意把分号排除在它的转换集之外，并把这一决定标注为 "danger"：它在散文里分隔列表项，而错误的全角分号很难被发现。想要它的作者现在有了这个逃生口。
+
+### 备注
+
+- 0.11.0 加入的文档测试覆盖了这次改动。从规范的「完全未实现」清单里删掉 `typography.semicolon` 不是可选项：漏掉它检查就会失败，因为这个选项现在存在于默认值里。这是检查在第一次碰到它时就在做自己的工作。
+
+## [0.11.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.10.0...v0.11.0) - 2026-09-28
+
+### 新增
+
+- **括号宽度**（TYPO-08）：`typography.parenStyle: mixed | fullwidth | halfwidth | preserve`，默认 `mixed` —— 汉字周围用全角 `（）`，拉丁字母或数字周围用半角 `()`。刻意保守：跨换行的一对、接触受保护区域的一对，或内部还有另一个开括号的一对，都逐字节原样保留而不是去猜，因为一个错的括号比一个宽的括号更糟。
+
+### 修复
+
+- 规范仍把 `typography.hashtag` 列为未实现，而它已经发布三个发布周期了。
+
+## [0.10.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.9.0...v0.10.0) - 2026-09-28
+
+### 新增
+
+- **需显式开启的话题标签空格**（TYPO-09）：`typography.hashtag`，默认关闭，因为 `中文#标签` 变成 `中文 # 标签` 会在任何发布它的地方弄坏标签。
+
+## [0.9.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.8.0...v0.9.0) - 2026-09-28
+
+### 修复
+
+- **行内代码 span 过去会跨空行配对。** 散文里一个孤立的未配对反引号在几段之后找到了搭档，凭空造出一个覆盖半个文件的 span，随后语义守卫拒绝格式化整篇文档。CommonMark 禁止代码 span 包含空行。这是格式化本仓库自己的文档时发现的。
+
+## [0.8.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.7.0...v0.8.0) - 2026-09-28
+
+### 新增
+
+- **VS Code 激活入口。** 为 Markdown 注册一个文档格式化器与一个范围格式化器。范围提供程序很要紧：「格式化选定内容」不会回退到文档格式化器，所以没有它 `Ctrl+K Ctrl+F` 会静默什么都不做。
+- **扩展构建**：`npm run build` 用 esbuild 把扩展与内联的核心打包进 `packages/vscode/dist/extension.cjs`。
+- `offsetToPosition`，与编辑器 API 分开测试。
+
+### 备注
+
+- 在真实扩展宿主里加载这个 bundle **尚未**验证。这里没有 VS Code 实例。已验证的是：bundle 能解析（`node --check`）、它包含两处提供程序注册、核心已内联。在有人装上它之前，请把这个扩展当成可构建但未经验证。
+
+## [0.7.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.6.0...v0.7.0) - 2026-09-28
+
+### 新增
+
+- **最小编辑计算**（GRT-06），位于 `packages/vscode`。核心返回整篇文档；适配器把它缩减到最小的差异字符范围，所以保存时格式化不会迫使编辑器对整份文件重新 diff、重新分词与重新分析。
+- `editsInRange`，让选区只收到落在它内部的编辑。
+- 扩展包清单，声明 `onLanguage:markdown` 激活、`untrustedWorkspaces: supported` —— 这是诚实的，因为格式化器不执行工作区里的任何东西 —— 以及 `fuxiFmt.enable` 设置。
+
+### 修复
+
+- **引用块规范化过去不幂等。** `>>nested` 变成 `>> nested`，再格式化一次产生 `> > nested`，因为判断作者是否写了带空格标记的检查把最后一个标记之后的空格也算作分隔符。现在相邻标记保持相邻。这是适配器的往返测试发现的；核心自己的测试只格式化那份输入一次。
+
+### 备注
+
+- 扩展还不能安装：没有激活入口，也没有打包步骤。清单记录的是预期形状，而不是一件成品。
+
+## [0.6.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.5.0...v0.6.0) - 2026-09-28
+
+### 新增
+
+- **命令行界面**：`--check`、`--diff`、`--write`、`--help`，退出码 0 / 1 / 2。
+
+## [0.5.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.4.0...v0.5.0) - 2026-09-28
+
+### 新增
+
+- **配置加载**（CFG-01）。`fuxi-fmt.json` 通过向上遍历发现；接受注释与尾随逗号。
+
+## [0.4.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.3.0...v0.4.0) - 2026-09-28
+
+### 新增
+
+- **无序标记规范化**（BLK-07）。
+- **代码围栏分隔符规范化**（BLK-10）。
+
+## [0.3.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.2.0...v0.3.0) - 2026-09-28
+
+### 新增
+
+- **标点宽度**（TYPO-05）、**字符宽度**（TYPO-06）、**文件卫生**（BLK-11）。
+
+## [0.2.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.1.0...v0.2.0) - 2026-09-28
+
+### 新增
+
+- **CJK 排版**（TYPO-01、TYPO-02、TYPO-03、TYPO-07、TYPO-09）。
+- **有序列表重新编号**（BLK-06）。
+- **语义保持守卫**（GRT-01、GRT-04）。
+
+## [0.1.0](https://github.com/Fux-i/fuxi-fmt/releases/tag/v0.1.0) - 2026-09-28
+
+第一个里程碑。
+
+### 新增
+
+- **受保护区域扫描器**（SAFE-01 – SAFE-06、FM-01）。
+- **块切分**，带空行策略（BLK-01、BLK-02、BLK-03）。
+- **标记空格**（BLK-04、BLK-05、BLK-09）。
+
+
