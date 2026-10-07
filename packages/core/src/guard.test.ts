@@ -138,3 +138,34 @@ describe('GRT-01 a block quote is compared as content', () => {
     assert.deepEqual(checkSemantics('>quote\n', '> quote\n'), []);
   });
 });
+
+describe('SAFE-04 / SAFE-06 the guard refuses rewritten Markdown and HTML syntax', () => {
+  // Claiming these characters in the scanner is half of the repair; the guard is
+  // the half that stops the next rule from moving them again. It used to be
+  // blind here too - the scanner had no region for a relative destination or an
+  // inline tag, so a document whose links had been rewritten came back with no
+  // refusal, no warning and exit code 0.
+  test('a destination rewritten to full width is a violation', () => {
+    const violations = checkSemantics('中文[链接](a.md)中文\n', '中文[链接]（a.md）中文\n');
+    assert.equal(violations.length, 1);
+    assert.equal(violations[0]?.ruleId, 'GRT-01');
+  });
+
+  test('an image marker that changed is a violation', () => {
+    const violations = checkSemantics('中文 ![图](a.png) 中文\n', '中文！[图]（a.png）中文\n');
+    assert.equal(violations.length, 1);
+  });
+
+  test('an HTML tag whose attributes changed is a violation', () => {
+    const violations = checkSemantics(
+      '中文 <img src="a.png" alt="中文" /> 中文\n',
+      '中文 <img src=“a.png”alt=“中文”/> 中文\n',
+    );
+    assert.equal(violations.length, 1);
+    assert.equal(violations[0]?.ruleId, 'SAFE-01');
+  });
+
+  test('a document that only gains the spacing it should is not', () => {
+    assert.deepEqual(checkSemantics('中文abc\n', '中文 abc\n'), []);
+  });
+});
