@@ -43,8 +43,11 @@ jobs:
           test -f "$vsix" || { echo "no package at $vsix"; exit 1; }
           unzip -l "$vsix" > /tmp/vsix.txt
           cat /tmp/vsix.txt
-          for name in package.json package.nls.json package.nls.zh-cn.json extension.cjs; do
-            grep -q "extension/$name\|extension/dist/$name" /tmp/vsix.txt || { echo "the package is missing $name"; exit 1; }
+          # readme.md, not README.md: vsce lowercases the name on the way in.
+          # It is generated into the stage from the repository root, which is
+          # exactly the kind of step that can silently stop producing a file.
+          for name in package.json package.nls.json package.nls.zh-cn.json extension.cjs readme.md; do
+            grep -qi "extension/$name\|extension/dist/$name" /tmp/vsix.txt || { echo "the package is missing $name"; exit 1; }
           done
       - uses: actions/upload-artifact@v7
         with:

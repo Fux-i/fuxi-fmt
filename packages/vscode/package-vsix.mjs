@@ -42,18 +42,33 @@ const SHIPPED = [
   'dist',
   'icon.png',
   'assets',
-  'README.md',
-  'CHANGELOG.md',
   'LICENSE',
   // Carried so the ignore rules still apply in the stage; without it the
   // sourcemap ships and the package doubles in size.
   '.vscodeignore',
 ];
 
+/**
+ * The marketplace reads the readme and the changelog out of the package, and
+ * this repository has exactly one of each: the two at the root. They are
+ * copied here rather than kept a second time under packages/vscode, because a
+ * hand-maintained mirror is a thing that drifts - the pair that used to live
+ * there had already stopped matching the files it mirrored.
+ *
+ * Copied, not linked. A symlink inside the package points outside it, and a
+ * Windows checkout with core.symlinks=false turns one into a plain file whose
+ * content is the target path. The copy exists only inside this temporary
+ * directory and is removed in the finally block.
+ */
+const FROM_ROOT = ['README.md', 'CHANGELOG.md'];
+
 const stage = mkdtempSync(join(tmpdir(), 'fuxi-fmt-vsix-'));
 try {
   for (const entry of SHIPPED) {
     cpSync(join(here, entry), join(stage, entry), { recursive: true });
+  }
+  for (const entry of FROM_ROOT) {
+    cpSync(join(root, entry), join(stage, entry));
   }
 
   // vsce runs vscode:prepublish before collecting. The staged copy has no
