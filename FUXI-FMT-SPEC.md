@@ -1,479 +1,462 @@
-# fuxi-fmt — Functional Specification
 
-**Draft 1. Functionality only.**
+# fuxi-fmt —— 功能规范
 
-This document defines *what* the formatter must and must not do. It deliberately contains no implementation, packaging, language, or release decisions. Everything here is a behavioural contract.
+**草稿 1。只谈功能。**
 
-**Scope:** a Markdown formatter for Chinese technical writing, delivered as a VS Code extension.
+本文档规定格式化器必须做什么、不得做什么。它刻意不含任何实现、打包、语言或发布决策。这里的一切都是行为契约。
 
-**Companion documents:** `MAINSTREAM_MD_FORMATTERS_REPORT.md` (per-formatter option internals and primary sources).
+**范围：** 面向中文技术写作的 Markdown 格式化器，以 VS Code 扩展的形式交付。
+
+**配套文档：** `MAINSTREAM_MD_FORMATTERS_REPORT.md`（各格式化器的选项内情与第一手出处）。
 
 ---
 
-## 1. Why this exists
+## 1. 为什么需要它
 
-### 1.1 The composition gap
+### 1.1 组合缺口
 
-No single VS Code extension covers the required behaviour set, and the ecosystem cannot be composed to cover it either:
+没有任何一个 VS Code 扩展能覆盖所需的行为集合，生态也拼不出来：
 
-- VS Code runs **exactly one** formatting provider per language per format action/save, selected by `editor.defaultFormatter`. With multiple providers registered and none configured, it refuses with "There are multiple formatters...".
-- A **range** provider counts as a document formatter, so every candidate competes for the same single slot.
-- Save participants run in a **fixed order**: TrimWhitespace → CodeActionOnSave → FormatOnSave → FinalNewLine → TrimFinalNewLines. A `source.fixAll.*` provider therefore runs **before** the default formatter, and any broad re-printer downstream clobbers its work.
-- Prettier ships an explicit guard that disables its own `source.fixAll.prettier` when another extension is the default formatter, described in its source as being "to prevent double-formatting". Upstream acknowledges the problem rather than solving it.
-- **AutoCorrect is not a formatting provider at all.** It registers a command, code actions, and its own `onWillSaveTextDocument` hook, which sits *outside* the save-participant ordering entirely — so its position relative to the formatter is undefined by any setting. It cannot occupy the `editor.defaultFormatter` slot.
+- VS Code 每种语言、每次格式化动作或保存**只运行一个**格式化提供程序，由 `editor.defaultFormatter` 选定。注册了多个提供程序却一个都没配置时，它直接拒绝，并提示 "There are multiple formatters..."。
+- **范围**提供程序也算文档格式化器，于是每个候选都在抢同一个位子。
+- 保存参与者按**固定顺序**执行：TrimWhitespace → CodeActionOnSave → FormatOnSave → FinalNewLine → TrimFinalNewLines。所以 `source.fixAll.*` 提供程序在默认格式化器**之前**运行，下游任何大范围的重新打印都会把它覆盖掉。
+- Prettier 自带一个显式守卫：当别的扩展是默认格式化器时，它会关掉自己的 `source.fixAll.prettier`，其源码说这是 "to prevent double-formatting"。上游承认了这个问题，而不是解决它。
+- **AutoCorrect 根本不是格式化提供程序。** 它注册的是命令、代码动作和自己的 `onWillSaveTextDocument` 钩子，完全落在保存参与者顺序**之外**——它相对于格式化器的位置不由任何设置决定。它占不到 `editor.defaultFormatter` 这个位子。
 
-**Consequence:** the gap is not a missing rule. It is the absence of one engine with one config surface that owns both structure and CJK typography.
+**结论：** 缺口不是少了一条规则，而是缺少一个引擎、一套配置，同时掌管结构与中国排版。
 
-### 1.2 The spec gap
+### 1.2 规范缺口
 
-There is no single normative specification to inherit. The human-facing source is the Chinese Copywriting Guidelines (sparanoid); the machine implementations are pangu.js, AutoCorrect, zhlint and `textlint-rule-preset-zh-technical-writing`, and they disagree on measurable cases:
+没有可继承的单一规范。面向人的来源是《中文文案排版指北》（sparanoid）；机器实现是 pangu.js、AutoCorrect、zhlint 与 `textlint-rule-preset-zh-technical-writing`，它们在可测量的案例上互相矛盾：
 
-| Case | Disagreement |
+| 案例 | 分歧 |
 |---|---|
-| Dates | `3月10日` stays tight in zhlint; becomes `3 月 10 日` in AutoCorrect and pangu |
-| Percent / units | `textlint-zh` forces `0.05%` and `70℃` tight; the Guidelines require `10 Gbps` with a space but `15%` without |
-| Parentheses | Guidelines and `textlint-zh` `mixed` choose full-width for Chinese content; **zhlint defaults to converting `（）` down to half-width** |
-| Inline code | zhlint and `textlint-zh` add spaces outside; AutoCorrect never touches it in Markdown; textlint-ja defaults to no space |
-| Negative numbers | AutoCorrect treats `-255` as a signed number; pangu treats the hyphen as an operator |
-| `第1章` | All three machine tools produce `第 1 章` |
-| Quotes | zhlint unifies `「」` to curly quotes; AutoCorrect never width-converts them |
+| 日期 | `3月10日` 在 zhlint 里保持紧贴；在 AutoCorrect 与 pangu 里变成 `3 月 10 日` |
+| 百分号与单位 | `textlint-zh` 强制 `0.05%` 与 `70℃` 紧贴；《指北》要求 `10 Gbps` 带空格而 `15%` 不带 |
+| 括号 | 《指北》与 `textlint-zh` 的 `mixed` 对中文内容选全角；**zhlint 默认把 `（）` 降成半角** |
+| 行内代码 | zhlint 与 `textlint-zh` 在外侧加空格；AutoCorrect 在 Markdown 里从不碰它；textlint-ja 默认不加空格 |
+| 负数 | AutoCorrect 把 `-255` 当带符号的数；pangu 把连字符当运算符 |
+| `第1章` | 三个机器工具都产出 `第 1 章` |
+| 引号 | zhlint 把 `「」` 统一成弯引号；AutoCorrect 从不做宽度转换 |
 
-Additionally, **pangu.js's own README says not to use it on Markdown** (it targets HTML/plain text and has no Markdown grammar; it will space `#` hashtags and mangle table pipes).
+此外，**pangu.js 自己的 README 就说了不要在 Markdown 上用它**（它的目标是 HTML 与纯文本，没有 Markdown 语法；它会给 `#` 标签加空格，还会弄乱表格竖线）。
 
-**Consequence:** fuxi-fmt owns its specification. The Guidelines are the prose rationale; the rule table in this document is the normative artefact.
+**结论：** fuxi-fmt 自己持有规范。《指北》是散文式的理由，本文档的规则表才是规范产物。
 
-### 1.3 Measured performance envelope
+### 1.3 实测性能范围
 
-Measured on a deterministic fixture of 10,129 lines / 372 KB / 55,175 Han characters (75% of lines inside code fences), best-of-N:
+在一个确定性的 fixture 上测量：10,129 行 / 372 KB / 55,175 个汉字（75% 的行位于代码围栏内），取 best-of-N：
 
-fuxi-fmt measured 47.3 ms, best-of-5, Node 24, on that fixture. It separates no
-parse from format because it does neither in the usual sense: there is one scan and one rebuild.
-Against Prettier's 461.5 ms that is 9.8x, which is the "order of magnitude" this section claims.
+fuxi-fmt 在这个 fixture 上测得 47.3 ms，best-of-5，Node 24。它不区分解析与格式化，因为这两件事它都不按通常意义去做：只有一次扫描和一次重建。相对 Prettier 的 461.5 ms 是 9.8 倍，也就是本节所称的「一个数量级」。
 
-| Engine | parse | format / round trip |
+| 引擎 | 解析 | 格式化 / 往返 |
 |---|---|---|
-| Rust + comrak (native release) | 0.9 ms | 6.1 ms |
-| markdown-it (JS) | 8.3 ms | — |
-| 20 Unicode-aware CJK regex passes (JS) | — | 12.1 ms |
-| remark / micromark → mdast (JS) | 164.5 ms | 199.8 ms |
-| Prettier (markdown) | — | 461.5 ms |
-| **fuxi-fmt** (this repository, whole pipeline) | — | **47.3 ms** |
+| Rust + comrak（原生 release） | 0.9 ms | 6.1 ms |
+| markdown-it（JS） | 8.3 ms | — |
+| 20 遍 Unicode 感知的 CJK 正则（JS） | — | 12.1 ms |
+| remark / micromark → mdast（JS） | 164.5 ms | 199.8 ms |
+| Prettier（markdown） | — | 461.5 ms |
+| **fuxi-fmt**（本仓库，整条流水线） | — | **47.3 ms** |
 
-Two conclusions are load-bearing for the design:
+有两个结论对设计有承重作用：
 
-1. A tokenizer-plus-scan engine in JavaScript is roughly an order of magnitude faster than Prettier on this workload. Native or WASM execution is **not** required for the stated scale, and the engine is **not** the bottleneck for format-on-save — the editor applying the edit is (see §2.F).
-2. remark/micromark is **20x slower to parse** than markdown-it on this file. It must not sit on the every-save path.
+1. JavaScript 里的 tokenizer 加扫描引擎在这个负载上大约比 Prettier 快一个数量级。在所声明的规模上，原生或 WASM 执行**并非必需**，引擎也**不是**保存时格式化的瓶颈——瓶颈是编辑器应用这次编辑（见 §2.F）。
+2. 在这个文件上，remark/micromark 的**解析慢 20 倍**于 markdown-it。它不能出现在每次保存的路径上。
 
 ---
 
-## 2. Goals
+## 2. 目标
 
-Rule IDs are stable and intended to become the rule registry's canonical identifiers.
+规则 ID 是稳定的，将来会成为规则注册表的规范标识符。
 
-### A. Block structure
+### A. 块级结构
 
-**BLK-01 — Blank lines around blocks** · default `exact`
+**BLK-01 —— 块与块之间的空行** · 默认 `exact`
 
-Insert blank lines around top-level blocks: paragraphs, headings, lists, fenced code, blockquotes, tables, thematic breaks, HTML blocks, and the boundary between front matter and body. Not between two blocks that both sit inside a block quote: a blank line there ends the quote, so the author's spacing is left alone (section 7, item 0).
+在顶层块周围插入空行：段落、标题、列表、围栏代码、引用块、表格、分隔线、HTML 块，以及 front matter 与正文的交界。不在两个同处引用块内部的块之间插入：那里的空行会结束引用，所以作者写的间距原样保留（第 7 节第 0 条）。
 
-- `blankLines.aroundBlocks: "exact" | "atLeast"` (default `exact`).
-- `atLeast` is only observably different from `exact` when BLK-02 allows more than one blank line; this must be documented rather than left implicit.
+- `blankLines.aroundBlocks: "exact" | "atLeast"`（默认 `exact`）。
+- 只有当 BLK-02 允许多于一个空行时，`atLeast` 才与 `exact` 有可观察的差别；这一点必须写进文档，而不是留作隐含。
 
-**BLK-02 — Cap on consecutive blank lines** · default `1`
+**BLK-02 —— 连续空行上限** · 默认 `1`
 
-`blankLines.maxConsecutive: number | null` (default `1`; `null` = unbounded, which is what makes `atLeast` meaningful).
+`blankLines.maxConsecutive: number | null`（默认 `1`；`null` 表示不设上限，也正是它让 `atLeast` 有意义）。
 
-**BLK-03 — Preserve list tightness** · always on
+**BLK-03 —— 保持列表的紧凑与宽松** · 始终开启
 
-A blank line between list items decides whether the list renders tight or loose, and those are different HTML. The policy is therefore explicit rather than incidental: `blankLines.insideLists` is `remove` (default), `one` or `preserve`, and it applies only between items of the *same* list — a blank between different markers separates two lists, and collapsing it would merge them. `blankLines.insideBlockquotes` was withdrawn rather than implemented (section 7, item 0).
+列表项之间的空行决定列表渲染成紧凑还是宽松，而这是两种不同的 HTML。所以策略是显式的而不是顺带的：`blankLines.insideLists` 取 `remove`（默认）、`one` 或 `preserve`，且只作用于*同一个*列表的项之间——不同标记之间的空行分隔的是两个列表，合并它会把两个列表并成一个。`blankLines.insideBlockquotes` 被撤回而非实现（第 7 节第 0 条）。
 
-**BLK-04 — One space after list markers**
+**BLK-04 —— 列表标记之后恰好一个空格**
 
-Exactly one space after `-`, `*`, `+`, `N.`, `N)` and after a task-list checkbox. Applies to single-line and multi-line items.
+`-`、`*`、`+`、`N.`、`N)` 以及任务列表复选框之后恰好一个空格。单行项与多行项都适用。
 
-**BLK-05 — One space after heading hashes**
+**BLK-05 —— 标题井号之后恰好一个空格**
 
-Exactly one space after the opening `#` run. Collapses multiple spaces; inserts a missing one.
+开头那串 `#` 之后恰好一个空格。多个空格合并成一个；缺了就补一个。
 
-- A `#` run followed immediately by a digit is treated as an issue reference (`#123 修复了`) and is left alone. Promoting it would silently turn a paragraph into a heading, which is a rendering change rather than a spacing fix.
+- 紧跟数字的 `#` 串被当作 issue 引用（`#123 修复了`），原样不动。把它提升成标题会把段落悄悄变成标题，那是渲染结果的改变，不是空格修复。
 
-**BLK-06 — Ordered list renumbering** · default `keep-all-ones`
+**BLK-06 —— 有序列表重新编号** · 默认 `keep-all-ones`
 
-Numbers are renumbered at every nesting level, honouring a declared start on the first item.
-`list.orderedStyle` chooses between three behaviours: `renumber` numbers sequentially from the
-declared start; `keep-all-ones` (the default) does the same but leaves a list the author wrote with
-lazy all-ones markers as it is, matching Prettier and dprint and keeping diffs minimal for the
-git-diff-friendly style; `preserve` changes no number at all.
+编号在每一层嵌套上重排，并尊重首项声明的起始编号。`list.orderedStyle` 在三种行为之间选择：`renumber` 从声明的起始编号顺序编号；`keep-all-ones`（默认）做同样的事，但作者用惰性全 1 标记写的列表原样保留，与 Prettier 和 dprint 一致，也让 git diff 友好的写法保持最小 diff；`preserve` 一个数字都不改。
 
-- Renumber at every nesting level.
-- Honour a declared start on the first item (`3. / 4. / 5.` keeps starting at 3).
-- **Auto-detect the lazy all-`1.` style** and preserve it (matches Prettier and dprint; also the minimal-diff default in mdformat). `list.orderedStyle: "keep-all-ones"`.
-- `orderedList.delimiter: "preserve" | "." | ")"`, default `preserve`.
-- **A blockquote prefix is part of the list's identity, not a blank wall in front of it.** A quoted
-  list is renumbered like any other, and each quote depth is a separate list — `> > 1. a` and
-  `> 1. b` are two lists, not a sequence. A bare `>` counts as a blank line inside the quote, so a
-  quoted paragraph ends the list it follows; and a heading inside a quote ends it too, exactly as a
-  bare heading does.
+- 每一层嵌套都重排。
+- 尊重首项声明的起始编号（`3. / 4. / 5.` 仍然从 3 开始）。
+- **自动识别惰性全 `1.` 风格**并保留它（与 Prettier、dprint 一致；也是 mdformat 的最小 diff 默认）。`list.orderedStyle: "keep-all-ones"`。
+- `orderedList.delimiter: "preserve" | "." | ")"`，默认 `preserve`。
+- **引用前缀是列表身份的一部分，不是挡在它前面的一堵墙。** 被引用的列表照样重新编号，而且每个引用深度都是一个独立的列表——`> > 1. a` 与 `> 1. b` 是两个列表，不是一串。一个裸 `>` 算引用内部的空行，所以被引用的段落会结束它前面的列表；引用内部的标题同样会结束列表，和裸标题一样。
 
-**BLK-07 — Unordered list marker normalization** · default `-`
+**BLK-07 —— 无序列表标记规范化** · 默认 `-`
 
-`list.unorderedMarker: "dashes" | "asterisks" | "preserve"` (default `dashes`).
+`list.unorderedMarker: "dashes" | "asterisks" | "preserve"`（默认 `dashes`）。
 
-**BLK-08 — List indentation width** · default `2`
+**BLK-08 —— 列表缩进宽度** · 默认 `2`
 
-`list.orderedIndent: "aligned" | 4` and `list.unorderedIndent: "aligned" | 3 | 4`. Applies to nested list content and continuation lines. **Interacts with SAFE-02**: a list containing a protected block is excluded from reindentation. See §7 open item 1. **Implemented** — `aligned` puts a nested item's marker at its parent's content column, and an explicit width is a floor under that column, so a long ordered marker keeps its own column and nesting is never broken.
+`list.orderedIndent: "aligned" | 4` 与 `list.unorderedIndent: "aligned" | 3 | 4`。作用于嵌套列表内容与续行。**与 SAFE-02 相互作用**：含有受保护块的列表不参与重新缩进。见 §7 待办第 1 条。**已实现**——`aligned` 把嵌套项的标记放在父项的内容列上，显式宽度是那一列之下的下限，所以很长的有序标记能保住自己的列，嵌套不会被弄坏。
 
-- **A top-level item keeps the offset it was written with**, because snapping an already-indented fragment to column 0 is the bug this scanner was written to replace. "Top-level" means the item opened the list.
-- **An item that falls out of an open ancestor is dedented to its container.** An item written shallower than the item above it cannot be that item's child, so it ends the list - and it used to keep the indent that made it look like a child anyway, which is how `1. 333` / `  - ok` stayed looking nested when it was not. Falling out means closing an item *shallower* than itself: closing a sibling at the same indent is ordinary list structure and changes nothing. The two situations look alike in the parent array and are not the same.
+- **顶层项保留它被写下时的偏移**，因为把一个本来就缩进过的片段吸附到第 0 列正是这个扫描器要取代的那个 bug。「顶层」指该项开启了列表。
+- **掉出祖先作用域的项会被反缩进到它实际所在的层级。** 写得比上一项更浅的项不可能是它的子项，于是它结束该列表——而它过去仍然保留着让它看起来像子项的缩进，这就是 `1. 333` / `  - ok` 明明不是嵌套却看起来像嵌套的原因。掉出意味着闭合一个*比自身更浅*的项：在同样缩进上闭合兄弟项是正常列表结构，什么都不改。这两种情况在父项数组里长得一样，却不是一回事。
 
-**BLK-09 — One space after the block quote marker**
+**BLK-09 —— 引用标记之后恰好一个空格**
 
-`>text` becomes `> text`. That one space is the separator and the only whitespace this rule owns: everything after it is the content's own indentation and is left exactly as written. Collapsing it was a bug rather than a tidy-up — `> - a` followed by `>   - b` is a nested item, and `> - a` followed by `> - b` is two siblings — and the same spaces are what make an indented code block inside a quote code, which the guard cannot see because every quoted line is the same block kind. Adjacent markers (`>>`) stay adjacent; only whitespace between markers means the author wrote the spaced form (`> >`).
+`>text` 变成 `> text`。这一个空格是分隔符，也是本规则唯一拥有的空白：它之后的全部内容都是内容自己的缩进，逐字节原样保留。把它合并掉是 bug 而不是整理——`> - a` 后面接 `>   - b` 是嵌套项，而 `> - a` 后面接 `> - b` 是两个兄弟项——同样这些空格决定了引用内部的缩进代码块确实是代码，而守卫看不见这一点，因为每一行被引用的行都是同一种块类型。相邻标记（`>>`）保持相邻；只有标记之间的空白才意味着作者写的是带空格的形态（`> >`）。
 
-**BLK-10 — Code fence delimiter normalization** · default `backticks`
+**BLK-10 —— 代码围栏分隔符规范化** · 默认 `backticks`
 
-Fence character and length only. Length is `max(3, longest run of the fence character in the body + 1)`. **The info string is never modified** (SAFE-02).
+只改围栏字符与长度。长度是 `max(3, 正文中最长的围栏字符连续串 + 1)`。**info string 永不修改**（SAFE-02）。
 
-A line indented more than three columns past the opener is not a closing fence, so a block "closed" that way is unterminated: its delimiters are left exactly as written. The normalizer applies the scanner's own indentation test rather than a looser one, because a line the scanner does not count as a closer is inside the protected region, and rewriting it is a SAFE-01 breach that refuses the whole document.
+比开头行缩进多出三列以上的行不是闭合围栏，所以以那种方式「闭合」的块其实是未终止的：它的分隔符逐字节原样保留。规范化器使用扫描器自己的缩进判定，而不是更宽松的判定，因为扫描器不算作闭合的行位于受保护区域内，改写它就是对 SAFE-01 的破坏，会让整篇文档被拒绝。
 
-**BLK-11 — File hygiene**
+**BLK-11 —— 文件卫生**
 
-| Rule | Default |
+| 规则 | 默认 |
 |---|---|
-| Trailing whitespace trimmed (except hard-break double-space when `hardBreakKind` uses it) | on |
-| Hard tabs replaced per `list.tabWidth` | on |
-| Exactly one final newline | on |
-| BOM stripped | on |
-| Line endings per `endOfLine: "lf" \| "crlf" \| "auto"` | `lf` |
+| 删除行尾空白（`hardBreakKind` 使用硬换行双空格时除外） | 开 |
+| 按 `list.tabWidth` 展开硬制表符 | 开 |
+| 结尾恰好一个换行 | 开 |
+| 去掉 BOM | 开 |
+| 行尾按 `endOfLine: "lf" \| "crlf" \| "auto"` | `lf` |
 
-**BLK-12 — Blank lines at the edges of a code block** · default on
+**BLK-12 —— 代码块首尾的空行** · 默认开
 
-`codeBlock.trimBlankLines: true | false` (default `true`). Blank lines immediately after the opening delimiter and immediately before the closing one are removed, because they are not code: they are the space the author left around it. Blank lines *inside* the block are untouched, since those are part of the code.
+`codeBlock.trimBlankLines: true | false`（默认 `true`）。紧跟开头分隔符之后的空行、紧跟闭合分隔符之前的空行会被删除，因为它们不是代码：那是作者在它周围留下的空隙。块*内部*的空行不动，因为那属于代码。
 
-**This is the one intentional difference to SAFE-01 in the whole tool.** It has to be declared rather than inferred from a config key, so the specification says it here and the guard names it where the guarantee is checked: the exception is granted only when this option is on, so a bug that deleted fence bytes is still a violation when it is off. A fence with no closing delimiter is never trimmed — its last line is code, and trimming it because it looked like a body edge would delete what the author wrote.
+**这是整个工具中唯一一处对 SAFE-01 的有意例外。** 它必须被声明，而不能从一个配置键推断出来，所以规范在这里写明，守卫在检查保证的地方点名它：只有当这个选项打开时才授予例外，所以一个删掉围栏字节的 bug 在该选项关闭时仍然是违规。没有闭合分隔符的围栏永不裁剪——它的最后一行是代码，因为那一行看起来像正文边缘就裁掉它，等于删掉作者写的东西。
 
-**BLK-13 — Thematic break character** · default `dashes`
+**BLK-13 —— 分隔线字符** · 默认 `dashes`
 
-`thematicBreak: "dashes" | "asterisks" | "underscores" | "preserve"` (default `dashes`). `---`, `***` and `___` are the same node, and so are `-----` and `* * *`: the canonical form is exactly three of the chosen character, with the author's indentation, and `preserve` keeps both the character and the run length as written.
+`thematicBreak: "dashes" | "asterisks" | "underscores" | "preserve"`（默认 `dashes`）。`---`、`***` 与 `___` 是同一个节点，`-----` 与 `* * *` 也是：规范形态是所选字符恰好三个，缩进沿用作者的写法；`preserve` 则连字符与长度都保持原样。
 
-Two positions are left alone, because there the character is not a style but a different node. Three dashes directly under a paragraph is a **setext heading underline** — `text` followed by `---` is an H2 — which is also why `segment()` keeps those two lines in one block: separating them with a blank line rewrites the heading as a paragraph and a rule, and the guard, which compares line kinds, cannot see the difference. And three dashes on line 1 above a YAML key would open front matter (FM-01). In both, the line keeps the character its author wrote; every other target and every other position is the same node written differently. A break inside a block quote is normalised like any other, with the marker chain peeled and put back byte for byte.
+有两个位置不动，因为在那里字符不是样式，而是另一个节点。紧贴段落下面的三个短横线是 **setext 标题下划线**——`text` 后面跟 `---` 是 H2——这也是 `segment()` 把这两行留在同一个块里的原因：用空行把它们分开，就把 H2 改写成段落加一条分隔线，而守卫比较的是行类型，看不见这个差别。第 1 行的三个短横线位于 YAML 键之上时则会开启 front matter（FM-01）。这两种情况下，该行保留作者写的字符；其它任何目标、任何位置都只是同一个节点换一种写法。引用块内部的分隔线照常规范化，标记链被剥下再逐字节放回。
 
-**TBL-01 — Table alignment and padding** · default `preserve`
+**TBL-01 —— 表格对齐与补空格** · 默认 `preserve`
 
-A GFM table is the one block whose source layout *is* its presentation, so padding is a choice rather than a default: `table.mode: "preserve" | "normalize"`, `table.maxWidth: number | null`, `table.cjkWidth: 2 | 1`.
+GFM 表格是唯一一种源码版式*就是*其呈现方式的块，所以补空格是一个选择而不是默认：`table.mode: "preserve" | "normalize"`、`table.maxWidth: number | null`、`table.cjkWidth: 2 | 1`。
 
-- **Width is display width.** A column of Han characters only lines up if each of them counts as two columns, which is what a fixed-pitch font does with East Asian Wide and Fullwidth characters. It is a convention and not a law — a proportional font, or one whose CJK glyphs are not exactly two Latin advances, will still look ragged — so `cjkWidth` makes it the reader’s choice. Unicode’s East Asian *Ambiguous* class (Greek, `°`, `±`, box drawing) counts as one column, which is what editor fonts do.
-- **Alignment is read, never invented.** The delimiter row’s colons are the author’s declaration; the rule reproduces them and fills the dashes to the column width. A column with no colon stays left-aligned and does not acquire one.
-- **`maxWidth` skips a line, not the table.** A row whose padded line would exceed the cap is left byte-identical, and the column widths are recomputed from the rows that remain, so one wide cell cannot stretch every other row to its size. Wrapping is not on the table: a GFM row is one line, and a `<br>` would be adding content rather than laying it out. Nothing is reported when a row is skipped — with a cap set, skipping is what was asked for.
-- **A pipe-less table is padded pipe-less.** GFM’s outer pipes are optional, while this formatter’s classifier reads `| a | b |` as a table and `a | b` as a paragraph, so adding the pipes would change what the line is for every pass that reads the classification. The author’s convention is kept, and so are the two edges: the first and last cells of a pipe-less row are not padded past their content, because trailing whitespace is invisible and exactly two trailing spaces would be a hard break the padding had invented.
-- **A table is not padded when its rows disagree with its header** — a missing cell is a content error that padding would hide — nor when the delimiter row declares a different number of columns. DET-10 reports both; this rule steps around the table.
+- **宽度是显示宽度。** 一列汉字只有每个都算两列才排得齐，这也正是等宽字体对东亚宽字符与全角字符的做法。这是约定不是定律——比例字体，或 CJK 字形宽度不等于两个拉丁字符前进量的字体，看起来仍然会参差——所以 `cjkWidth` 把这个选择交给读者。Unicode 东亚*歧义*类（希腊字母、`°`、`±`、制表符号）算一列，编辑器字体就是这么做的。
+- **对齐是读出来的，从不凭空发明。** 分隔行里的冒号是作者的声明；规则复现它们，并把短横线补到列宽。没有冒号的列保持左对齐，也不会获得一个冒号。
+- **`maxWidth` 跳过一行，而不是跳过整张表。** 补空格后会超过上限的行逐字节保持原样，列宽则用剩下的行重新计算，所以一个很宽的单元格无法把其它所有行都撑到它的宽度。折行不在讨论范围内：GFM 的一行就是一行，而 `<br>` 是在添加内容而不是在排版。跳过行时不报告任何东西——设了上限，跳过就是要求本身。
+- **不带竖线的表格补空格后也不带竖线。** GFM 的外侧竖线是可选的，而本格式化器的分类器把 `| a | b |` 读成表格、把 `a | b` 读成段落，所以加上竖线会改变每一遍读取分类的通行为了什么。作者的约定被保留，两端也一样：不带竖线的行里首尾单元格不会在内容之外补空格，因为行尾空白看不见，而恰好两个行尾空格会是补空格凭空造出的硬换行。
+- **当行的单元格数与表头不符时，表格不补空格**——缺失的单元格是内容错误，补空格会把它藏起来——分隔行声明的列数不同时也一样。两者都由 DET-10 报告；本规则绕过该表格。
 
-**BLK-14 — A block quote is a prefix** · always on
+**BLK-14 —— 引用块是一个前缀** · 始终开启
 
-The `>` chain is a prefix, not a wall: what is inside a quote is a document like any other, and every rule that applies outside applies inside. The chain is peeled to find the content and put back byte for byte, so a quoted list is renumbered (BLK-06) and reindented (BLK-08), a quoted table is padded (TBL-01), a quoted thematic break is normalised (BLK-13), and a quoted fence, math block or HTML block is a protected region (SAFE-01 – SAFE-04). Each quote depth is its own document, so `> > 1. a` and `> 1. b` are two lists rather than one sequence, and a quoted list and a top-level list are two lists even when they share a marker.
+`>` 链是一个前缀，不是一堵墙：引用内部的内容和别处一样是一篇文档，外面适用的每条规则在里面也适用。链条被剥下来找到内容，再逐字节放回，所以被引用的列表会重新编号（BLK-06）、重新缩进（BLK-08），被引用的表格会补空格（TBL-01），被引用的分隔线会规范化（BLK-13），被引用的围栏、公式块或 HTML 块是受保护区域（SAFE-01 – SAFE-04）。每个引用深度都是它自己的一篇文档，所以 `> > 1. a` 与 `> 1. b` 是两个列表而不是一串；被引用的列表与顶层列表即使共用同一种标记，也是两个列表。
 
-Two things follow from that and are worth stating:
+由此推出两件事，值得写明：
 
-- **A bare `>` is a blank line.** It renders as one, so the guard reads it as one: a rule may add or remove a blank line inside a quote without the non-blank line count changing, and a `>` line is not counted as content. This is what section 7 item 0 once said was impossible.
-- **The blank-line policy still stands down inside a quote.** Consecutive quoted lines are one block, so there is rarely a gap for BLK-01 to close, and where there is one - around a quoted fence - an *empty* line would end the quote rather than separate two blocks inside it. Writing a `>` line there instead would merge two quotes the author wrote as separate. The policy therefore leaves the author's spacing exactly as written, and `blankLines.insideBlockquotes` remains unbuilt (section 7, item 0).
+- **裸 `>` 就是空行。** 它渲染出来就是空行，所以守卫也把它当空行读：规则可以在引用内部增删一个空行而不让非空行计数发生变化，`>` 行不算内容行。这正是第 7 节第 0 条曾经说做不到的事。
+- **空行策略在引用内部依旧让位。** 连续的被引用行是一个块，所以 BLK-01 很少有机会去补空隙；而当空隙确实存在时——比如被引用的围栏周围——插一个*空*行会结束引用而不是分隔引用内部的两个块。在那里改写一个 `>` 行则会合并作者分开写的两个引用。于是策略把作者写的间距原样留下，`blankLines.insideBlockquotes` 依旧没有实现（第 7 节第 0 条）。
 
-### B. Inline structure
+### B. 行内结构
 
-**INL-01 — Inline code spacing** (see TYPO-01 for the mechanism)
+**INL-01 —— 行内代码两侧的空格**（机制见 TYPO-01）
 
-Inline code and inline math are treated as a **single Latin "word"**. Spacing therefore applies only at their CJK boundary, by exactly the same rule as any other Latin run. Contents of the span are byte-untouched.
+行内代码与行内公式被当作**一个拉丁词**。因此空格只加在它们与 CJK 的交界处，规则与任何其它拉丁串完全相同。span 的内容逐字节不动。
 
-Consequences that follow directly and must be documented as intended, not as bugs:
+由此直接推出、必须写成有意设计而不是 bug 的结论：
 
-- `中文`code`中文` becomes `中文 `code` 中文`.
-- `中文`code`，` gains no space before `，` (full-width punctuation is a boundary — TYPO-07).
-- `foo`bar`baz` is **never** spaced: both sides are non-CJK.
+- `中文`code`中文` 变成 `中文 `code` 中文`。
+- `中文`code`，` 在 `，` 之前不加空格（全角标点是边界——TYPO-07）。
+- `foo`bar`baz` **从不**加空格：两侧都不是 CJK。
 
-**INL-02 — Escaping audit** · always on
+**INL-02 —— 转义审计** · 始终开启
 
-After all rules run, the document must parse to the same tree as before, except for documented intentional differences. If any rule would change parsing (a converted character becoming Markdown-significant), the formatter escapes it or refuses to write. Never silently emit a document that parses differently.
+所有规则跑完之后，文档必须解析出与之前相同的树，文档中声明的有意差异除外。如果某条规则会改变解析（被转换的字符变成了 Markdown 有效语法），格式化器就转义它，或者拒绝写入。绝不静默输出一篇解析结果不同的文档。
 
-### C. CJK typography
 
-**TYPO-01 — CJK ↔ non-CJK spacing** · default on
+### C. CJK 排版
 
-Insert exactly one space at a boundary between a CJK character and a non-CJK character. **Never insert a space between two non-CJK runs.** This is the whole rule; it is implemented directly, with no dependency on pangu or any other spacing library.
+**TYPO-01 —— CJK 与非 CJK 之间的空格** · 默认开
 
-Character classes (configurable):
+在 CJK 字符与非 CJK 字符的交界处恰好插入一个空格。**两个非 CJK 串之间绝不插入空格。** 规则就这么多；它直接实现，不依赖 pangu 或任何其它间距库。
 
-- **CJK (spacing-active):** Han — Ext-A `U+3400–4DBF`, Unified `U+4E00–9FFF`, Compatibility `U+F900–FAFF`, Ext-B and beyond via surrogate pairs.
-- **Wide (spacing-eligible, not CJK):** full-width forms `U+FF00–FFEF` — used to decide eligibility, not treated as Han.
-- **Non-CJK:** Latin letters, digits, and a whitelisted symbol set.
-- **Excluded by default, configurable:** Hiragana, Katakana, Hangul, Bopomofo, Enclosed CJK.
+字符类（可配置）：
 
-Whitelisted symbols (spaced only when directly touching CJK): `+ - = < > % ° ℃ ℉`. Slash, pipe and asterisk are excluded: the reference implementations keep `/` tight, and `|` and `*` are Markdown syntax in tables and emphasis.
+- **CJK（参与间距）：** 汉字 —— 扩展 A `U+3400–4DBF`、统一表意 `U+4E00–9FFF`、兼容 `U+F900–FAFF`、扩展 B 及以后经由代理对。
+- **宽字符（有资格参与间距，但不是 CJK）：** 全角形式 `U+FF00–FFEF` —— 用来判定资格，不当汉字处理。
+- **非 CJK：** 拉丁字母、数字，以及一份白名单符号。
+- **默认排除、可配置：** 平假名、片假名、谚文、注音符号、带圈 CJK。
 
-**TYPO-02 — Boundary whitespace collapse** · default on
+白名单符号（只在直接接触 CJK 时才加空格）：`+ - = < > % ° ℃ ℉`。斜杠、竖线与星号被排除：参考实现让 `/` 保持紧贴，而 `|` 与 `*` 在表格与强调中是 Markdown 语法。
 
-Multiple existing spaces at a CJK boundary collapse to one. Collapsing is **local to the boundary**; whitespace elsewhere is never touched.
+**TYPO-02 —— 交界处的空白合并** · 默认开
 
-**TYPO-03 — Compound-name protection** · always on
+CJK 交界处已有的多个空格合并成一个。合并**只作用于交界处**；其它地方的空白永不触碰。
 
-Never break or space inside compound tokens. Non-exhaustive protected forms: `GPT-4o`, `claude-4-opus`, `state-of-the-art`, `Sci-Fi`, `USB-C`, `X-RAY`, `A/B`, `60公里/小時`, `Math.floor(x)`, `*[0-9].log`.
+**TYPO-03 —— 复合词保护** · 始终开启
 
-**TYPO-04 — Number, unit, percent and date resolution** · always on
+绝不在复合 token 内部断开或加空格。非穷尽的受保护形态：`GPT-4o`、`claude-4-opus`、`state-of-the-art`、`Sci-Fi`、`USB-C`、`X-RAY`、`A/B`、`60公里/小時`、`Math.floor(x)`、`*[0-9].log`。
 
-A single principle resolves every disputed case: **number↔unit tightness is not the rule; CJK adjacency is.**
+**TYPO-04 —— 数字、单位、百分号与日期的判定** · 始终开启
 
-- Tight to the number: `%`, `℃`, `°`, Latin units. `15%`, `70℃`, `10GB`, `90°` are unchanged.
-- Spaced from CJK: `第 1 章`, `3 月 10 日`, `1 个`, `Nginx 服务器`.
-- A Latin run directly preceded by `%`, `$` or a backslash is not spaced (format-string escape hatch: `%s`, `$1`, `\1`).
-- Hyphen before a digit is a minus sign only when not preceded by an alphanumeric, so `-255` is spaced as a sign while `GPT-4o` and `A-Z` are untouched.
+一条原则解决所有争议案例：**紧贴与否不是规则，与 CJK 是否相邻才是。**
 
-**TYPO-05 — Punctuation width, CJK-adjacent** · default `fullwidth`
+- 与数字紧贴：`%`、`℃`、`°`、拉丁单位。`15%`、`70℃`、`10GB`、`90°` 不变。
+- 与 CJK 之间有空格：`第 1 章`、`3 月 10 日`、`1 个`、`Nginx 服务器`。
+- 紧跟在 `%`、`$` 或反斜杠之后的拉丁串不加空格（格式化字符串的逃生口：`%s`、`$1`、`\1`）。
+- 数字前的连字符只有在它前面不是字母数字时才是负号，所以 `-255` 按带符号的数加空格，而 `GPT-4o` 与 `A-Z` 不动。
 
-Half-width punctuation in Chinese context converts to full-width. `punctuationStyle: "fullwidth" | "halfwidth" | "mixed"` (default `fullwidth`).
+**TYPO-05 —— 与 CJK 相邻的标点宽度** · 默认 `fullwidth`
 
-- **What counts as Chinese context is one decision, shared with TYPO-08.** By default the whole line decides, so a Chinese sentence quoting an English term gets Chinese punctuation around it. Two bounds apply. A quoted span is its own scope, so an English sentence inside Chinese quotation marks keeps English punctuation; and a mark written tight against a Latin letter or digit belongs to that word, which is what keeps `1,000`, `3.14`, `10:30` and `foo(bar)` intact without an exception list for any of them. CJK directly beside the mark always wins, so `abc,中文` converts. `typography.context: "line" | "adjacent"` (default `line`); `adjacent` reads only the nearest significant character on either side, which is the older, narrower rule.
+中文语境中的半角标点转成全角。`punctuationStyle: "fullwidth" | "halfwidth" | "mixed"`（默认 `fullwidth`）。
 
-- Allowlist-driven. Default: `,` → `，`, `.` → `。`, `:` → `：`, `!` → `！`, `?` → `？`, plus paired quotes.
-- **A `.` converts only when it stands alone and follows CJK** — no dot on either side, and the character before it CJK. A dot is three different things in Markdown (sentence end, decimal point, ellipsis), and adjacency on either side is not enough to tell them apart: `等等...` used to become `等等。..`. Standing alone is the test rather than the end of the line, so `中文.后面还有字` still converts, while `1.5`, `a.b`, `e.g.` and every ellipsis are left alone.
-- Semicolon is **included** in the default change list. AutoCorrect excludes it deliberately, annotating the decision "danger", because in prose it separates list items and a wrong full-width semicolon is hard to spot. It is a default rather than a rule: remove `;` from `punctuationChangeList` to keep it half-width.
-- Never converts a character that is Markdown syntax in that position (see INL-02).
+- **什么叫中文语境是一个决定，与 TYPO-08 共用。** 默认由整行决定，所以一句中文引用一个英文术语时，它周围用的是中文标点。两条边界适用。被引号包起来的 span 是它自己的作用域，所以中文引号里的英文句子保留英文标点；而紧贴拉丁字母或数字写下的标点属于那个词，这正是让 `1,000`、`3.14`、`10:30` 与 `foo(bar)` 完好无损、且不需要为它们中任何一个列例外的原因。紧邻标点的 CJK 永远获胜，所以 `abc,中文` 会转换。`typography.context: "line" | "adjacent"`（默认 `line`）；`adjacent` 只读两侧最近的一个有效字符，那是更早、更窄的规则。
+- 由白名单驱动。默认：`,` → `，`、`.` → `。`、`:` → `：`、`!` → `！`、`?` → `？`，加上成对引号。
+- **`.` 只在单独成点且跟在 CJK 之后时转换** —— 两侧都不是点，且它前面的字符是 CJK。点在 Markdown 里有三种身份（句末、小数点、省略号），只看相邻不足以区分它们：`等等...` 曾经变成 `等等。..`。判定标准是单独成点而不是行尾，所以 `中文.后面还有字` 仍然转换，而 `1.5`、`a.b`、`e.g.` 与所有省略号都不动。
+- 分号**包含**在默认变更表里。AutoCorrect 有意排除它，并把这一决定标注为 "danger"，因为它在散文里分隔列表项，而错误的 全角分号很难被发现。它是默认值而不是规则：把 `;` 从 `punctuationChangeList` 里去掉就保持半角。
+- 绝不在那个位置上是 Markdown 语法的字符上转换（见 INL-02）。
 
-**TYPO-06 — Full-width alphanumerics to half-width** · default on
+**TYPO-06 —— 全角字母数字转半角** · 默认开
 
-`１２３` → `123`, `ＡＢＣ` → `ABC`, and U+3000 ideographic space → a normal space. This is width normalization, distinct from spacing.
+`１２３` → `123`、`ＡＢＣ` → `ABC`，以及 U+3000 表意空格 → 普通空格。这是宽度规范化，与加空格是两回事。
 
-**TYPO-07 — No space around full-width punctuation** · always on
+**TYPO-07 —— 全角标点两侧不加空格** · 始终开启
 
-Full-width punctuation (`，。！？；：、（）【】「」《》""''`) is a **boundary**, never a spacing target, and is never separated from its neighbours on either side.
+全角标点（`，。！？；：、（）【】「」《》""''`）是**边界**，从不是加空格的目标，也从不与两侧的邻居分开。
 
-Except at a **block marker**, where the space is not spacing but syntax. `- “引用”` is a list item and `-“引用”` is a paragraph that happens to start with a hyphen; the two are the same characters and different documents, so the marker keeps its separator. The exemption is one boundary wide: one space is kept where the author wrote a run, the rest of the line is formatted as usual, and prose is untouched — `中文 ，“引用”` still becomes `中文，“引用”`. `# “标题”` and `1. （一）` are the same case as the list item, and `> - “引用”` is why the whole marker chain is peeled rather than only the first marker.
+**块标记**处除外，那里的空格不是间距而是语法。`- “引用”` 是一个列表项，而 `-“引用”` 是一个恰好以连字符开头的段落；两者字符相同而文档不同，所以标记保留它的分隔符。豁免只有一个边界宽：作者写了连续空格就保留一个，行内其余部分照常格式化，散文不受影响 —— `中文 ，“引用”` 仍然变成 `中文，“引用”`。`# “标题”` 与 `1. （一）` 和列表项是同一种情况，而 `> - “引用”` 正是要剥整条标记链、而不是只剥第一个标记的原因。
 
-Without this, the space TYPO-07 deleted was the space the block syntax is made of: the formatter refused the document (GRT-01 reports the list item that came back a paragraph), and inside a blockquote, where the line kind does not change, it silently rewrote `> - “引用”` as `> -“引用”` and flattened the inner list.
+没有这一条，TYPO-07 删掉的空格就是构成块语法的那个空格：格式化器会拒绝文档（GRT-01 报告那个变回段落的列表项），而在引用块内部，行类型不变，它会静默地把 `> - “引用”` 改写成 `> -“引用”`，并把内层列表压平。
 
-**TYPO-08 — Parenthesis width follows the surrounding text** · default `mixed`
+**TYPO-08 —— 括号宽度跟随周围文本** · 默认 `mixed`
 
-A pair takes the width of the text it sits in, decided by the first non-blank character before the
-opening parenthesis; both parens of a pair take that one decision, so they never come out
-mismatched. Deciding from the *contents* rewrote the full-width parens of a Chinese sentence whenever
-the bracketed term happened to be English — `中文（English）文` became `中文(English)文`. When nothing
-precedes the opener on its line there is no context to read and the contents decide. `preserve`
-leaves both parens as written; `fullwidth` and `halfwidth` override the decision entirely.
+一对括号取它所处文本的宽度，由开括号之前第一个非空字符决定；一对括号的两个括号取同一个决定，所以绝不会出现宽度不匹配。从*内容*决定，会在括号里的术语恰好是英文时改写中文句子的全角括号 —— `中文（English）文` 会变成 `中文(English)文`。开括号在它那一行之前没有东西时，没有语境可读，由内容决定。`preserve` 让两个括号都保持原样；`fullwidth` 与 `halfwidth` 完全覆盖这个决定。
 
-`parenStyle: "mixed" | "fullwidth" | "halfwidth" | "preserve"` (default `mixed`). Only the character outside the opening parenthesis is read — never the bracketed term, which is why `English(中文)English` keeps half-width parens while `中文(English)文` does not. This follows the Guidelines' preference for full-width parentheses in Chinese text and deliberately diverges from zhlint's default.
+`parenStyle: "mixed" | "fullwidth" | "halfwidth" | "preserve"`（默认 `mixed`）。只读开括号外侧的字符 —— 绝不读括号里的术语，这就是为什么 `English(中文)English` 保持半角括号而 `中文(English)文` 不保持。这遵循《指北》偏爱中文文本使用全角括号的取向，并有意与 zhlint 的默认分歧。
 
-**TYPO-09 — Hashtag and anchor protection** · always on
+**TYPO-09 —— 话题标签与锚点保护** · 始终开启
 
-Mid-text `#` is a hashtag/anchor token and is **never spaced**, because `中文#标签` → `中文 # 标签` silently breaks tags on publishing destinations. `#` is handled only as an ATX heading marker at line start, which BLK-05 already covers. An off-by-default `typo.spacing.hashtag` rule exists for authors who want it, with the risk documented.
+正文中间的 `#` 是话题标签或锚点 token，**从不加空格**，因为 `中文#标签` → `中文 # 标签` 会在发布平台上悄悄弄坏标签。`#` 只在行首作为 ATX 标题标记处理，这已由 BLK-05 覆盖。为想要它的作者保留了一条默认关闭的 `typo.spacing.hashtag` 规则，并写明了风险。
 
-**TYPO-10 — Hash symbol in `C++`, `A+` and issue references**
+**TYPO-10 —— `C++`、`A+` 与 issue 引用里的加号**
 
-`[A-Za-z0-9][+#]+` followed by CJK is spaced as a unit: `C++中文` → `C++ 中文`, `A+评分` → `A+ 评分`.
+`[A-Za-z0-9][+#]+` 后面跟 CJK 时作为一个整体加空格：`C++中文` → `C++ 中文`、`A+评分` → `A+ 评分`。
 
-**TYPO-11 — Straight double quotes become paired Chinese marks** · default `paired`
+**TYPO-11 —— 直双引号变成成对中文引号** · 默认 `paired`
 
-`typography.quotes: "paired" | "preserve"` (default `paired`). `"text"` becomes `“text”` when the quotation is in Chinese context.
+`typography.quotes: "paired" | "preserve"`（默认 `paired`）。当引文处于中文语境时，`"text"` 变成 `“text”`。
 
-- **Only the double quote is converted.** The apostrophe is never touched: `'` and the single quotation mark share a codepoint family, `don't` is indistinguishable from an opening quote without guessing, and a rule that guesses will one day eat a contraction.
-- **Pairing is per paragraph and all-or-nothing.** A paragraph with an odd number of straight quotes has one whose partner is elsewhere, so it is left exactly as written and TYPO-11 reports one warning at that line. The format still succeeds: a warning is not a failure. The paragraph rather than the line, because a quotation may wrap across a line break: pairing per line warns on every wrapped quotation, which is a warning nobody reads twice.
-- A quote written tight against a word is an inch mark rather than a quotation, so `12" x 8"` is untouched.
-- A quotation is a context scope for TYPO-05 and TYPO-08, which is why `他说 "hello, world" 这句话` becomes `他说“hello, world”这句话` with the comma still half-width.
+- **只转换双引号。** 撇号永不触碰：`'` 与单引号共用一个码点家族，不猜测就无法把 `don't` 与开引号区分开，而一条靠猜的规则总有一天会吃掉一个缩写。
+- **配对按段落进行，且全有或全无。** 一个段落里直引号是奇数个，就有一个的搭档在别处，于是整段逐字节原样保留，TYPO-11 在该行报一条警告。格式化仍然成功：警告不是失败。按段落而不是按行，因为一条引文可能跨过换行：按行配对会对每一条换行的引文报警，那是没人会看第二眼的警告。
+- 紧贴单词写下的引号是英寸符号而不是引文，所以 `12" x 8"` 不动。
+- 引文是 TYPO-05 与 TYPO-08 的语境作用域，这就是为什么 `他说 "hello, world" 这句话` 变成 `他说“hello, world”这句话`，逗号仍保持半角。
 
-**TYPO-12 — One delimiter per emphasis kind** · default `preserve`
+**TYPO-12 —— 每种强调只用一种分隔符** · 默认 `preserve`
 
-`**x**` and `__x__` are the same node, `*x*` and `_x_` are the same node, and one tilde is strikethrough in the dialects that accept it as well as two. `typography.emphasis` chooses the spelling for each: `strong: "asterisks" | "underscores" | "preserve"`, `em: "asterisk" | "underscore" | "preserve"`, `strikethrough: "double" | "single" | "preserve"`, all `preserve` by default.
+`**x**` 与 `__x__` 是同一个节点，`*x*` 与 `_x_` 是同一个节点，而一个波浪号在接受它的方言里和两个一样是删除线。`typography.emphasis` 为每一种选择拼法：`strong: "asterisks" | "underscores" | "preserve"`、`em: "asterisk" | "underscore" | "preserve"`、`strikethrough: "double" | "single" | "preserve"`，默认全是 `preserve`。
 
-- **Only a pair the parser would pair is rewritten.** The decision is CommonMark's own flanking test, and `_` is the character that makes it matter: `snake_case_name` is not emphasis and never becomes any, and neither is `中文_斜体_中文`, because an underscore inside a word cannot open one. The **target** is tested the same way before it is written, which is what stops `中文**加粗**中文` from becoming `中文__加粗__中文` — that rewrite would delete the emphasis rather than respell it.
-- **Runs of three or more are left alone.** `***x***` is two nodes sharing one run of delimiters, and telling those apart is a parser's job. A run this rule cannot read is a run it does not touch.
-- **Only within one line**, and never inside a protected region: a delimiter in a code span or a fence is content.
-- **Strikethrough carries a dialect risk that the other two do not.** `~~x~~` is strikethrough in GitHub-flavoured Markdown and `~x~` is literal text there; a renderer that understands one reads the other as tildes. That is why `preserve` is the default and why the setting's description says so out loud.
+- **只有解析器会配对的成对分隔符才被改写。** 判定用的是 CommonMark 自己的 flanking 测试，而 `_` 正是让它变得要紧的字符：`snake_case_name` 不是强调，也永远不会变成强调，`中文_斜体_中文` 也一样，因为单词内部的下划线无法开启强调。**目标**在写出之前也按同样方式测试，这正是阻止 `中文**加粗**中文` 变成 `中文__加粗__中文` 的原因 —— 那个改写会删掉强调，而不是换个拼法。
+- **三个及以上的连续分隔符不动。** `***x***` 是两个节点共用一串分隔符，把它们区分开是解析器的工作。本规则读不懂的连续串，它就不碰。
+- **只在一行之内**，且绝不在受保护区域内：代码 span 或围栏里的分隔符是内容。
+- **删除线带有另外两种没有的方言风险。** `~~x~~` 在 GitHub 风格 Markdown 里是删除线，`~x~` 在那里是字面文本；只认识其中一种的渲染器会把另一种读成波浪号。这就是 `preserve` 是默认值、也是该设置的说明要明说的原因。
 
 ### D. Front matter
 
-**FM-01 — Front matter is a fully protected region** · always on
+**FM-01 —— front matter 是完全受保护的区域** · 始终开启
 
-YAML front matter is detected and then **not modified in any way**. No spacing rule, no punctuation rule, no width conversion, no reindentation, no key or list normalization, no structural reformatting. Bytes in, bytes out.
+YAML front matter 被识别出来，然后**不做任何修改**。没有空格规则、没有标点规则、没有宽度转换、没有重新缩进、没有键或列表规范化、没有结构性重排。进什么字节，出什么字节。
 
-**FM-02 — Malformed front matter passes through**
+**FM-02 —— 畸形的 front matter 原样通过**
 
-Unparseable or unterminated front matter is copied verbatim with a diagnostic. It is never rewritten and never partially repaired.
+无法解析或未终止的 front matter 连同一条诊断逐字节复制。它永不被改写，也永不被部分修复。
 
-### E. Protected regions
+### E. 受保护区域
 
-These are the general form of "don't touch code blocks". Every one is byte-verbatim.
+这些是「不要碰代码块」的一般形式。每一个都逐字节保持原样。
 
-**A region inside a block quote is still a region.** The marker chain is part of it: a fence written after a `>` opens a fence, its body is code, and the marker bytes belong to the region like every other byte in it. The chain is peeled to *find* the region, never to rewrite it - the region starts at the beginning of the first line and ends at the end of the last, markers included - and display math, an HTML block and indented code stack the same way. Detections do not stop at a quote either. Before this, a quoted fence was not a region at all: its body was spaced like prose and the author was told about an unmatched backtick instead of the fence that never closed.
+**引用块内部的区域仍然是区域。** 标记链是它的一部分：写在 `>` 之后的围栏会开启一个围栏，它的正文是代码，标记字节和里面其它字节一样属于该区域。剥链是为了*找到*区域，绝不是为了改写它 —— 区域从第一行的行首开始，到最后一行的行尾结束，包含标记 —— 显示公式、HTML 块与缩进代码也以同样方式叠加。检测也不在引用处停下。在这之前，被引用的围栏根本不算区域：它的正文被当作散文加空格，作者得到的提示是「未配对的引号」，而不是那个从未闭合的围栏。
 
-**SAFE-01 — Fenced and indented code bodies** · never modified, never formatted by a language formatter, never trimmed of leading/trailing blank lines, never dedented.
+**SAFE-01 —— 围栏代码与缩进代码的正文** · 永不修改，永不交给语言格式化器，永不裁剪首尾空行，永不反缩进。
 
-**SAFE-02 — Fence delimiter line** · the fence's **indentation and info string are byte-verbatim**, including Pandoc-style attributes such as ` ~~~ c {3, 4}`. Only the fence character and length may change (BLK-10).
+**SAFE-02 —— 围栏分隔符行** · 围栏的**缩进与 info string 逐字节保持原样**，包括 Pandoc 风格属性，例如 ` ~~~ c {3, 4}`。只有围栏字符与长度可以改（BLK-10）。
 
-**SAFE-03 — Inline code, inline math and display math** · contents byte-verbatim. Backslash escapes do not work inside a code span, so the closing backtick of a span whose content is a backslash still closes it. A line whose content is exactly `$$` opens display math and the next such line closes it; a single line that begins and ends with `$$` and has body between them is display math on one line.
+**SAFE-03 —— 行内代码、行内公式与显示公式** · 内容逐字节原样。反斜杠转义在代码 span 内不生效，所以内容是一个反斜杠的 span，其闭合反引号仍然闭合它。内容恰好是 `$$` 的行开启显示公式，下一行这样的行关闭它；一行以 `$$` 开头并以 `$$` 结尾且中间有正文，是单行显示公式。
 
-**SAFE-04 — HTML blocks, inline HTML and comments** · byte-verbatim. Not formatted as HTML.
+**SAFE-04 —— HTML 块、行内 HTML 与注释** · 逐字节原样。不按 HTML 格式化。
 
-**SAFE-05 — MDX/JSX, shortcodes (`{{ }}`), `:::` containers, Obsidian wikilinks (`[[ ]]`), embedded Vue** · byte-verbatim. Detected and skipped, never a hard error.
+**SAFE-05 —— MDX/JSX、shortcode（`{{ }}`）、`:::` 容器、Obsidian wikilink（`[[ ]]`）、内嵌 Vue** · 逐字节原样。识别并跳过，绝不当作硬错误。
 
-**SAFE-06 — URLs, link and image destinations, file paths, autolinks** · byte-verbatim.
+**SAFE-06 —— URL、链接与图片目标、文件路径、autolink** · 逐字节原样。
 
-**SAFE-07 — Tables** · cell contents are formatted only for the rules that apply to inline text; padding and alignment are a non-goal (NG-02).
+**SAFE-07 —— 表格** · 单元格内容只按适用于行内文本的规则格式化；补空格与对齐是非目标（NG-02）。
 
-### F. Guarantees
+### F. 保证
 
-**GRT-01 — Semantic preservation.** `format(x)` parses to the same tree as `x`, except for an exhaustive, documented list of intentional differences: full-width punctuation conversion changes text; BLK-12 removes blank lines at the edges of a code block, which is the one rule that changes protected bytes and the one exception the guard grants; a paragraph may be promoted to a heading when the only difference is a space after the hash run (BLK-05). List-tightness flips are forbidden by BLK-03 and therefore appear nowhere. Enforced mechanically by comparing a parse of the input with a parse of the output and **refusing to write on mismatch** — the pattern mdformat calls `validate`.
+**GRT-01 —— 语义保持。** `format(x)` 解析出的树与 `x` 相同，文档中穷尽列出的有意差异除外：全角标点转换改变文本；BLK-12 删除代码块首尾的空行，这是唯一会改变受保护字节的规则，也是守卫授予的唯一例外；当唯一差别是井号串之后的一个空格时，段落可能被提升为标题（BLK-05）。列表紧凑性的翻转被 BLK-03 禁止，因此不出现在任何地方。机械地通过比较输入的解析结果与输出的解析结果来强制，**不一致就拒绝写入** —— 即 mdformat 所称的 `validate`。
 
-**GRT-02 — Idempotence.** `format(format(x)) === format(x)` for every file in the corpus.
+**GRT-02 —— 幂等。** 对语料库中的每个文件，`format(format(x)) === format(x)`。
 
-**GRT-03 — Minimal, stable diffs.** No changed line outside a range a rule targeted. Format-on-save on a clean file produces zero edits.
+**GRT-03 —— 最小且稳定的 diff。** 规则目标范围之外没有任何行被改动。对干净文件做保存时格式化产生零个编辑。
 
-**GRT-04 — Totality.** The formatter never throws and never corrupts. Worst case it reproduces the input unchanged and reports a diagnostic.
+**GRT-04 —— 全函数。** 格式化器永不抛出、永不损坏。最坏情况是原样输出输入并报告一条诊断。
 
-**GRT-05 — Editor/CI byte parity.** The same version produces the same bytes in the editor, the CLI, pre-commit, and CI.
+**GRT-05 —— 编辑器与 CI 的字节一致。** 同一个版本在编辑器、命令行、pre-commit 与 CI 中产生相同的字节。
 
-**GRT-06 — Bounded edit granularity.** Edits are returned as minimal per-rule ranges, never as a single whole-document replacement. Rationale: on a 10k-line file the editor's re-tokenization, diffing, fold/outline recomputation and downstream re-linting dominate the cost, not the engine (§1.3).
+**GRT-06 —— 有界的编辑粒度。** 编辑以按规则划分的最小范围返回，永不作为一个整篇文档替换。理由：在 10k 行的文件上，编辑器重新分词、做 diff、重算折叠与大纲、下游重新 lint 的开销占主导，引擎不是瓶颈（§1.3）。
 
-### G. Tunable surface
+### G. 可调面
 
-**CFG-01 — Configuration file with per-directory resolution**, plus a preset layer. The editor adds two layers around the file rather than one: the individual `fuxiFmt.*` settings sit **below** `fuxi-fmt.json`, and the `fuxiFmt.config` object sits **above** it. The file beats the granular settings because the CLI cannot see editor settings; the alternative is an editor that disagrees with `--check` about the same document.
+**CFG-01 —— 按目录解析的配置文件**，外加一个预设层。编辑器在文件周围加的不是一层而是两层：单独的 `fuxiFmt.*` 设置位于 `fuxi-fmt.json` **之下**，`fuxiFmt.config` 对象位于它**之上**。文件压过细粒度设置，因为命令行看不到编辑器设置；否则就会出现编辑器与 `--check` 对同一份文档结论不一致。
 
-**CFG-02 — Rule registry.** Every rule has a stable ID (the IDs in this document), a default severity, and typed options. No flat option bag.
+**CFG-02 —— 规则注册表。** 每条规则都有稳定的 ID（即本文档中的那些 ID）、默认严重级别与带类型的选项。没有扁平的选项包。
 
-The `off | warn | error` severity per rule that this section originally promised is **not what shipped**, and this is the correction. Severity is a property of a rule, not of a configuration: an error refuses the document and a warning does not, they are not interchangeable, and a configuration that could promote a warning to an error would let a settings change turn a formatting nudge into a failed build. What is configurable is **visibility**: one switch per warning rule in the editor (`fuxiFmt.diagnostics.*`, all on by default). Errors carry no switch — a refused document is refused for a reason, and silencing the reason is how this project's own users ended up with a formatter that did nothing and said nothing. The CLI prints every diagnostic regardless: a build log that omits what the editor would show makes the two disagree about the same document.
+本节原先承诺的「每条规则可配 `off | warn | error` 严重级别」**不是实际发布的东西**，这里就是更正。严重级别是规则的属性，不是配置的属性：错误拒绝文档而警告不拒绝，两者不可互换，而一个能把警告提升为错误的配置，会让一次设置改动把格式化的提醒变成失败的构建。可配置的是**可见性**：编辑器里每条警告规则一个开关（`fuxiFmt.diagnostics.*`，默认全开）。错误没有开关 —— 被拒绝的文档有其原因，而消掉那个原因正是本项目用户最终拿到一个什么都不做、也不说什么的格式化器的原因。命令行无论设置如何都打印每一条诊断：一份省略了编辑器会显示内容的构建日志，会让两者对同一份文档产生分歧。
 
-**CFG-03 — In-document ignore directives**: file-level, range-level, and next-line, following dprint's four-directive shape.
+**CFG-03 —— 文档内忽略指令**：文件级、区间级与下一行，沿用 dprint 的四指令形态。
 
-**CFG-04 — `--check` and `--diff` modes** with a stable exit code, for CI. `--explain` is a modifier rather than a mode: it adds a report on stderr saying where the configuration came from, whether the document changed, and what was warned about — so a formatter that correctly changed nothing can say so instead of saying nothing.
+**CFG-04 —— `--check` 与 `--diff` 模式**，带稳定的退出码，供 CI 使用。`--explain` 是修饰符而不是模式：它在 stderr 上加一份报告，说明配置来自哪里、文档是否被改动、警告了什么 —— 于是一个正确地什么都没改的格式化器可以说出来，而不是什么都不说。
 
-**CFG-05 — Compatibility mapping and config import** for `.markdownlint.json`, `.autocorrectrc` and `.prettierrc`.
+**CFG-05 —— 兼容映射与配置导入**，针对 `.markdownlint.json`、`.autocorrectrc` 与 `.prettierrc`。
 
-**CFG-06 — Pipeline position.** fuxi-fmt registers a real formatting provider **and** a range provider, so it can be `editor.defaultFormatter` and so Format Selection works. An independent save hook is offered as an option for authors who keep another formatter, with the precedence contract documented. The adapter also **reports**: diagnostics from the core become editor diagnostics at their line, a configuration notice is written to the extension's output channel, and that channel is revealed only when something was refused or warned about. Before this, the adapter computed diagnostics and discarded them, so a document the guard refused simply did not format and nothing said why — which is how two of this round's five reports arrived as "it does nothing". A diagnostic carries the **input line** it is about as data rather than as prose — absent when the complaint is about the document as a whole, because a refused document is refused whole and every guard refusal used to claim line 1 — The CLI writes `path:line: severity: RULE message`, the shape a compiler log is parsed for. The editor writes a **block per document**: a header naming the file relative to the workspace folder and the time the run started, then one line per diagnosis as `LEVEL[line] RULE sentence`, with the bracket omitted when the complaint is about the document as a whole. The two differ deliberately — a log a human reads while editing wants its runs separated, a log a machine reads wants one line per finding — and what they share is the rule id, which stays in Latin in both, so one search finds a rule in either. A clean document writes nothing at all.
+**CFG-06 —— 流水线位置。** fuxi-fmt 同时注册真正的格式化提供程序**和**范围提供程序，所以它既能当 `editor.defaultFormatter`，也能让「格式化选定内容」工作。对保留另一个格式化器的作者，另提供一个独立的保存钩子，并写明优先级契约。适配器还**报告**：来自核心的诊断变成编辑器诊断并落在对应的行，一条配置提示写进扩展的输出通道，而该通道只在有内容被拒绝或被警告时才显示。在这之前，适配器算出诊断又把它们丢掉，于是被守卫拒绝的文档干脆不格式化，也没有任何东西说明为什么 —— 本轮五份报告里有两份就是这样来的：「它什么都不做」。诊断把它所针对的**输入行**作为数据而不是散文携带 —— 当抱怨针对整篇文档时不带行号，因为被拒绝的文档是整体被拒绝，而过去每一次守卫拒绝都声称是第 1 行 —— 命令行写成 `path:line: severity: RULE message`，也就是编译器日志被解析的那种形状。编辑器写成**每篇文档一个块**：一个表头，写明相对于工作区文件夹的文件名与本次运行开始的时间，然后每条诊断一行，形如 `LEVEL[line] RULE sentence`，当抱怨针对整篇文档时省略方括号。两者刻意不同 —— 人在编辑时读的日志希望把每次运行分开，机器读的日志希望每条发现一行 —— 而它们共有的是规则 id，在两边都保持拉丁字母，于是一次搜索能在任一日志里找到某条规则。干净的文档什么都不写。
 
-**CFG-07 — Retired option names are read, and reported.** A renamed key that silently stops working produces no error, no change and no clue, so every name this project retires is read for one release and reported with both names.
+**CFG-07 —— 退役的选项名会被读取，并被报告。** 一个改名后静默失效的键不产生错误、不产生变化、也不留下线索，所以本项目退役的每个名字都会被读取一个发布周期，并连同新旧两个名字一起报告。
 
-- Moved unchanged: `typography.symbolWhitelist` → `typography.spacingSymbols`, `typography.punctuationAllowlist` → `typography.punctuationChangeList`, `codeBlock.normalizeLength` → `codeBlock.fenceLength`.
-- Converted, because the shape changed: `blankLines.insideLists` (a boolean that could only insert a blank → `remove` / `one` / `preserve`), `typography.semicolon` (folded into `punctuationChangeList`), `list.indentWidth` (split into `orderedIndent` and `unorderedIndent`). Each conversion is the one that means what the old value meant, and the notice says what it became.
-- A key that is not an option at all is reported and still ignored, so a configuration written for a later version loads.
-- The list is finite and closed: each entry exists to be deleted, and a name is removed from it the release after it is retired.
+- 原样移动：`typography.symbolWhitelist` → `typography.spacingSymbols`、`typography.punctuationAllowlist` → `typography.punctuationChangeList`、`codeBlock.normalizeLength` → `codeBlock.fenceLength`。
+- 因形状改变而转换：`blankLines.insideLists`（一个只能插入空行的布尔值 → `remove` / `one` / `preserve`）、`typography.semicolon`（并入 `punctuationChangeList`）、`list.indentWidth`（拆成 `orderedIndent` 与 `unorderedIndent`）。每次转换都取与旧值含义相同的那一个，提示里说明它变成了什么。
+- 根本不是选项的键会被报告，但仍被忽略，这样为更高版本写的配置还能加载。
+- 这份清单是有限且封闭的：每一条的存在就是为了被删除，某个名字在退役后的下一个发布周期即从清单移除。
 
-**CFG-08 — One message catalogue, and it is translatable.** Every sentence the formatter can produce is a template in `packages/core/src/messages.ts`, keyed by an id, with positional placeholders for its values; the English is *rendered* from the entry rather than spelled out where it is used. The English text is also the key the editor's localisation looks up, because that is how `vscode.l10n` works, so the translations live beside it and the bundle files under `packages/vscode/l10n` are generated from the table rather than maintained by hand. A translation must use the same placeholder set as its English source, and a test compares the sets rather than trusting the translator — a Chinese sentence that dropped `{0}` would quietly lose the number it was reporting. Rule IDs stay in Latin in every language, and a payload (a JSON signature, a configuration key) is passed as an argument and stays byte-identical. The editor renders through `vscode.l10n.t` with the English template as the key, so the language is the editor's to choose and an installation without a bundle falls back to English rather than to a raw id; the CLI renders from the catalogue directly.
+**CFG-08 —— 一份消息目录，而且可翻译。** 格式化器能产出的每一句话都是 `packages/core/src/messages.ts` 里按 id 索引的模板，值用位置占位符；英文是从条目*渲染*出来的，而不是在使用处拼出来。英文文本同时是编辑器本地化查表的键，因为 `vscode.l10n` 就是这么工作的，所以译文与它放在一起，而 `packages/vscode/l10n` 下的 bundle 文件由这张表生成而不是手工维护。译文必须使用与英文源相同的占位符集合，测试比较的是集合而不是信任翻译者 —— 一句丢了 `{0}` 的中文会悄悄丢掉它正在报告的那个数字。规则 ID 在任何语言里都保持拉丁字母，而载荷（JSON 签名、配置键）作为参数传入并逐字节保持原样。编辑器通过 `vscode.l10n.t` 以英文模板为键渲染，所以语言由编辑器选择，没有 bundle 的安装回退到英文而不是回退到一个裸 id；命令行直接从目录渲染。
 
-### H. Detection — what the parse had to guess
+### H. 检测 —— 解析不得不猜的地方
 
-fuxi-fmt formats a document by parsing it, and a parse can be a guess. Every rule here reports a guess; nothing here holds an opinion about the prose, which is NG-12. The section exists because the alternative is a formatter that silently does less than it was asked to, and silent under-formatting is the complaint that produced most of this project's bug reports.
+fuxi-fmt 通过解析来格式化文档，而解析可能是猜的。这里每条规则都是报告一次猜测；这里没有任何东西对散文持意见，那是 NG-12。这一节存在，是因为替代方案是一个静默地做得比被要求更少的格式化器，而静默的欠格式化正是本项目大多数 bug 报告的来源。
 
-Each warning rule can be switched off individually in the editor (CFG-02); the core always reports all of them, so the CLI and a build log never depend on an editor setting.
+每条警告规则都能在编辑器里单独关闭（CFG-02）；核心总是报告全部，所以命令行与构建日志从不依赖编辑器设置。
 
-**One rule decides the severity.** A region that never terminated swallowed everything after it, so the document is **refused** whole: an error, the input returned unchanged, exit 2 from the CLI, no edits in the editor. Anything that terminated but is implausible is a **warning**; the document formats and the author is told. A detection runs before any formatting pass, so a refused document is refused before a rule touches a text already known to be misread.
+**由一条规则决定严重级别。** 一个从未终止的区域吞掉了它之后的一切，所以整篇文档被**拒绝**：错误、原样返回输入、命令行退出码 2、编辑器里没有编辑。终止了但不可信的任何东西都是**警告**；文档照常格式化并告知作者。检测在任何格式化遍之前运行，所以被拒绝的文档在任何规则碰到一段已知被误读的文本之前就被拒绝。
 
-An unclosed fenced block is **legal CommonMark** — the block simply runs to the end of the document — and this section says so out loud rather than pretending the rule is a parse error. The parse is well defined and the output for what was written is correct; the author has almost certainly forgotten a delimiter. Calling it an error is a deliberate over-reaction in favour of being told, because the alternative is the one two separate reports described: a document that formats everywhere except after the mistake, with nothing said about why.
+未闭合的围栏块是**合法的 CommonMark** —— 该块一直延伸到文档结尾 —— 本节明说这一点，而不是假装它是解析错误。解析是良定义的，对已写内容的输出也是正确的；作者几乎肯定是忘了分隔符。把它称作错误是一种刻意的过度反应，为的是被告知，因为替代方案正是两份不同报告描述的情形：一篇文档除犯错处之后以外到处都能格式化，却对原因只字不提。
 
-**DET-01 — Unterminated fenced code block** · error. No closing fence was found, so every line after the opener is code (SAFE-01). Reported at the opening fence. A fence inside a block quote is unterminated when the quote ends before the fence does: a blank line ends the quote, and the author is told rather than the formatter reading the next quote's text as code.
+**DET-01 —— 未终止的围栏代码块** · 错误。没有找到闭合围栏，所以开启行之后的每一行都是代码（SAFE-01）。在开启围栏处报告。引用块内的围栏在引用先于围栏结束时报未终止：一个空行会结束引用，于是作者被告知，而不是让格式化器把下一个引用的文本读成代码。
 
-**DET-02 — Unterminated front matter** · error. Line 1 is `---` and the first non-blank line after it is a YAML key, so the whole document was read as front matter (FM-01, FM-02). Reported at line 1.
+**DET-02 —— 未终止的 front matter** · 错误。第 1 行是 `---`，其后第一个非空行是 YAML 键，于是整篇文档被读成 front matter（FM-01、FM-02）。在第 1 行报告。
 
-**DET-04 — Unterminated display math** · error. A `$$` line with no closing `$$` line, so every line after the opener was read as display math (SAFE-03). Reported at the opening line. Inside a block quote the same test applies within the quote.
+**DET-04 —— 未终止的显示公式** · 错误。一个 `$$` 行之后没有闭合的 `$$` 行，以致开启行之后的每一行都被读成显示公式（SAFE-03）。在开启行报告。在引用块内部，同样的判定在引用内部适用。
 
-**DET-06 — Unmatched backtick** · warning. A backtick no code span claims, outside a protected region and not backslash-escaped. CommonMark makes it literal text, which is why nobody notices: the file looks the same either way.
+**DET-06 —— 未配对的反引号** · 警告。一个没有代码 span 认领的反引号，位于受保护区域之外且未被反斜杠转义。CommonMark 把它变成字面文本，所以没人会注意到：两种情况文件看起来一样。
 
-**DET-07 — Unmatched dollar sign** · warning. The same, for a `$` that is not part of an inline math span. A price and an unclosed formula are indistinguishable, so this is the rule most likely to be switched off.
+**DET-07 —— 未配对的美元符号** · 警告。同理，针对不属于行内公式 span 的 `$`。价格与未闭合的公式无法区分，所以这是最容易被关掉的规则。
 
-**DET-08 — Unclosed wikilink** · warning. `[[` with no `]]` on the same line, so it stays literal text.
+**DET-08 —— 未闭合的 wikilink** · 警告。`[[` 在同一行没有 `]]`，于是保持为字面文本。
 
-**DET-09 — Unclosed link destination** · warning. `](` with no `)` on the same line, so this is not a link.
+**DET-09 —— 未闭合的链接目标** · 警告。`](` 在同一行没有 `)`，所以这不是链接。
 
-**DET-10 — Ragged table row** · warning. A row whose cell count differs from its header's. An escaped `\|` is cell content, not a column separator.
+**DET-10 —— 参差的表格行** · 警告。单元格数与表头不同的行。被转义的 `\|` 是单元格内容，不是列分隔符。
 
-**DET-12 — List excluded because it contains a protected block** · warning. BLK-08 leaves such a list un-reindented (SAFE-02 × BLK-08, section 7 item 1), the indentation is not repaired, and nothing in the source says why. The exclusion covers the blank-line policy too, for the reason in section 7.
+**DET-12 —— 因含受保护块而被排除的列表** · 警告。BLK-08 让这样的列表不重新缩进（SAFE-02 × BLK-08，第 7 节第 1 条），缩进没有被修复，而源码里没有任何东西说明原因。该排除同样覆盖空行策略，理由见第 7 节。
 
-**DET-11 — Item indented as if nested, belonging to no parent** · warning. BLK-08 dedents it to the level it actually occupies, and that repair is invisible in the source, which is why the author is told.
+**DET-11 —— 缩进得像嵌套却不属于任何父项的项** · 警告。BLK-08 把它反缩进到它实际占据的层级，而这次修复在源码里看不见，所以要告知作者。
 
-**Deliberately not reported.** A code span the author wrapped across a line break is correct Markdown and its contents are protected exactly as intended. The rule that would have flagged it was dropped after firing four times on this repository's own CHANGELOG and prior-art report. A detection that fires on correct input teaches people to ignore the panel, which is worse than not having it.
+**有意不报告。** 作者跨换行包裹的代码 span 是正确的 Markdown，其内容按预期受到保护。本来要标记它的那条规则，在本仓库自己的 CHANGELOG 与先例报告上触发了四次之后被撤掉。一条对正确输入报警的检测会教人忽略面板，那比没有面板更糟。
 
-**DET-03 — Unterminated HTML comment** · error. A `<!--` with no `-->` anywhere after it, outside a protected region (SAFE-04). Reported at the comment start. A comment start inside a code fence is code, not a comment, and is not reported.
+**DET-03 —— 未终止的 HTML 注释** · 错误。一个 `<!--` 之后任何地方都没有 `-->`，且位于受保护区域之外（SAFE-04）。在注释开始处报告。代码围栏里的注释开始是代码而不是注释，不报告。
+
 
 ---
 
-## 3. Non-goals
+## 3. 非目标
 
-Each non-goal is stated precisely, because "we don't do X" is only useful with a boundary.
+每条非目标都精确陈述，因为「我们不做 X」只有配上边界才有用。
 
-**NG-01 — Prose wrap.** No wrapping, no unwrapping, no reflowing. Lines are never joined and never split. This explicitly excludes the CJK hazard that makes re-printers wrong for this content: because CJK has no spaces to break at, a wrapping printer must split *between CJK characters* (Prettier ships `tests/format/markdown/splitCjkText/` fixtures for exactly this). fuxi-fmt never does it.
+**NG-01 —— 散文折行。** 不折行、不反折行、不重排。行永不被合并，也永不被拆分。这明确排除了让重新打印器对这类内容出错的那个 CJK 隐患：因为 CJK 没有可断行的空格，折行打印器必须在*汉字之间*断开（Prettier 为此专门带着 `tests/format/markdown/splitCjkText/` 的 fixture）。fuxi-fmt 永不这样做。
 
-**NG-02 — Table padding and alignment are not touched by default.** Cell padding, pipe alignment and column width are left as written unless `table.mode: "normalize"` asks for them (TBL-01); the default is the author's layout, which is what this non-goal was protecting. Delimiter-row repair and blank lines around tables are **not** part of this non-goal — they remain goals, and the delimiter row is now reported by DET-10 when its column count disagrees with the header.
+**NG-02 —— 表格补空格与对齐默认不碰。** 单元格补空格、竖线对齐与列宽都按原样保留，除非 `table.mode: "normalize"` 要求它们（TBL-01）；默认是作者的版式，这正是本非目标要保护的东西。分隔行修复与表格周围的空行**不**属于本非目标 —— 它们仍然是目标，而分隔行声明的列数与表头不一致时现在由 DET-10 报告。
 
-**NG-03 — Embedded code formatting.** No language formatter is ever invoked; fence bodies are never touched (SAFE-01).
+**NG-03 —— 内嵌代码格式化。** 永不调用任何语言格式化器；围栏正文永不被触碰（SAFE-01）。
 
-**NG-04 — Fence info-string normalization.** Casing, spacing and attributes are preserved (SAFE-02).
+**NG-04 —— 围栏 info string 规范化。** 大小写、空格与属性都保留（SAFE-02）。
 
-**NG-05 — Heading style conversion.** Setext headings are not converted to ATX, or vice versa.
+**NG-05 —— 标题样式转换。** setext 标题不转成 ATX，反之亦然。
 
-**NG-06 — Heading level renumbering.** Levels are not normalized or incremented.
+**NG-06 —— 标题级别重新编号。** 级别不被规范化，也不被递增。
 
-**NG-07 — Emphasis and strong markers are not rewritten unless asked.** `_x_` stays `_x_` and `*x*` stays `*x*` under the default, which is `preserve` for every kind (TYPO-12); the option exists because Prettier's default is underscores and dprint's `emphasisKind` default is also `underscores`, so a house style is a real preference rather than a defect. The rewrite never touches a pair the parser would not pair, and never a run of three or more delimiters.
+**NG-07 —— 不主动改写强调与加粗标记。** 默认下 `_x_` 保持 `_x_`、`*x*` 保持 `*x*`，每种都是 `preserve`（TYPO-12）；这个选项存在是因为 Prettier 的默认是下划线、dprint 的 `emphasisKind` 默认也是 `underscores`，所以一种团队风格是真实的偏好而不是缺陷。改写永不触碰解析器不会配对的一对，也永不触碰三个及以上的连续分隔符。
 
-**NG-08 — Reference-link and inline-link conversion.** Authoring intent is preserved.
+**NG-08 —— 引用式链接与行内链接的转换。** 作者意图被保留。
 
-**NG-09 — Bare URL to autolink conversion.**
+**NG-09 —— 裸 URL 转 autolink。**
 
-**NG-10 — Redundant-escape cleanup.** Off by default.
+**NG-10 —— 冗余转义清理。** 默认关闭。
 
-**NG-11 — Web extension host support.** Desktop Node extension host only. Consequence: no `vscode.dev` or `github.dev`, no dual Node/web bundle, no WASM requirement.
+**NG-11 —— Web 扩展宿主支持。** 只支持桌面 Node 扩展宿主。后果：不支持 `vscode.dev` 或 `github.dev`，没有 Node/Web 双 bundle，也不需要 WASM。
 
-**NG-12 — Prose and terminology linting.** Sentence length, proper-noun casing (markdownlint MD044), terminology, typo dictionaries. That is textlint's job, not a formatter's.
+**NG-12 —— 散文与术语检查。** 句长、专有名词大小写（markdownlint MD044）、术语、错别字词典。那是 textlint 的工作，不是格式化器的。
 
-**NG-13 — Table-of-contents generation, section numbering, print/HTML export, preview.** Markdown All in One and Markdown Preview Enhanced territory.
+**NG-13 —— 目录生成、章节编号、打印或导出 HTML、预览。** 那是 Markdown All in One 与 Markdown Preview Enhanced 的地盘。
 
-**NG-14 — Encoding conversion and Han simplification/traditional conversion.**
+**NG-14 —— 编码转换与汉字简繁转换。**
 
 ---
 
-## 4. Mapping from the original goal list
+## 4. 与最初目标清单的对应
 
-| Original goal | Where it lives now |
+| 最初的目标 | 现在落在哪里 |
 |---|---|
-| Blank lines around blocks | BLK-01, BLK-02, BLK-03 |
-| Space after `#` and list marks | BLK-04, BLK-05 |
-| Renumber ordered lists | BLK-06 |
-| Front matter YAML format | FM-01 (reduced to "protect", by decision) |
-| Spaces around inline code blocks | INL-01 |
-| CJK ↔ Latin spacing | TYPO-01 … TYPO-04, TYPO-10 |
-| CJK punctuation full/half width | TYPO-05 … TYPO-08 |
-| Code-context safety | SAFE-01 … SAFE-07 |
-| Tunable surface | §2.G, §6 |
+| 块与块之间的空行 | BLK-01、BLK-02、BLK-03 |
+| `#` 与列表标记之后的空格 | BLK-04、BLK-05 |
+| 有序列表重新编号 | BLK-06 |
+| Front matter 的 YAML 格式 | FM-01（按决定收缩为「保护」） |
+| 行内代码块两侧的空格 | INL-01 |
+| CJK 与拉丁文之间的空格 | TYPO-01 … TYPO-04、TYPO-10 |
+| 中文标点全角与半角 | TYPO-05 … TYPO-08 |
+| 代码语境安全 | SAFE-01 … SAFE-07 |
+| 可调面 | §2.G、§6 |
 
-Two original goals changed shape during design and the change should be visible:
+有两个最初的目标在设计过程中变了形状，这个变化应该看得见：
 
-- **Front matter YAML format** was originally "format the YAML". It is now "protect the front matter entirely" (§7 records the reasoning).
-- **Code-context safety** was originally "don't touch code blocks". It is now a seven-item protected-region contract, because the same reasoning applies to inline code, HTML, math, MDX, shortcodes, wikilinks and URLs.
+- **Front matter 的 YAML 格式**最初是「格式化那段 YAML」。现在是「完整保护 front matter」（§7 记录了理由）。
+- **代码语境安全**最初是「不要碰代码块」。现在是一份七条的受保护区域契约，因为同样的理由也适用于行内代码、HTML、公式、MDX、shortcode、wikilink 与 URL。
 
 ---
 
-## 5. Coverage matrix against prior art
+## 5. 对先例的覆盖矩阵
 
-Y = covers, P = partial or conditional, N = does not cover.
+Y = 覆盖，P = 部分或带条件，N = 不覆盖。
 
-| Requirement | Prettier | dprint / Deno | markdownlint | MAIO | AutoCorrect | CJK Text Formatter | fuxi-fmt |
+| 需求 | Prettier | dprint / Deno | markdownlint | MAIO | AutoCorrect | CJK Text Formatter | fuxi-fmt |
 |---|---|---|---|---|---|---|---|
-| (a) blank lines around blocks | Y | Y | Y | N | N | N | **Y** |
-| (b) space after `#` / list markers | Y | Y | Y | P | N | N | **Y** |
-| (c) renumber ordered lists | Y | Y | Y | P (on-type only) | N | N | **Y** |
-| (d) front matter | Y (YAML + TOML) | P | N | N | N | N | **N (by design, FM-01)** |
-| (e) spaces around inline code | N | N | N (MD038 is the opposite) | N | P | N | **Y** |
-| (f) CJK ↔ Latin spacing | N | N | N | N | Y | Y | **Y** |
-| (g) CJK punctuation width | N | N | N | N | Y | Y | **Y** |
-| (h) never touch fenced code | P (opt-out) | P (opt-out) | Y | Y | P (opt-out) | Y | **Y (default)** |
-| (i) all options tunable | P | P | P | P | P | P | **P** (see note below) |
+| (a) 块与块之间的空行 | Y | Y | Y | N | N | N | **Y** |
+| (b) `#` 与列表标记之后的空格 | Y | Y | Y | P | N | N | **Y** |
+| (c) 有序列表重新编号 | Y | Y | Y | P（仅输入时） | N | N | **Y** |
+| (d) front matter | Y（YAML + TOML） | P | N | N | N | N | **N（有意为之，FM-01）** |
+| (e) 行内代码两侧的空格 | N | N | N（MD038 恰好相反） | N | P | N | **Y** |
+| (f) CJK 与拉丁文之间的空格 | N | N | N | N | Y | Y | **Y** |
+| (g) 中文标点宽度 | N | N | N | N | Y | Y | **Y** |
+| (h) 永不触碰围栏代码 | P（可关） | P（可关） | Y | Y | P（可关） | Y | **Y（默认）** |
+| (i) 所有选项可调 | P | P | P | P | P | P | **P**（见下面的说明） |
 
-Row (i) is **P** rather than Y because some documented options are unimplemented or withdrawn.
-Setting one produces silence. The authoritative list is the status note at the end of section 7, and
-the readme carries the same list, which a test keeps in agreement — so this paragraph does not repeat
-it. It used to repeat it, and this copy was wrong for two releases while the checked copy was right,
-which is the whole argument against writing one fact down twice.
-**Closest single tool:** Prettier — covers (a)(b)(c) and can be made code-safe for (h), but misses (e)(f)(g) entirely and its default for (h) is the opposite of the requirement. **Closest for the CJK half:** AutoCorrect or CJK Text Formatter — cover (f)(g) and part of (e), but neither has any of (a)(b)(c) as a formatter, and AutoCorrect is not a formatting provider at all.
+第 (i) 行是 **P** 而不是 Y，因为有些写进文档的选项尚未实现或已被撤回。设置它们只会得到沉默。权威清单是第 7 节末尾的状态注记，而 readme 带有同一份清单，由一条测试保持两者一致 —— 所以这一段不再重复它。它曾经重复过，而这份拷贝错了两个发布周期、被检查的那一份才是对的，这就是反对把同一个事实写两遍的全部论据。
+**最接近的单一工具：** Prettier —— 覆盖 (a)(b)(c)，并可以为了 (h) 调成代码安全，但完全缺少 (e)(f)(g)，而它对 (h) 的默认与需求正好相反。**CJK 那一半最接近的：** AutoCorrect 或 CJK Text Formatter —— 覆盖 (f)(g) 以及 (e) 的一部分，但两者作为格式化器都没有 (a)(b)(c) 中的任何一条，而 AutoCorrect 根本不是格式化提供程序。
 
 ---
 
-## 6. Tunable surface (draft)
+## 6. 可调面（草稿）
 
 ```yaml
-# fuxi-fmt.toml / .fuxi-fmtrc — illustrative, not final
+# fuxi-fmt.toml / .fuxi-fmtrc —— 示意，不是最终形态
 preset: default          # default | strict-commonmark
 
 blankLines:
@@ -485,7 +468,7 @@ list:
   unorderedMarker: dashes   # dashes | asterisks | preserve
   orderedIndent: aligned    # aligned | 4
   unorderedIndent: aligned  # aligned | 3 | 4
-  tabWidth: 2               # N, or 0 to leave hard tabs alone
+  tabWidth: 2               # N，或 0 表示不动硬制表符
   orderedStyle: keep-all-ones  # renumber | keep-all-ones | preserve
   orderedDelimiter: preserve
 
@@ -493,13 +476,13 @@ codeBlock:
   fenceChar: backticks      # backticks | tildes | preserve
   fenceLength: true
   trimBlankLines: true
-  # body, indentation and info string are always verbatim (SAFE-01, SAFE-02)
+  # 正文、缩进与 info string 永远逐字节原样（SAFE-01、SAFE-02）
 
 thematicBreak: dashes     # dashes | asterisks | underscores | preserve
 
 table:
   mode: preserve            # preserve | normalize
-  maxWidth: null            # null, or a column count
+  maxWidth: null            # null，或列数
   cjkWidth: 2               # 2 | 1
 
 typography:
@@ -516,7 +499,7 @@ typography:
     strikethrough: preserve       # double | single | preserve
   halfwidthAlphanumerics: true
   ideographicSpace: true
-  hashtag: false                  # opt-in, see TYPO-09
+  hashtag: false                  # 需显式开启，见 TYPO-09
   cjkClasses: [han]               # han | kana | hangul | bopomofo | enclosed
   spacingSymbols: ["+", "-", "=", "<", ">", "%", "°", "℃", "℉"]
 
@@ -529,67 +512,45 @@ ignore:
   line: fuxi-fmt-ignore
 ```
 
-**Implementation status.** <!-- fuxi-fmt:not-implemented --> `typography.collapseBoundarySpaces`.
-<!-- fuxi-fmt:partially-implemented --> `list.orderedIndent` / `list.unorderedIndent`, which today only controls how
-hard tabs are expanded, and also sets the minimum indent width that list reindentation targets. Everything else in this
-block is implemented.
+**实现状态。** <!-- fuxi-fmt:not-implemented --> `typography.collapseBoundarySpaces`。
+<!-- fuxi-fmt:partially-implemented --> `list.orderedIndent` / `list.unorderedIndent`，今天只控制硬制表符如何展开，同时也设定列表重新缩进所瞄准的最小缩进宽度。这个块里其余的一切都已实现。
 
-Configuration is read from the nearest `fuxi-fmt.json` above the file being
-formatted, which may contain comments and trailing commas. Presets (CFG-01) are implemented; the
-platform presets named in an early draft were removed rather than guessed at.
-Everything in this block is implemented.
+配置从被格式化文件之上最近的 `fuxi-fmt.json` 读取，它可以包含注释与尾随逗号。预设（CFG-01）已实现；早期草稿里点名的平台预设被删掉，而不是靠猜去实现。这个块里的一切都已实现。
 
 ---
 
-## 7. Open items
+## 7. 待办事项
 
-0. **`blankLines.insideBlockquotes` was withdrawn, and one half of the reason has since been
-   removed.** A blank line inside a blockquote is a `>` line; a `>` line used to count as non-blank,
-   so GRT-01 refused any change to the number of them. That half is fixed: the guard now reads a bare
-   `>` as the blank line it renders as (BLK-14), so a rule may add or remove one. What remains is
-   that consecutive quoted lines are a single block, so there is no gap between two quoted blocks for
-   a policy to work on, and where a gap does exist - around a quoted fence - writing a `>` line would
-   merge two quotes the author kept apart. The policy stands down inside quotes rather than making
-   that call on the author's behalf. What the policy must not do is the opposite: an *empty* line inserted between two quoted
-   blocks is invisible to that same count - an empty line is blank - and it still ends the quote, so
-   BLK-01 leaves the author's spacing inside a quote exactly as written. A quoted blank line is the
-   author's to write.
+0. **`blankLines.insideBlockquotes` 被撤回，而理由的一半后来被移除了。** 引用块内部的空行是一个 `>` 行；`>` 行过去算作非空，所以 GRT-01 拒绝任何改变其数量的修改。那一半已经修好：守卫现在把裸 `>` 读成它所渲染出的空行（BLK-14），于是规则可以增删一个。剩下的是：连续的被引用行是一个块，所以两个被引用的块之间没有空隙可供策略施展，而当空隙确实存在时 —— 比如被引用的围栏周围 —— 写一个 `>` 行会合并作者分开保留的两个引用。策略在引用内部让位，而不是替作者做这个决定。策略不得做的是相反的事：插在两个被引用块之间的*空*行对同一个计数不可见 —— 空行就是空 —— 而它仍然结束引用，所以 BLK-01 把引用内部作者写的间距原样留下。被引用的空行由作者来写。
 
 
-1. **Fence indentation vs list-indentation normalization (SAFE-02 x BLK-08).** SAFE-02 says a fence's indentation is byte-verbatim. BLK-08 normalizes list indentation. When a fenced block sits *inside* a list item, normalizing the list changes the indentation the fence must have, or the block escapes its parent. Options: (a) the fence follows its list context, so SAFE-02 applies only to fences not inside lists; (b) any list containing a fence is excluded from indentation normalization; (c) normalization is skipped and a diagnostic is reported. **Resolved: option (b).** A list containing a protected block is excluded from
-indentation normalization, and a diagnostic is reported when that happens. Option (a) — letting
-the fence follow the list — would move code the author wrote at a fixed indentation, and moving
-code is precisely what SAFE-02 exists to prevent. Excluding the list keeps both promises.
-**Implemented, including the diagnostic, as **DET-12**. The exclusion covers the blank-line policy as well as the indentation plan: inserting a blank line inside such a list is not cosmetic, because a deeply indented item after a blank line is an indented code block, so the tidied document parses differently from the written one. That interaction was a real refusal — a list containing a code block with an over-indented child came back untouched with `protected region count changed: 1 -> 2`. `list.orderedIndent` / `list.unorderedIndent` sets the minimum indent width used by list reindentation, and
-`list.tabWidth` the width hard tabs are expanded to — two jobs that one option used to conflate:
-reindentation is driven by the parent's content column, not by that option.
-2. **YAML front matter format** (FM-01) is currently "protect entirely". The `frontMatter.enabled`
-option that once appeared in the config block has been **removed rather than implemented**: turning
-protection off would mean formatting YAML as Markdown, which is worse than either protecting it (as
-now) or formatting it properly (as this item contemplates). A config key that only makes the output
-worse is not worth keeping as an unimplemented promise. The original goal was "format the YAML". Formatting it safely requires a YAML-significant-character audit and a parse-equality guard, because `:`, `#`, `&`, `*`, `|`, `>`, `@`, quotes and `-` are all significant at some position. Revisit after v1 if comment- and key-order-preserving YAML formatting proves worth the risk.
-3. **Punctuation change list contents.** Semicolon is **included** by default (TYPO-05); `typography.semicolon` was removed in favour of the list, so there is one control rather than two. Whether `、` and the paired quotes belong in the list is still not settled.
-4. **`……` and `——` normalization.** Not in v1. If added, they are opt-in rules, and no existing tool converts `--` to `——`.
-5. **Range-formatting semantics.** GRT-06 requires minimal edits. The adapter answers this narrowly: it computes the whole document's edits and keeps only those whose line span intersects the selection, so a partial selection never receives an edit outside it. It does not reason about block-level rules reaching across the boundary — a selection covering half a list is given the half it covers. That is a deliberate simplification, and it should be revisited if it proves surprising in an editor rather than left as an open question.
+1. **围栏缩进与列表缩进规范化的冲突（SAFE-02 × BLK-08）。** SAFE-02 说围栏的缩进逐字节原样。BLK-08 规范化列表缩进。当一个围栏块位于列表项*内部*时，规范化列表会改变围栏必须拥有的缩进，否则该块会逃出它的父项。选项：(a) 围栏跟随它的列表语境，于是 SAFE-02 只适用于不在列表内的围栏；(b) 任何含有围栏的列表被排除在缩进规范化之外；(c) 跳过规范化并报告一条诊断。**已解决：选项 (b)。** 含有受保护块的列表被排除在缩进规范化之外，发生这种情况时报一条诊断。选项 (a) —— 让围栏跟随列表 —— 会移动作者以固定缩进写下的代码，而移动代码正是 SAFE-02 要防止的。排除该列表同时守住了两个承诺。
+**已实现，包括那条诊断，即 **DET-12**。该排除同时覆盖空行策略与缩进方案：在这样一个列表内部插入空行不是装饰性的，因为空行之后一个缩进很深的项就是缩进代码块，于是整理后的文档与写下的文档解析结果不同。这个相互作用曾是一次真实的拒绝 —— 一个含有代码块、且带有一个缩进过深的子项的列表原样返回，并报 `protected region count changed: 1 -> 2`。`list.orderedIndent` / `list.unorderedIndent` 设定列表重新缩进使用的最小缩进宽度，`list.tabWidth` 设定硬制表符展开的宽度 —— 过去一个选项把这两件事混在一起：重新缩进由父项的内容列驱动，而不是由那个选项驱动。
+2. **YAML front matter 格式**（FM-01）目前是「完整保护」。配置块里曾经出现的 `frontMatter.enabled` 选项已被**删除而不是实现**：关掉保护意味着把 YAML 当 Markdown 格式化，那比保护它（现状）或正确地格式化它（本条所设想的）都更糟。一个只会让输出更糟的配置键，不值得作为未兑现的承诺留着。最初的目标是「格式化那段 YAML」。安全地格式化它需要一次 YAML 有效字符审计和一道解析等价守卫，因为 `:`、`#`、`&`、`*`、`|`、`>`、`@`、引号与 `-` 在某些位置都是有意义的。如果保留注释与键序的 YAML 格式化证明值得这份风险，v1 之后再回头看。
+3. **标点变更表的内容。** 分号默认**包含**（TYPO-05）；`typography.semicolon` 被删除，改用这张表，于是只有一个控制点而不是两个。`、` 与成对引号是否该进这张表仍未定。
+4. **`……` 与 `——` 的规范化。** 不在 v1。如果加入，它们是需要显式开启的规则，而且没有任何现有工具把 `--` 转成 `——`。
+5. **范围格式化的语义。** GRT-06 要求最小编辑。适配器对此的答案很窄：它算出整篇文档的编辑，只保留行跨度与选区相交的那些，所以部分选区永远不会收到落在它之外的编辑。它不推理会跨过边界的块级规则 —— 覆盖半个列表的选区只拿到它覆盖的那一半。这是一个刻意的简化，如果它在编辑器里被证明出人意料，就应该回过头改，而不是当成一个悬而未决的问题留着。
 
 ---
 
-## Appendix A — primary sources
+## 附录 A —— 第一手来源
 
-- AutoCorrect — https://github.com/huacnlee/autocorrect
-- zhlint — https://github.com/zhlint/zhlint
-- pangu.js — https://github.com/vinta/pangu.js
-- Chinese Copywriting Guidelines — https://github.com/sparanoid/chinese-copywriting-guidelines
-- textlint zh preset — https://github.com/darkyzhou/textlint-rule-preset-zh-technical-writing
-- Prettier markdown options — https://prettier.io/docs/options
-- dprint markdown config — https://dprint.dev/plugins/markdown/config/
-- mdformat — https://mdformat.readthedocs.io/
-- remark-stringify — https://github.com/remarkjs/remark/blob/main/packages/remark-stringify/readme.md
-- markdownlint rules — https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
-- VS Code formatting API — https://code.visualstudio.com/api/references/vscode-api
+- AutoCorrect —— https://github.com/huacnlee/autocorrect
+- zhlint —— https://github.com/zhlint/zhlint
+- pangu.js —— https://github.com/vinta/pangu.js
+- 中文文案排版指北 —— https://github.com/sparanoid/chinese-copywriting-guidelines
+- textlint 中文预设 —— https://github.com/darkyzhou/textlint-rule-preset-zh-technical-writing
+- Prettier 的 markdown 选项 —— https://prettier.io/docs/options
+- dprint 的 markdown 配置 —— https://dprint.dev/plugins/markdown/config/
+- mdformat —— https://mdformat.readthedocs.io/
+- remark-stringify —— https://github.com/remarkjs/remark/blob/main/packages/remark-stringify/readme.md
+- markdownlint 规则 —— https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+- VS Code 格式化 API —— https://code.visualstudio.com/api/references/vscode-api
 
-## Appendix B — benchmark method
+## 附录 B —— 基准测量方法
 
-Fixture generated deterministically by a script (fixed seed, mixed prose/code/tables/lists/front matter, CJK deliberately unspaced). Benchmarks were a Node script, with a Rust comparison using comrak. Best-of-N wall clock, single process, Node 24. Values are for the ratios, not as absolute guarantees.
+Fixture 由一个脚本确定性地生成（固定种子，混合散文、代码、表格、列表、front matter，CJK 刻意不加空格）。基准是一个 Node 脚本，另有一个用 comrak 的 Rust 对照。best-of-N 挂钟时间，单进程，Node 24。数值是为了比值，不是绝对保证。
 
-**The harness itself is no longer in the tree.** It was a generated 372 KB fixture, two scripts and a Rust crate, referenced by nothing but this appendix; a measurement is worth keeping, the apparatus that produced it is not worth 416 KB of repository. It remains in the git history if the numbers ever need re-deriving, and the figures in section 1.3 are dated measurements from the releases that carried it rather than results this project re-runs. Nothing else referenced it: no script, no test, no workflow.
+**测量装置本身已经不在仓库里。** 它曾是一个生成的 372 KB fixture、两个脚本和一个 Rust crate，除本附录外没有任何东西引用它；一次测量值得留下，产生它的装置不值得占 416 KB 的仓库。如果数字需要重新推导，它仍在 git 历史里，而 1.3 节的数字是承载它那些发布版本当时测得的、带日期的测量值，不是本项目会重跑的结果。其它任何东西都没有引用它：没有脚本、没有测试、没有工作流。
+
+
