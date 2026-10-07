@@ -46,7 +46,10 @@ describe('TYPO-08 parenthesis width follows the surrounding text', () => {
     );
   });
   test('a nested pair is skipped rather than guessed', () => {
-    assert.equal(out('中文（a(b)c）\n'), '中文（a(b)c）\n');
+    // The outer pair has another opener inside it, so the walker bails and
+    // leaves it exactly as written. The inner pair is a pair of its own and
+    // takes the line's decision like any other, which is why it widens here.
+    assert.equal(out('中文（a(b)c）\n'), '中文（a（b）c）\n');
   });
   test('never touches a fence', () => {
     const src = '```\n中文（NMRI）\n```\n';

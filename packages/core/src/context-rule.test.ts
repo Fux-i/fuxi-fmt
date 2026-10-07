@@ -1,10 +1,11 @@
 /**
- * The shared context rule, tested through the formatter.
+ * The context rule the two width rules share, tested through the formatter.
  *
- * The first case is the one the user reported: parentheses stayed half-width
- * because an asterisk sat between the Han character and the mark. The rest are the
- * bounds that make the wider rule safe, each written as a case the old adjacency
- * rule would have got wrong in the other direction.
+ * They share the question and not the precedence. A punctuation mark keeps its
+ * word guard first, which is what holds `第 1,000 个字符` together; a parenthesis
+ * asks the context first, because the line is what says which script the
+ * sentence is written in. The cases below are the bounds that make each order
+ * safe, several of them written as the answer the other order would get wrong.
  *
  * Spec references: TYPO-05, TYPO-08.
  */
@@ -22,7 +23,7 @@ function settles(src: string, expected: string, options?: FormatOptionsInput): v
   assert.equal(out(expected, options), expected, 'not idempotent');
 }
 
-describe('TYPO-05/08 one context rule', () => {
+describe('TYPO-05 and TYPO-08 share a context, not a precedence', () => {
   test('an emphasis marker no longer hides the Han before a parenthesis', () => {
     settles('这就是**自信**(confidence)的体现\n', '这就是**自信**（confidence）的体现\n');
   });
@@ -31,8 +32,15 @@ describe('TYPO-05/08 one context rule', () => {
     settles('这就是(confidence)的体现\n', '这就是（confidence）的体现\n');
   });
 
-  test('a parenthesis tight against a Latin word stays half-width', () => {
-    settles('这是 foo(bar) 的调用\n', '这是 foo(bar) 的调用\n');
+  test('a parenthesis glued to a Latin word follows the line, not the word', () => {
+    // The mark below keeps its guard; a parenthesis does not, because a digit
+    // or a letter before it says nothing about which script the sentence is in.
+    settles('这是 foo(bar) 的调用\n', '这是 foo（bar）的调用\n');
+    // The narrow setting still keeps Latin parentheticals half-width when Latin
+    // is what sits outside them on both sides.
+    const adjacent: FormatOptionsInput = { typography: { context: 'adjacent' } };
+    settles('见 English(term)English 处\n', '见 English（term）English 处\n');
+    settles('见 English(term)English 处\n', '见 English(term)English 处\n', adjacent);
   });
 
   test('CJK directly beside a mark wins, whichever side it is on', () => {

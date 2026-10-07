@@ -248,26 +248,34 @@ export function punctuationConverts(
 /**
  * TYPO-08: does this parenthesis pair take the full-width form?
  *
- * Only the character *outside* the opening parenthesis is read. The bracketed
- * term is what the pair contains, not the text the pair sits in, which is why
- * `English(中文)English` keeps half-width parentheses while `中文(English)文`
- * does not.
+ * `typography.context` decides how wide the context is read, and it is asked
+ * first. `line` reads the whole line, with a quotation as a scope of its own, so
+ * a pair in a Chinese line is full-width whatever it contains and whatever it is
+ * glued to. `adjacent` reads only the two non-blank characters outside the pair:
+ * the one before the opener and the one after the closer.
+ *
+ * Asking the neighbours first, as this used to, left the setting nearly
+ * unreachable. A pair glued to a Latin letter or digit was decided by that
+ * character and the context never had a vote, so 版本 22.18（推荐 24 LTS） came
+ * out half-width because of the 8 - while 版本 22.18 （推荐 24 LTS）, one space
+ * wider, came out full-width. A rule whose answer flips on a space is a rule
+ * nobody can predict.
  */
 export function parensConvert(
   text: string,
-  index: number,
+  open: number,
+  close: number,
   mask: Uint8Array,
   options: TypographyOptions,
 ): boolean {
-  const before = text.charAt(index - 1);
-  return decides(
-    isCjk(before, options.cjkClasses),
-    isAlphanumeric(before),
-    text,
-    index,
-    mask,
-    options,
-  );
+  const classes = options.cjkClasses;
+  if (options.context === 'adjacent') {
+    return (
+      isCjk(significantBefore(text, open, mask), classes) ||
+      isCjk(significantAfter(text, close, mask), classes)
+    );
+  }
+  return spanHasCjk(text, scopeOf(text, open, mask), mask, classes);
 }
 
 /**

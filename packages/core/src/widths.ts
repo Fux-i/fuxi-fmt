@@ -104,7 +104,7 @@ export function normalizeParens(
         ? true
         : options.parenStyle === 'halfwidth'
           ? false
-          : parensConvert(text, i, mask, options);
+          : parensConvert(text, i, j, mask, options);
     chars[i] = full ? '\uff08' : '(';
     chars[j] = full ? '\uff09' : ')';
     i = j;
