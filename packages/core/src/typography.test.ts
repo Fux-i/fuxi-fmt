@@ -235,3 +235,28 @@ describe('SAFE-06 link and image syntax survives the typography passes', () => {
     assert.equal(out('中文[链接](a.md)中文,后面\n'), '中文[链接](a.md)中文，后面\n');
   });
 });
+
+describe('SAFE-04 inline HTML survives the typography passes', () => {
+  // The tags came back as <img src=“a.png”alt=“中文”/>: curly quotes where the
+  // attribute quotes were, and the separating spaces gone, because a tag that
+  // does not start its line was not a region at all.
+  test('leaves a tag with attributes alone', () => {
+    const src = '中文 <img src="a.png" alt="中文" /> 中文\n';
+    assert.equal(out(src), src);
+  });
+  test('leaves an element, its attributes and its content alone', () => {
+    const src = '中文 <span class="a">中文</span> 中文\n';
+    assert.equal(out(src), src);
+  });
+  test('leaves a bare tag alone', () => {
+    const src = '中文 <br/> 中文\n';
+    assert.equal(out(src), src);
+  });
+  test('does not invent a space around a tag', () => {
+    // A tag is markup, not a word: the spacing rule treats it the way it treats
+    // a bracket, so the author's spacing is kept and none is added. Adding one
+    // would put whitespace into the rendered text between the two Han runs.
+    const src = '中文<img src="a.png"/>中文\n';
+    assert.equal(out(src), src);
+  });
+});

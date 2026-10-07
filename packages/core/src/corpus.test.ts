@@ -50,6 +50,7 @@ const ALL_KINDS: readonly RegionKind[] = Object.keys({
   wikilink: true,
   mdx: true,
   linkSyntax: true,
+  inlineHtml: true,
 } satisfies Record<RegionKind, true>) as RegionKind[];
 
 describe('the fixture corpus', () => {

@@ -76,8 +76,8 @@ function tokenize(
       while (j < to && mask[j] === 1) j++;
       // A protected span usually behaves as one opaque Latin word (SAFE-03), so
       // an inline code span gains the spaces that make it a word in the
-      // sentence. Punctuation that delimits a link is not a word: treating the
-      // destination as one put a space inside the link text and
+      // sentence. Punctuation that delimits a link or a tag is not a word:
+      // treating the destination as one put a space inside the link text and
       // another after the destination, which is a change the author never asked
       // for and a rule that never wanted to make it. It takes the class the
       // markup characters take, which is to say neither side of it is a
@@ -169,10 +169,10 @@ export function applyTypography(
   const blockMask = new Uint8Array(text.length);
   /**
    * Protected characters that are punctuation rather than a word: the
-   * delimiters of a link or an image. They are protected either way; the
-   * distinction is only about spacing, and it is needed because SAFE-03's model
-   * - a protected span is one opaque Latin word - is right for an inline code
-   * span and wrong for a bracket.
+   * delimiters of a link or an image, and an inline HTML tag. They are protected
+   * either way; the distinction is only about spacing, and it is needed because
+   * SAFE-03's model - a protected span is one opaque Latin word - is right for
+   * an inline code span and wrong for a bracket or a tag.
    */
   const syntaxMask = new Uint8Array(text.length);
   for (const range of extra) {
@@ -183,7 +183,7 @@ export function applyTypography(
   }
   for (const region of regions) {
     const block = isBlockRegionKind(region.kind);
-    const syntax = region.kind === 'linkSyntax';
+    const syntax = region.kind === 'linkSyntax' || region.kind === 'inlineHtml';
     for (let i = region.start; i < region.end; i++) {
       mask[i] = 1;
       if (syntax) syntaxMask[i] = 1;

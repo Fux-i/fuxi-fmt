@@ -35,6 +35,14 @@ export type RegionKind =
    * being one.
    */
   | 'linkSyntax'
+  /**
+   * A tag in the middle of a line (SAFE-04). The mdx pattern below wants a
+   * capital letter and an htmlBlock wants the tag to start its line, so an
+   * inline lowercase tag with attributes was claimed by nothing at all: its
+   * straight quotes became curly Chinese ones and the spaces between its
+   * attributes were eaten by the plain-prose rules.
+   */
+  | 'inlineHtml'
 
 export interface Region {
   readonly kind: RegionKind;
@@ -412,6 +420,13 @@ function scanInline(source: string, mask: Uint8Array, regions: Region[]): void {
   scanPattern(source, mask, regions, /\[\[[^\]\n]*\]\]/g, 'wikilink');
   scanPattern(source, mask, regions, /\{\{[^}\n]*\}\}/g, 'mdx');
   scanPattern(source, mask, regions, /<[A-Z][A-Za-z0-9.]*(?:\s[^<>]*?)?\/?>/g, 'mdx');
+  scanPattern(
+    source,
+    mask,
+    regions,
+    /<[/!]?[A-Za-z][A-Za-z0-9-]*(?:\s[^<>\n]*?)?\/?>/g,
+    'inlineHtml',
+  );
   // Before the url pattern, not after: an absolute destination belongs to its
   // link, and letting url claim the inside of it first would leave the
   // parentheses that delimit it unmasked - which is the bug this closes.

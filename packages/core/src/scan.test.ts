@@ -172,6 +172,28 @@ describe('scan: verbatim link and markup destinations (SAFE-04, SAFE-05, SAFE-06
   test('does not mistake a less-than sign in prose for syntax', () => {
     assert.deepEqual(slices('a < b and c > d\n'), []);
   });
+
+  test('detects an inline HTML tag with attributes', () => {
+    // A lowercase tag in the middle of a line was claimed by nothing: the mdx
+    // pattern above wants a capital letter, and an htmlBlock wants the tag to
+    // start the line. Its attributes were therefore prose to TYPO-05 and
+    // TYPO-11, which turned the quotes curly and ate the spaces between them -
+    // the tag came back as something no browser reads the same way.
+    const src = '中文 <img src="a.png" alt="中文" /> 中文\n';
+    assert.deepEqual(slices(src), [['inlineHtml', '<img src="a.png" alt="中文" />']]);
+  });
+
+  test('detects a closing tag', () => {
+    const src = '中文 <span class="a">中文</span> 中文\n';
+    assert.deepEqual(slices(src), [
+      ['inlineHtml', '<span class="a">'],
+      ['inlineHtml', '</span>'],
+    ]);
+  });
+
+  test('detects a self-closing tag with no attributes', () => {
+    assert.deepEqual(slices('中文 <br/> 中文\n'), [['inlineHtml', '<br/>']]);
+  });
 });
 
 describe('scan: inline code delimiters', () => {
@@ -252,9 +274,13 @@ describe('scan: a protected region inside a block quote (SAFE-01, SAFE-04)', () 
 
   test('a bare > is a blank line, so it ends a quoted HTML block', () => {
     const src = '> <div>\n>\n> 中文,abc\n> </div>\n';
-    const kinds = scanRegions(src).map((r) => r.kind);
-    assert.deepEqual(kinds, ['htmlBlock']);
+    const regions = scanRegions(src);
+    // The block ends at the opening tag, because the bare '>' is the blank line
+    // it renders as. The closing tag on the last line is outside it - and is a
+    // protected inline tag of its own, not the unprotected prose it used to be.
+    assert.deepEqual(regions.map((r) => r.kind), ['htmlBlock', 'inlineHtml']);
     assert.equal(slices(src)[0]?.[1], '> <div>');
+    assert.equal(slices(src)[1]?.[1], '</div>');
   });
 
   test('front matter is still a document-start thing, not a quoted one', () => {
