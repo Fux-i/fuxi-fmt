@@ -1,237 +1,237 @@
 
-# Mainstream Markdown Formatters — Configurable Feature Surface
+# 主流 Markdown 格式化工具 —— 可配置能力面
 
-Facts only; primary docs/source cited. Inline code shown with &#96; (rendered as a backtick by the reader).
+只记事实；逐条给出第一手文档或源码。行内代码以 &#96; 表示（渲染出来就是反引号）。
 
 ## 1. Prettier
 
-Built-in supports markdown via the `markdown` parser (micromark; MDX via `mdx`). Markdown-specific options are registered in [`src/language-markdown/options.js`](https://github.com/prettier/prettier/blob/main/src/language-markdown/options.js); general options in [Options](https://prettier.io/docs/options).
+内置支持 Markdown，走 `markdown` 解析器（micromark；MDX 走 `mdx`）。Markdown 专属选项注册在 [`src/language-markdown/options.js`](https://github.com/prettier/prettier/blob/main/src/language-markdown/options.js)；通用选项见 [Options](https://prettier.io/docs/options)。
 
-**Markdown-relevant options**
-- `proseWrap`: `"preserve"` (default) / `"always"` (wrap to `printWidth`) / `"never"` (each prose block one line). [Options §Prose Wrap](https://prettier.io/docs/options#prose-wrap)
-- `printWidth` 80 — used by `always` and table layout.
-- `tabWidth` 2, `useTabs` false — list content indentation/alignment uses `options.tabWidth` ([print/list.js](https://github.com/prettier/prettier/blob/main/src/language-markdown/print/list.js)).
-- `endOfLine` `"lf"` (default).
-- `embeddedLanguageFormatting` `"auto"` (default) / `"off"` — `auto` formats fenced code whose info string maps to a parser via [embed.js](https://github.com/prettier/prettier/blob/main/src/language-markdown/embed.js); `off` disables.
-- `singleQuote` false — a markdown option, consumed only in [print/mdast.js](https://github.com/prettier/prettier/blob/main/src/language-markdown/print/mdast.js) `getPreferredQuote(title, options.singleQuote)` (preferred quote char for link/image titles).
-- No option for bullet/emphasis/fence/heading style: those are fixed by the printer.
+**与 Markdown 相关的选项**
+- `proseWrap`：`"preserve"`（默认）/ `"always"`（按 `printWidth` 折行）/ `"never"`（每个散文块压成一行）。[Options §Prose Wrap](https://prettier.io/docs/options#prose-wrap)
+- `printWidth` 80 —— 被 `always` 与表格排版使用。
+- `tabWidth` 2、`useTabs` false —— 列表内容的缩进与对齐使用 `options.tabWidth`（[print/list.js](https://github.com/prettier/prettier/blob/main/src/language-markdown/print/list.js)）。
+- `endOfLine` `"lf"`（默认）。
+- `embeddedLanguageFormatting` `"auto"`（默认）/ `"off"` —— `auto` 会格式化那些 info string 能映射到某个解析器的围栏代码（[embed.js](https://github.com/prettier/prettier/blob/main/src/language-markdown/embed.js)）；`off` 关闭。
+- `singleQuote` false —— 一个 Markdown 选项，只在 [print/mdast.js](https://github.com/prettier/prettier/blob/main/src/language-markdown/print/mdast.js) 的 `getPreferredQuote(title, options.singleQuote)` 里被消费（链接与图片标题的首选引号字符）。
+- 项目符号、强调、围栏、标题样式都没有选项：这些由打印器写死。
 
-**Concrete normalizations** (all in [src/language-markdown/](https://github.com/prettier/prettier/tree/main/src/language-markdown))
-- Unordered lists: primary `-`, and `*` for the alternating list sibling (adjacent lists alternate); task items `[x]`/`[ ]` (list.js).
-- Ordered lists: first item prints the source start number; later items print `start+index`; marker `.`/`)` alternates across consecutive lists; a git-diff-friendly list (>=2 items, item 2 is 1, and item 1 != 0 or item 3 is 1) prints every item as `1.`; values clamp at 999,999,999 (list.js, utilities.js). Nested lists are numbered independently.
-- Emphasis `_` by default, switched to `*` when next to a word char, nested in emphasis, or strong-with-word; strong is always `**`; GFM delete is `~~` (mdast.js).
-- Thematic break `---`; `***` when it is the very first root node (so it is not read as front matter) and when alternating inside lists (mdast.js).
-- Headings: style is preserved, not converted — setext headings are re-emitted with the original `=`/`-` underline; ATX as `#`*depth + space ([print/heading.js](https://github.com/prettier/prettier/blob/main/src/language-markdown/print/heading.js)).
-- Code fences: backticks; fence length `max(3, longest backtick run + 1)`; info string preserved; fenced value only line-ending-normalized unless embedded formatting applies ([print/code.js](https://github.com/prettier/prettier/blob/main/src/language-markdown/print/code.js)).
-- Inline code: smallest backtick run not present in the content; a padding space is added when content starts/ends with a backtick or with space+non-space; newlines become spaces unless `proseWrap: preserve`; `|` is escaped inside table cells (mdast.js).
-- Links/references: inline links normalized to `[text](url "title")`, empty URL printed `<>`; pure autolinks preserved `<url>`; full/collapsed/shortcut reference kinds preserved; reference labels escape `[`, `]`, `\`; URLs get backslash/entity escaping and `<...>` wrapping when required (`printUrl`).
-- Tables: cells padded to per-column max width; `:` alignment markers; with `proseWrap: never` a compact table is used only when it exceeds print width ([print/table.js](https://github.com/prettier/prettier/blob/main/src/language-markdown/print/table.js)).
-- Front matter: only `---` (default YAML) and `+++` (default TOML); optional explicit language after the delimiter; YAML may end at `...`; body is formatted by Prettier's yaml/toml printers; **JSON front matter is not recognized**; delimiters preserved ([parse.js](https://github.com/prettier/prettier/blob/main/src/main/front-matter/parse.js), [embed.js](https://github.com/prettier/prettier/blob/main/src/main/front-matter/embed.js)).
-- Blank lines: exactly one blank line between blocks; multiple blanks collapse; tight/loose list spacing is preserved from the AST (`spread`); consecutive list items and definitions are not separated by a blank line; HTML edges special-cased ([print/children.js](https://github.com/prettier/prettier/blob/main/src/language-markdown/print/children.js)).
-- Escaping/safety: entity escapes (`\&`), URL escaping, label escaping, title quoting; `prettier-ignore` / `prettier-ignore-start|end` supported. Prettier states it changes only formatting ([Option Philosophy](https://prettier.io/docs/option-philosophy)); mdformat's FAQ disputes markdown AST preservation ([mdformat FAQ](https://github.com/hukkin/mdformat#why-not-use-prettier-instead)).
+**具体的规范化行为**（全部位于 [src/language-markdown/](https://github.com/prettier/prettier/tree/main/src/language-markdown)）
+- 无序列表：主轴 `-`，相邻列表用 `*` 交替；任务项 `[x]`/`[ ]`（list.js）。
+- 有序列表：首项打印原文的起始编号，后续项打印 `start+index`；标记 `.`/`)` 在相邻列表间交替；对 git diff 友好的列表（≥2 项、第 2 项为 1，且第 1 项不为 0 或第 3 项为 1）每一项都打印成 `1.`；数值上限 999,999,999（list.js、utilities.js）。嵌套列表各自独立编号。
+- 强调默认 `_`，在紧邻单词字符、嵌套于强调中、或加粗紧邻单词时改用 `*`；加粗永远是 `**`；GFM 删除线是 `~~`（mdast.js）。
+- 分隔线 `---`；当它是根节点的第一个节点时用 `***`（这样不会被读成 front matter），在列表内交替时也用 `***`（mdast.js）。
+- 标题：样式保留而不转换 —— setext 标题按原来的 `=`/`-` 下划线重新输出；ATX 输出为 `#` 乘上深度再加一个空格（[print/heading.js](https://github.com/prettier/prettier/blob/main/src/language-markdown/print/heading.js)）。
+- 代码围栏：反引号；围栏长度 `max(3, 内容里最长的反引号串 + 1)`；info string 原样保留；除非命中嵌入格式化，围栏内容只做行尾规范化（[print/code.js](https://github.com/prettier/prettier/blob/main/src/language-markdown/print/code.js)）。
+- 行内代码：取内容中不存在的最小反引号串；内容以反引号开头或结尾，或以「空格 + 非空格」开头或结尾时补一个空格；除非 `proseWrap: preserve`，换行一律变成空格；表格单元格里的 `|` 会被转义（mdast.js）。
+- 链接与引用：行内链接规范化为 `[text](url "title")`，空 URL 打印成 `<>`；纯 autolink 保留 `<url>`；完整、折叠、快捷三种引用形态都保留；引用标签转义 `[`、`]`、`\`；URL 在需要时做反斜杠或实体转义，并用 `<...>` 包裹（`printUrl`）。
+- 表格：单元格按各列最大宽度补空格；`:` 对齐标记；在 `proseWrap: never` 下，只有超过 print width 才会使用紧凑表格（[print/table.js](https://github.com/prettier/prettier/blob/main/src/language-markdown/print/table.js)）。
+- Front matter：只认 `---`（默认 YAML）与 `+++`（默认 TOML）；分隔符之后可以写显式语言；YAML 可以以 `...` 结束；正文交给 Prettier 自己的 yaml/toml 打印器；**不识别 JSON front matter**；分隔符保留（[parse.js](https://github.com/prettier/prettier/blob/main/src/main/front-matter/parse.js)、[embed.js](https://github.com/prettier/prettier/blob/main/src/main/front-matter/embed.js)）。
+- 空行：块之间恰好一个空行；多个空行合并；紧凑或宽松列表的间距从 AST 保留（`spread`）；相邻的列表项与定义之间不加空行；HTML 边界特殊处理（[print/children.js](https://github.com/prettier/prettier/blob/main/src/language-markdown/print/children.js)）。
+- 转义与安全：实体转义（`\&`）、URL 转义、标签转义、标题加引号；支持 `prettier-ignore` / `prettier-ignore-start|end`。Prettier 自称只改格式（[Option Philosophy](https://prettier.io/docs/option-philosophy)）；mdformat 的 FAQ 不认可它保持 Markdown AST 的说法（[mdformat FAQ](https://github.com/hukkin/mdformat#why-not-use-prettier-instead)）。
 
-**Third-party prettier-* plugins that change Markdown output**
-- [prettier-plugin-markdown-html](https://www.npmjs.com/package/prettier-plugin-markdown-html) — formats raw HTML embedded in Markdown with the HTML parser.
-- [prettier-plugin-md-nocjsp](https://www.npmjs.com/package/prettier-plugin-md-nocjsp) — prevents Prettier inserting spaces between CJK and Latin letters.
-- [prettier-markdown-table](https://www.npmjs.com/package/prettier-markdown-table) — formats Markdown tables.
-- [prettier-plugin-embed](https://www.npmjs.com/package/prettier-plugin-embed) — embedded-language formatting for js/ts, not markdown-specific.
-- No plugin is required for core md/MDX; other popular plugins (tailwind, imports, xml, etc.) do not affect Markdown.
+**会改变 Markdown 输出的第三方 prettier-* 插件**
+- [prettier-plugin-markdown-html](https://www.npmjs.com/package/prettier-plugin-markdown-html) —— 用 HTML 解析器格式化嵌入 Markdown 的原始 HTML。
+- [prettier-plugin-md-nocjsp](https://www.npmjs.com/package/prettier-plugin-md-nocjsp) —— 阻止 Prettier 在中日韩文字与拉丁字母之间插入空格。
+- [prettier-markdown-table](https://www.npmjs.com/package/prettier-markdown-table) —— 格式化 Markdown 表格。
+- [prettier-plugin-embed](https://www.npmjs.com/package/prettier-plugin-embed) —— js/ts 的嵌入语言格式化，与 Markdown 无关。
+- 核心的 md/MDX 不需要任何插件；其它热门插件（tailwind、imports、xml 等）不影响 Markdown。
 
 ## 2. dprint-plugin-markdown
 
-Config lives under the `"markdown"` key. Full option list and defaults from [resolve_config.rs](https://github.com/dprint/dprint-plugin-markdown/blob/main/src/configuration/resolve_config.rs), [types.rs](https://github.com/dprint/dprint-plugin-markdown/blob/main/src/configuration/types.rs), [builder.rs](https://github.com/dprint/dprint-plugin-markdown/blob/main/src/configuration/builder.rs); rendered table at [dprint docs](https://dprint.dev/plugins/markdown/config/).
+配置写在 `"markdown"` 键下。完整选项表与默认值来自 [resolve_config.rs](https://github.com/dprint/dprint-plugin-markdown/blob/main/src/configuration/resolve_config.rs)、[types.rs](https://github.com/dprint/dprint-plugin-markdown/blob/main/src/configuration/types.rs)、[builder.rs](https://github.com/dprint/dprint-plugin-markdown/blob/main/src/configuration/builder.rs)；渲染后的表格见 [dprint docs](https://dprint.dev/plugins/markdown/config/)。
 
-| Option | Default | Values / meaning |
+| 选项 | 默认值 | 取值 / 含义 |
 |---|---|---|
-| `lineWidth` | 80 (global fallback) | max line width |
+| `lineWidth` | 80（全局回退值） | 最大行宽 |
 | `newLineKind` | `lf` | `auto`/`crlf`/`lf`/`system` |
-| `textWrap` | `maintain` | `always`, `maintain` (keep breaks), `maintainAndWrap` (keep breaks but break long lines), `never`, `sentence` (one sentence per line) |
-| `wrapUnspacedScripts` | false | break inside CJK-style unspaced scripts when wrapping |
-| `wrapCodeSpans` | true | allow a line break inside a code span |
+| `textWrap` | `maintain` | `always`、`maintain`（保留换行）、`maintainAndWrap`（保留换行但把过长行断开）、`never`、`sentence`（每句一行） |
+| `wrapUnspacedScripts` | false | 折行时允许在 CJK 这类无空格文字内部断开 |
+| `wrapCodeSpans` | true | 允许在行内代码内部换行 |
 | `emphasisKind` | `underscores` | `asterisks` / `underscores` |
 | `strongKind` | `asterisks` | `asterisks` / `underscores` |
 | `hardBreakKind` | `backslash` | `backslash` / `doubleSpace` |
-| `maxBlankLines` | 1 (min 1) | max consecutive blank lines kept between blocks |
-| `heading.kind` (old `headingKind`) | `atx` | `atx` / `setext` (setext only for levels 1-2) |
-| `heading.blankLinesAbove` | unset | fixed blank lines above headings (min 1); unset keeps written blanks up to `maxBlankLines` |
-| `list.unorderedMarker` (old `unorderedListKind`) | `dashes` | `dashes` / `asterisks` (other char is used as alternator) |
-| `list.indentKind` (old `listIndentKind`) | `commonMark` | `commonMark` (align to marker width) / `pythonMarkdown` (fixed >=4 spaces) |
-| `codeBlock.skipFormat` | false | leave fenced code content untouched |
-| `codeBlock.raiseSyntaxErrors` | false | fail file if a code-block formatter errors |
-| `codeBlock.preserveIndentation` | false | keep code indentation instead of unindenting |
-| `codeBlock.preserveBlankLines` | false | keep leading/trailing blank lines in a fence |
-| `codeBlock.useTabs` | unset | override the code formatter's `useTabs` |
-| `codeBlock.indentWidth` | unset | override the code formatter's `indentWidth` |
-| `html.skipFormat` | false | leave inline/block HTML layout untouched |
-| `html.useTabs` | false (global) | indent HTML with tabs |
-| `html.indentWidth` | 2 (global) | HTML indent width |
-| `html.selfClosingSpace` | true | `<br />` vs `<br/>` |
-| `html.preferSingleLine` | false | collapse multi-line HTML that fits |
-| `table.skipFormat` | false | do not align tables |
+| `maxBlankLines` | 1（最小 1） | 块之间保留的连续空行上限 |
+| `heading.kind`（旧名 `headingKind`） | `atx` | `atx` / `setext`（setext 只用于 1–2 级） |
+| `heading.blankLinesAbove` | 未设置 | 标题上方的固定空行数（最小 1）；未设置时保留原文空行，上限为 `maxBlankLines` |
+| `list.unorderedMarker`（旧名 `unorderedListKind`） | `dashes` | `dashes` / `asterisks`（另一个字符用作交替标记） |
+| `list.indentKind`（旧名 `listIndentKind`） | `commonMark` | `commonMark`（对齐到标记宽度）/ `pythonMarkdown`（固定 ≥4 空格） |
+| `codeBlock.skipFormat` | false | 围栏代码内容保持原样 |
+| `codeBlock.raiseSyntaxErrors` | false | 代码块格式化器报错时让整个文件失败 |
+| `codeBlock.preserveIndentation` | false | 保留代码缩进，而不是取消缩进 |
+| `codeBlock.preserveBlankLines` | false | 保留围栏内首尾的空行 |
+| `codeBlock.useTabs` | 未设置 | 覆盖代码格式化器的 `useTabs` |
+| `codeBlock.indentWidth` | 未设置 | 覆盖代码格式化器的 `indentWidth` |
+| `html.skipFormat` | false | 行内与块级 HTML 的排版保持原样 |
+| `html.useTabs` | false（全局值） | 用制表符缩进 HTML |
+| `html.indentWidth` | 2（全局值） | HTML 缩进宽度 |
+| `html.selfClosingSpace` | true | `<br />` 还是 `<br/>` |
+| `html.preferSingleLine` | false | 放得下的多行 HTML 折叠成一行 |
+| `table.skipFormat` | false | 不对齐表格 |
 | `table.cellPadding` | `align` | `align` / `space` / `none` |
-| `ignoreDirective` | "dprint-ignore" | line ignore directive |
-| `ignoreFileDirective` | "dprint-ignore-file" | file ignore directive |
-| `ignoreStartDirective` | "dprint-ignore-start" | range start |
-| `ignoreEndDirective` | "dprint-ignore-end" | range end |
-| `tags` | {} | custom tag -> file-extension map for code-block formatting |
+| `ignoreDirective` | "dprint-ignore" | 行级忽略指令 |
+| `ignoreFileDirective` | "dprint-ignore-file" | 文件级忽略指令 |
+| `ignoreStartDirective` | "dprint-ignore-start" | 区间开始 |
+| `ignoreEndDirective` | "dprint-ignore-end" | 区间结束 |
+| `tags` | {} | 自定义标签到文件后缀的映射，供代码块格式化使用 |
 
-Notes:
-- Deprecated key renames: `headingKind`->`heading.kind`, `unorderedListKind`->`list.unorderedMarker`, `listIndentKind`->`list.indentKind` ([resolve_config.rs](https://github.com/dprint/dprint-plugin-markdown/blob/main/src/configuration/resolve_config.rs)).
-- There is **no `reflow`/`reflowText` option** in current dprint-plugin-markdown; wrapping is `textWrap` + `wrapCodeSpans` + `wrapUnspacedScripts`.
-- `deno: true` preset sets `textWrap: always` and the `deno-fmt-ignore*` directives (builder.rs).
-- Ordered lists are **renumbered**: sequential from the first item's start number; a list whose first two markers are 1s stays all `1.`; if the count would exceed 999,999,999 the written numbers are kept. Marker `. ` primary, `)` alternator for consecutive lists ([generate.rs gen_list](https://github.com/dprint/dprint-plugin-markdown/blob/main/src/generation/generate.rs)).
-- Unordered: `-` primary, `*` alternate; guards against 3 bullets reading as a thematic break.
-- Front matter: `---` YAML body is passed to the code-block formatter registry for `"yaml"` (formatted only if a YAML plugin such as pretty_yaml is present), otherwise kept raw; `+++` (TOML) is always kept raw; delimiters preserved ([gen_metadata_block](https://github.com/dprint/dprint-plugin-markdown/blob/main/src/generation/generate.rs)).
-- Code fences: backtick by default, tilde if the info string contains a backtick; fence length exceeds the longest run of the fence char in the content; leading/trailing whitespace trimmed and code unindented unless `codeBlock.preserve*`; indented code after a list becomes fenced (generate.rs).
-- Escaping: paragraph line-start escapes keep text from becoming blocks; `escape_title` escapes `"` and backslashes (generate.rs).
+说明：
+- 已废弃的键名改成了：`headingKind`→`heading.kind`，`unorderedListKind`→`list.unorderedMarker`，`listIndentKind`→`list.indentKind`（[resolve_config.rs](https://github.com/dprint/dprint-plugin-markdown/blob/main/src/configuration/resolve_config.rs)）。
+- 当前版本的 dprint-plugin-markdown **没有 `reflow`/`reflowText` 选项**；折行由 `textWrap` + `wrapCodeSpans` + `wrapUnspacedScripts` 负责。
+- `deno: true` 预设会设置 `textWrap: always` 以及 `deno-fmt-ignore*` 指令（builder.rs）。
+- 有序列表会**重新编号**：从首项的起始编号开始顺序编号；前两个标记都是 1 的列表保持全为 `1.`；若计数会超过 999,999,999，则保留原文写下的编号。标记以 `. ` 为主，相邻列表用 `)` 交替（[generate.rs gen_list](https://github.com/dprint/dprint-plugin-markdown/blob/main/src/generation/generate.rs)）。
+- 无序列表：`-` 为主，`*` 交替；有防护逻辑避免三个项目符号被读成分隔线。
+- Front matter：`---` 包起来的 YAML 正文交给面向 `"yaml"` 的代码块格式化器注册表（只有装了 pretty_yaml 之类的 YAML 插件才会被格式化），否则原样保留；`+++`（TOML）永远原样保留；分隔符保留（[gen_metadata_block](https://github.com/dprint/dprint-plugin-markdown/blob/main/src/generation/generate.rs)）。
+- 代码围栏：默认反引号；info string 里含反引号时改用波浪号；围栏长度超过内容中最长的围栏字符连续串；除非设置了 `codeBlock.preserve*`，首尾空白被裁掉、代码取消缩进；列表之后的缩进代码块会变成围栏代码（generate.rs）。
+- 转义：段落行首的转义防止文本被读成块；`escape_title` 转义 `"` 与反斜杠（generate.rs）。
 
-## 3. mdformat (Python) and plugins
+## 3. mdformat（Python）与插件
 
-Docs: [style](https://mdformat.readthedocs.io/en/stable/users/style.html), [plugins](https://mdformat.readthedocs.io/en/stable/users/plugins.html), [config file](https://mdformat.readthedocs.io/en/stable/users/configuration_file.html), [README/CLI](https://github.com/hukkin/mdformat).
+文档：[style](https://mdformat.readthedocs.io/en/stable/users/style.html)、[plugins](https://mdformat.readthedocs.io/en/stable/users/plugins.html)、[config file](https://mdformat.readthedocs.io/en/stable/users/configuration_file.html)、[README/CLI](https://github.com/hukkin/mdformat)。
 
-- CLI/options: `--check`, `--no-validate`, `--number` (default false), `--wrap {keep,no,INTEGER}` (default `keep`), `--end-of-line {lf,crlf,keep}` (default `lf`), `--exclude` (3.13+), `--extensions/--no-extensions` (default: all installed), `--codeformatters/--no-codeformatters`. `.mdformat.toml` mirrors: `wrap`, `number`, `end_of_line`, `validate`, `extensions`, `codeformatters`, `exclude`.
-- Plugin mechanism (entry points, per [contributing](https://github.com/hukkin/mdformat/blob/master/docs/contributors/contributing.md)): `mdformat.parser_extension` for parser/renderer extensions implementing `mdformat.plugins.ParserExtensionInterface` (built on markdown-it-py); `mdformat.codeformatter` for `Callable[[str, str], str]` code-block formatters. Installed plugins are enabled by default; per-plugin options live under `[plugin.<name>]`.
-- Style (pure CommonMark by default): ATX only (setext -> ATX); bullet `-`, alternating `-`/`*` for consecutive lists; ordered lists use `1.`/`1)` for every item ("non-numbering", minimal diff) unless `--number`, with `.`/`)` alternating across consecutive ordered lists; fenced code only (indented code -> fenced); code spans reduce to minimal backtick run and strip needless padding; inline link angle brackets removed; all link reference definitions moved to the document bottom, sorted by label, unused/duplicate removed; thematic breaks become 70 underscores; single EOL, single empty line between blocks (tight lists: single newline), single trailing newline; hard breaks are a backslash.
-- Front matter: only via the `frontmatter` extension ([mdformat-frontmatter](https://github.com/butler54/mdformat-frontmatter)); **YAML only**, must be at the first line(s); formats YAML front matter. No TOML/JSON.
-- Parser-extension plugins: [mdformat-frontmatter](https://github.com/butler54/mdformat-frontmatter) (YAML front matter); [mdformat-gfm](https://github.com/hukkin/mdformat-gfm) (`gfm` and `tables`; GFM tables, task lists, strikethrough, autolinks; adds `--compact-tables` / `[plugin.tables] compact_tables`); [mdformat-tables](https://github.com/executablebooks/mdformat-tables) (moved into mdformat-gfm; aligns tables, e.g. `| a | b |` -> padded); [mdformat-footnote](https://github.com/executablebooks/mdformat-footnote) (Pandoc-style footnotes); `mdformat-deflist` (Pandoc definition lists); [mdformat-mkdocs](https://github.com/KyleKing/mdformat-mkdocs) (MkDocs; 4-space list indent); `mdformat-toc` (auto TOC generation); `mdformat-myst`, `mdformat-admon`, `mdformat-gfm-alerts`, `mdformat-simple-breaks` (3-dash breaks), `mdformat-pyproject`.
-- Code-block formatter plugins: `mdformat-black`/*-ruff` (python), `mdformat-shfmt`/*-beautysh`, `mdformat-gofmt`, `mdformat-rustfmt`, `mdformat-web` (js/css/html/xml), `mdformat-config` (json/toml/yaml).
-- Safety: `validate` compares the rendered HTML before/after and refuses to write if the AST changed; stated goal is "only change style, not content", with minimal-diff rationale (all-1 numbering, sorted definitions).
+- 命令行与选项：`--check`、`--no-validate`、`--number`（默认 false）、`--wrap {keep,no,INTEGER}`（默认 `keep`）、`--end-of-line {lf,crlf,keep}`（默认 `lf`）、`--exclude`（3.13+）、`--extensions/--no-extensions`（默认：所有已安装的）、`--codeformatters/--no-codeformatters`。`.mdformat.toml` 一一对应：`wrap`、`number`、`end_of_line`、`validate`、`extensions`、`codeformatters`、`exclude`。
+- 插件机制（entry points，见 [contributing](https://github.com/hukkin/mdformat/blob/master/docs/contributors/contributing.md)）：`mdformat.parser_extension` 用于实现 `mdformat.plugins.ParserExtensionInterface` 的解析器与渲染器扩展（建立在 markdown-it-py 之上）；`mdformat.codeformatter` 用于 `Callable[[str, str], str]` 形式的代码块格式化器。已安装的插件默认启用；每个插件的选项放在 `[plugin.<name>]` 下。
+- 样式（默认是纯 CommonMark）：只用 ATX（setext 转成 ATX）；项目符号 `-`，相邻列表用 `-`/`*` 交替；有序列表每一项都用 `1.`/`1)`（「不编号」，为最小 diff），除非给了 `--number`，相邻有序列表之间用 `.`/`)` 交替；只用围栏代码（缩进代码转成围栏）；行内代码收缩为最小反引号串并去掉多余的空格填充；行内链接的尖括号去掉；所有链接引用定义移到文档末尾、按标签排序，未使用与重复的定义删除；分隔线变成 70 个下划线；单一 EOL、块之间单一空行（紧凑列表：单一换行）、结尾单一换行；硬换行用反斜杠。
+- Front matter：只能通过 `frontmatter` 扩展（[mdformat-frontmatter](https://github.com/butler54/mdformat-frontmatter)）；**只支持 YAML**，且必须位于开头若干行；它会格式化 YAML front matter。不支持 TOML 与 JSON。
+- 解析器扩展插件：[mdformat-frontmatter](https://github.com/butler54/mdformat-frontmatter)（YAML front matter）；[mdformat-gfm](https://github.com/hukkin/mdformat-gfm)（`gfm` 与 `tables`；GFM 表格、任务列表、删除线、autolink；附带 `--compact-tables` / `[plugin.tables] compact_tables`）；[mdformat-tables](https://github.com/executablebooks/mdformat-tables)（已并入 mdformat-gfm；对齐表格，例如 `| a | b |` 补成等宽）；[mdformat-footnote](https://github.com/executablebooks/mdformat-footnote)（Pandoc 风格脚注）；`mdformat-deflist`（Pandoc 定义列表）；[mdformat-mkdocs](https://github.com/KyleKing/mdformat-mkdocs)（MkDocs；列表缩进 4 空格）；`mdformat-toc`（自动生成目录）；`mdformat-myst`、`mdformat-admon`、`mdformat-gfm-alerts`、`mdformat-simple-breaks`（三短横线分隔线）、`mdformat-pyproject`。
+- 代码块格式化器插件：`mdformat-black` / `*-ruff`（python）、`mdformat-shfmt` / `*-beautysh`、`mdformat-gofmt`、`mdformat-rustfmt`、`mdformat-web`（js/css/html/xml）、`mdformat-config`（json/toml/yaml）。
+- 安全：`validate` 比较格式化前后渲染出的 HTML，AST 变了就拒绝写入；它自述的目标是「只改样式，不改内容」，理由是最小 diff（全 1 编号、定义排序）。
 
 ## 4. remark / remark-stringify / remark-lint
 
-**remark-stringify options** (defaults from [readme](https://github.com/remarkjs/remark/blob/main/packages/remark-stringify/readme.md)):
-`bullet` `'*'`; `bulletOther` opposite of bullet; `bulletOrdered` `'.'`; `closeAtx` false; `emphasis` `'*'`; `fence` ``'`'``; `fences` true; `incrementListMarker` true; `listItemIndent` `'one'` (also `'mixed'`, `'tab'`); `quote` `'"'`; `resourceLink` false; `rule` `'*'`; `ruleRepetition` 3; `ruleSpaces` false; `setext` false; `strong` `'*'`; `tightDefinitions` false; plus `handlers`, `join`, `unsafe` (escape schemas). GFM table serialization options come from remark-gfm: `tableCellPadding`, `tablePipeAlign`, `tablePipes`.
-- Serialization always uses one blank line between blocks unless a `join`/tight-list case says otherwise; `tightDefinitions` joins definitions without a blank line.
-- Front matter is preserved (not formatted) by `remark-frontmatter` (YAML/TOML/etc.).
-- remark-lint does not itself rewrite text; each fixable rule documents the equivalent `remark-stringify`/`remark-gfm` option, and re-serializing the AST produces the fix.
+**remark-stringify 的选项**（默认值来自 [readme](https://github.com/remarkjs/remark/blob/main/packages/remark-stringify/readme.md)）：
+`bullet` `'*'`；`bulletOther` 取 bullet 的反面；`bulletOrdered` `'.'`；`closeAtx` false；`emphasis` `'*'`；`fence` ``'`'``；`fences` true；`incrementListMarker` true；`listItemIndent` `'one'`（还有 `'mixed'`、`'tab'`）；`quote` `'"'`；`resourceLink` false；`rule` `'*'`；`ruleRepetition` 3；`ruleSpaces` false；`setext` false；`strong` `'*'`；`tightDefinitions` false；外加 `handlers`、`join`、`unsafe`（转义 schema）。GFM 表格的序列化选项来自 remark-gfm：`tableCellPadding`、`tablePipeAlign`、`tablePipes`。
+- 序列化时块之间总是一个空行，除非 `join` 或紧凑列表的情况另有规定；`tightDefinitions` 让定义之间不加空行。
+- Front matter 由 `remark-frontmatter` 保留（不格式化）（YAML/TOML 等）。
+- remark-lint 自己不重写文本；每条可修复的规则都写着等价的 `remark-stringify`/`remark-gfm` 选项，重新序列化 AST 就是修复动作。
 
-**remark-lint rules with fix guidance** (Fix section; 31 rules). What each changes:
-- `checkbox-character-style`: checked `[x]`, unchecked `[ ]`.
-- `checkbox-content-indent`: single space after checkbox.
-- `code-block-style`: fenced code (or indented via `fences: false`).
-- `directive-quote-style` / `mdx-jsx-quote-style`: attribute quote style (double by default; `quote`).
-- `emphasis-marker`: `*` (or `emphasis: '_'`).
-- `fenced-code-marker`: backticks (or `fence: '~'`).
-- `final-newline`: adds final newline.
-- `heading-style`: ATX (or `setext: true` / `closeAtx: true`).
-- `linebreak-style`: Unix line endings.
-- `link-title-style`: double quotes (or `quote: "'"`).
-- `list-item-bullet-indent`: removes item indent.
-- `list-item-content-indent`: aligns item content.
-- `list-item-indent`: `listItemIndent: 'one'` (also `'mixed'`/`'tab'`).
-- `no-blockquote-without-marker`: adds `>` to every block-quote line.
-- `no-consecutive-blank-lines`: exactly one blank line between blocks (`join` for complex cases).
-- `no-heading-content-indent`: one space after `#`.
-- `no-heading-indent`: removes heading indent.
-- `no-literal-urls`: converts to regular autolinks/full links.
-- `no-missing-blank-lines`: blank lines between blocks.
-- `no-table-indentation`: unindents tables.
-- `no-tabs`: spaces only.
-- `ordered-list-marker-style`: `.` (or `bulletOrdered: ')'`).
-- `ordered-list-marker-value`: keeps first value, increments (or `incrementListMarker: false`).
-- `rule-style`: `***` (`rule`/`ruleRepetition`/`ruleSpaces`).
-- `strikethrough-marker`: two tildes.
-- `strong-marker`: `*` (or `strong: '_'`).
-- `table-cell-padding` / `table-pipe-alignment` / `table-pipes`: padded cells / aligned pipes / leading+trailing pipes.
-- `unordered-list-marker-style`: `*` (or `bullet: '+'|'-'`).
-Non-fixable examples (no Fix section): `blockquote-indentation`, `definition-sort`, `fenced-code-flag`, `file-extension`, `heading-increment`, `list-item-spacing`, `maximum-line-length`, `no-duplicate-headings`, `no-emphasis-as-heading`, `no-html`, `no-shell-dollars`, `no-undefined-references`, `no-unused-definitions`, `no-shortcut-reference-link/image`, and the file-name/heading-punctuation rules.
+**写了修复指引的 remark-lint 规则**（带 Fix 小节的 31 条）。每条改什么：
+- `checkbox-character-style`：勾选写 `[x]`，未勾选写 `[ ]`。
+- `checkbox-content-indent`：复选框之后一个空格。
+- `code-block-style`：围栏代码（或用 `fences: false` 改成缩进代码）。
+- `directive-quote-style` / `mdx-jsx-quote-style`：属性引号样式（默认双引号；对应 `quote`）。
+- `emphasis-marker`：`*`（或 `emphasis: '_'`）。
+- `fenced-code-marker`：反引号（或 `fence: '~'`）。
+- `final-newline`：补上结尾换行。
+- `heading-style`：ATX（或 `setext: true` / `closeAtx: true`）。
+- `linebreak-style`：Unix 行尾。
+- `link-title-style`：双引号（或 `quote: "'"`）。
+- `list-item-bullet-indent`：去掉列表项的缩进。
+- `list-item-content-indent`：对齐列表项内容。
+- `list-item-indent`：`listItemIndent: 'one'`（还有 `'mixed'`/`'tab'`）。
+- `no-blockquote-without-marker`：给引用块的每一行补 `>`。
+- `no-consecutive-blank-lines`：块之间恰好一个空行（复杂情况用 `join`）。
+- `no-heading-content-indent`：`#` 之后一个空格。
+- `no-heading-indent`：去掉标题的缩进。
+- `no-literal-urls`：转成常规 autolink 或完整链接。
+- `no-missing-blank-lines`：块之间补空行。
+- `no-table-indentation`：把表格的缩进去掉。
+- `no-tabs`：只用空格。
+- `ordered-list-marker-style`：`.`（或 `bulletOrdered: ')'`）。
+- `ordered-list-marker-value`：保留首项的值，之后递增（或 `incrementListMarker: false`）。
+- `rule-style`：`***`（对应 `rule`/`ruleRepetition`/`ruleSpaces`）。
+- `strikethrough-marker`：两个波浪号。
+- `strong-marker`：`*`（或 `strong: '_'`）。
+- `table-cell-padding` / `table-pipe-alignment` / `table-pipes`：单元格补空格 / 对齐竖线 / 首尾都加竖线。
+- `unordered-list-marker-style`：`*`（或 `bullet: '+'|'-'`）。
+不可修复的例子（没有 Fix 小节）：`blockquote-indentation`、`definition-sort`、`fenced-code-flag`、`file-extension`、`heading-increment`、`list-item-spacing`、`maximum-line-length`、`no-duplicate-headings`、`no-emphasis-as-heading`、`no-html`、`no-shell-dollars`、`no-undefined-references`、`no-unused-definitions`、`no-shortcut-reference-link/image`，以及文件名与标题标点那几条。
 
-## 5. markdownlint (CLI + VSCode)
+## 5. markdownlint（CLI + VSCode）
 
-Fix machinery: rules that can fix set a `fixInfo` property; the library exposes `applyFix`/`applyFixes`; `markdownlint-cli --fix` "fix basic issues (does not work with STDIN)" and notes not all issues are fixable ([CLI README](https://github.com/igorshubovych/markdownlint-cli), [lib README §Fixing](https://github.com/DavidAnson/markdownlint)). VSCode extension: quick fix (lightbulb), `markdownlint.fixAll` command, register-as-formatter, and format-on-save via `editor.codeActionsOnSave: { "source.fixAll.markdownlint": "explicit" }` ([VSCode README](https://github.com/DavidAnson/vscode-markdownlint)). Rule list/defaults: [doc/Rules.md](https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md); fix actions read from [lib/md*.mjs](https://github.com/DavidAnson/markdownlint/tree/main/lib).
+修复机制：能修的规则会设置 `fixInfo` 属性；库导出 `applyFix`/`applyFixes`；`markdownlint-cli --fix` 自称「修复基础问题（不支持 STDIN）」，并说明并非所有问题都可修（[CLI README](https://github.com/igorshubovych/markdownlint-cli)、[lib README §Fixing](https://github.com/DavidAnson/markdownlint)）。VSCode 扩展：快速修复（灯泡）、`markdownlint.fixAll` 命令、注册为格式化器，以及通过 `editor.codeActionsOnSave: { "source.fixAll.markdownlint": "explicit" }` 在保存时修复（[VSCode README](https://github.com/DavidAnson/vscode-markdownlint)）。规则列表与默认值：[doc/Rules.md](https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md)；修复动作读自 [lib/md*.mjs](https://github.com/DavidAnson/markdownlint/tree/main/lib)。
 
-**Auto-fixable rules and exactly what the fix does** (fix actions from source):
-| Rule | Name | Fix action |
+**可自动修复的规则，以及修复动作具体做什么**（修复动作取自源码）：
+| 规则 | 名称 | 修复动作 |
 |---|---|---|
-| MD004 | ul-style | replace the unordered marker with the configured style marker |
-| MD005 | list-indent | add/remove spaces so same-level list items align |
-| MD007 | ul-indent | add/remove spaces to reach configured unordered indent (default 2) |
-| MD009 | no-trailing-spaces | delete trailing spaces (except allowed hard-break spaces) |
-| MD010 | no-hard-tabs | replace each tab with spaces |
-| MD011 | no-reversed-links | rewrite `(url)[text]` to `[text](url)` |
-| MD012 | no-multiple-blanks | delete blank lines beyond the configured maximum (default 1) |
-| MD014 | commands-show-output | delete the `$` prompt |
-| MD018 | no-missing-space-atx | insert one space after the hash |
-| MD019 | no-multiple-space-atx | delete extra spaces after the opening hash |
-| MD020 | no-missing-space-closed-atx | rewrite closed ATX heading with one space inside both hash runs |
-| MD021 | no-multiple-space-closed-atx | delete extra spaces inside closed ATX hashes |
-| MD022 | blanks-around-headings | insert blank line(s) above/below headings (`lines_above/below` default 1; `include_front_matter` false) |
-| MD023 | heading-start-left | delete leading indentation before a heading |
-| MD026 | no-trailing-punctuation | delete trailing punctuation in headings |
-| MD027 | no-multiple-space-blockquote | delete extra spaces after `>` |
-| MD029 | ol-prefix | rewrite ordered-list prefixes to the configured style: `one_or_ordered` (default), `one`, `ordered`, `zero`; preserves right-alignment and zero-padding |
-| MD030 | list-marker-space | set spaces after list markers (`ul_single/ol_single/ul_multi/ol_multi`, all default 1) |
-| MD031 | blanks-around-fences | insert blank line above/below fenced code (respects blockquote prefix) |
-| MD032 | blanks-around-lists | insert blank line above/below lists |
-| MD034 | no-bare-urls | wrap a bare URL in `<...>` |
-| MD037 | no-space-in-emphasis | delete spaces just inside emphasis markers |
-| MD038 | no-space-in-code | delete spaces just inside code-span backticks |
-| MD039 | no-space-in-links | delete spaces just inside link text |
-| MD044 | proper-names | replace wrong capitalization with the configured proper name (`names`) |
-| MD047 | single-trailing-newline | insert a final newline |
-| MD049 | emphasis-style | replace emphasis marker with configured style (`consistent` default) |
-| MD050 | strong-style | replace strong marker with configured style (`consistent` default) |
-| MD051 | link-fragments | fix a link fragment to the correct case |
-| MD053 | link-image-reference-definitions | delete the unused reference-definition line |
-| MD054 | link-image-style | convert link/image to the configured inline/autolink/full/shortcut style |
-| MD058 | blanks-around-tables | insert blank line above/below tables |
-| MD060 | table-column-style | add/remove spaces around table pipes per style (`tight`/`compact`) |
-Not fixable (no `fixInfo`): MD001, MD003, MD013, MD024, MD025, MD028, MD033, MD035, MD036, MD040, MD041, MD042, MD043, MD045, MD046, MD048, MD052, MD055, MD056, MD059. (Notably MD003 heading-style and MD046/MD048 code-style/fence-style are report-only.)
-- Front matter: MD001 uses `front_matter_title` (default `^\s*title\s*[:=]`) to treat a front-matter title as a level-1 heading; MD022 has `include_front_matter`; markdownlint does not format front matter.
-- Blank-line policy: MD012 max 1 consecutive blank; MD022 blank(s) around headings (default 1 each side); MD031 around fences; MD032 around lists; MD047 single trailing newline.
-- VSCode extension's documented fixable list omits MD029 and MD060, although the library marks them fixable.
+| MD004 | ul-style | 把无序标记替换成配置的样式标记 |
+| MD005 | list-indent | 增删空格，让同级列表项对齐 |
+| MD007 | ul-indent | 增删空格，达到配置的无序列表缩进（默认 2） |
+| MD009 | no-trailing-spaces | 删除行尾空格（允许的硬换行空格除外） |
+| MD010 | no-hard-tabs | 每个制表符替换为空格 |
+| MD011 | no-reversed-links | 把 `(url)[text]` 改写为 `[text](url)` |
+| MD012 | no-multiple-blanks | 删除超过配置上限的空行（默认 1） |
+| MD014 | commands-show-output | 删除 `$` 提示符 |
+| MD018 | no-missing-space-atx | 在井号之后插入一个空格 |
+| MD019 | no-multiple-space-atx | 删除开头井号后的多余空格 |
+| MD020 | no-missing-space-closed-atx | 把闭合 ATX 标题改写成两侧井号内各一个空格 |
+| MD021 | no-multiple-space-closed-atx | 删除闭合 ATX 井号内的多余空格 |
+| MD022 | blanks-around-headings | 在标题上下插入空行（`lines_above/below` 默认 1；`include_front_matter` false） |
+| MD023 | heading-start-left | 删除标题前的缩进 |
+| MD026 | no-trailing-punctuation | 删除标题末尾的标点 |
+| MD027 | no-multiple-space-blockquote | 删除 `>` 之后的多余空格 |
+| MD029 | ol-prefix | 把有序列表前缀改写成配置的样式：`one_or_ordered`（默认）、`one`、`ordered`、`zero`；保留右对齐与补零 |
+| MD030 | list-marker-space | 设置列表标记后的空格数（`ul_single/ol_single/ul_multi/ol_multi`，默认都是 1） |
+| MD031 | blanks-around-fences | 在围栏代码上下插入空行（尊重引用块前缀） |
+| MD032 | blanks-around-lists | 在列表上下插入空行 |
+| MD034 | no-bare-urls | 把裸 URL 用 `<...>` 包起来 |
+| MD037 | no-space-in-emphasis | 删除强调标记内侧的空格 |
+| MD038 | no-space-in-code | 删除行内代码反引号内侧的空格 |
+| MD039 | no-space-in-links | 删除链接文本内侧的空格 |
+| MD044 | proper-names | 把大小写写错的词替换成配置的专有名词（`names`） |
+| MD047 | single-trailing-newline | 补上结尾换行 |
+| MD049 | emphasis-style | 把强调标记替换成配置的样式（默认 `consistent`） |
+| MD050 | strong-style | 把加粗标记替换成配置的样式（默认 `consistent`） |
+| MD051 | link-fragments | 修正链接片段的大小写 |
+| MD053 | link-image-reference-definitions | 删除未使用的引用定义行 |
+| MD054 | link-image-style | 把链接或图片转换成配置的行内、autolink、完整或快捷样式 |
+| MD058 | blanks-around-tables | 在表格上下插入空行 |
+| MD060 | table-column-style | 按样式（`tight`/`compact`）增删表格竖线周围的空格 |
+不可修复（没有 `fixInfo`）：MD001、MD003、MD013、MD024、MD025、MD028、MD033、MD035、MD036、MD040、MD041、MD042、MD043、MD045、MD046、MD048、MD052、MD055、MD056、MD059。（值得注意的是 MD003 标题样式与 MD046/MD048 代码样式与围栏样式只报告不修。）
+- Front matter：MD001 用 `front_matter_title`（默认 `^\s*title\s*[:=]`）把 front matter 里的 title 当作一级标题；MD022 有 `include_front_matter`；markdownlint 不格式化 front matter。
+- 空行策略：MD012 连续空行上限 1；MD022 标题上下空行（默认每侧 1）；MD031 围栏上下；MD032 列表上下；MD047 结尾单一换行。
+- VSCode 扩展文档里的可修复清单漏掉了 MD029 与 MD060，尽管库把它们标记为可修复。
 
-## 6. deno fmt, markdownfmt, mdsf, and others
+## 6. deno fmt、markdownfmt、mdsf 及其他
 
-**deno fmt** — wraps [dprint-plugin-markdown](https://github.com/dprint/dprint-plugin-markdown) ([deno fmt docs](https://docs.deno.com/runtime/reference/cli/fmt/), [deno_json](https://docs.deno.com/runtime/reference/deno_json/#formatting), [fmt.rs](https://github.com/denoland/deno/blob/main/cli/tools/fmt.rs)).
-- md extensions: .md, .mkd, .mkdn, .mdwn, .mdown, .markdown.
-- `"fmt"` keys relevant to markdown: `lineWidth` default 80; `proseWrap` default `always` (`always`/`never`/`preserve` -> dprint `textWrap: always/never/maintain`); `newLineKind` default `lf`; plus `useTabs`/`indentWidth` (global). No deno option for emphasis/strong/bullet/heading kinds.
-- Code blocks inside Markdown are formatted with the registered dprint code-block plugins; ignore directives are `<!-- deno-fmt-ignore -->`, `<!-- deno-fmt-ignore-start/end -->`, `<!-- deno-fmt-ignore-file -->`.
-- .editorconfig fills unset options (highest precedence: CLI flags, deno.json, .editorconfig, defaults).
+**deno fmt** —— 包装 [dprint-plugin-markdown](https://github.com/dprint/dprint-plugin-markdown)（[deno fmt docs](https://docs.deno.com/runtime/reference/cli/fmt/)、[deno_json](https://docs.deno.com/runtime/reference/deno_json/#formatting)、[fmt.rs](https://github.com/denoland/deno/blob/main/cli/tools/fmt.rs)）。
+- 认作 markdown 的扩展名：.md、.mkd、.mkdn、.mdwn、.mdown、.markdown。
+- 与 markdown 有关的 `"fmt"` 键：`lineWidth` 默认 80；`proseWrap` 默认 `always`（`always`/`never`/`preserve` 对应 dprint 的 `textWrap: always/never/maintain`）；`newLineKind` 默认 `lf`；外加全局的 `useTabs`/`indentWidth`。deno 没有针对强调、加粗、项目符号、标题样式的选项。
+- Markdown 里的代码块交给已注册的 dprint 代码块插件格式化；忽略指令是 `<!-- deno-fmt-ignore -->`、`<!-- deno-fmt-ignore-start/end -->`、`<!-- deno-fmt-ignore-file -->`。
+- .editorconfig 填补未设置的选项（优先级从高到低：命令行参数、deno.json、.editorconfig、默认值）。
 
-**markdownfmt (Go)** — [shurcooL/markdownfmt](https://github.com/shurcooL/markdownfmt), "Like gofmt, but for Markdown"; blackfriday-based renderer ([markdown/main.go](https://github.com/shurcooL/markdownfmt/blob/master/markdown/main.go)).
-- Flags only `-d` (diff), `-l` (list), `-w` (write); no config/style options.
-- Output style: level-1/2 headings as setext (`=`/`-` underline), level >=3 ATX; unordered marker `-`; ordered lists renumbered from 1 (`1.`, `2.`, ...); horizontal rule `---`; tables aligned.
-- No front matter support (README says pure Markdown only; points to `mdfmt` fork, `tidy-markdown`, `Flowmark`). It renders through an AST to markdown, so it is not a minimal-diff/semantic-preserving formatter.
+**markdownfmt（Go）** —— [shurcooL/markdownfmt](https://github.com/shurcooL/markdownfmt)，自称「像 gofmt，但用于 Markdown」；基于 blackfriday 的渲染器（[markdown/main.go](https://github.com/shurcooL/markdownfmt/blob/master/markdown/main.go)）。
+- 只有 `-d`（diff）、`-l`（列出）、`-w`（写回）三个参数；没有任何配置或样式选项。
+- 输出样式：1、2 级标题用 setext（`=`/`-` 下划线），3 级及以上用 ATX；无序标记 `-`；有序列表从 1 重新编号（`1.`、`2.`……）；水平分隔线 `---`；表格对齐。
+- 不支持 front matter（README 说自己只处理纯 Markdown，并指向 `mdfmt` 分支、`tidy-markdown`、`Flowmark`）。它经由 AST 重新渲染出 Markdown，所以不是最小 diff，也不保持语义。
 
-**mdsf** — [hougesen/mdsf](https://github.com/hougesen/mdsf): formats and lints only the code inside markdown fenced code blocks via external tools (does not reformat markdown prose/structure).
-- Config `mdsf.json|toml|yaml`; `languages` maps language -> tool(s) with alternatives/lists; `language_aliases`; `newline` `lf`/`cr`/`crlf` (default lf); custom tools via `binary/arguments/stdin`; `format`/`verify` commands, `--cache`, `--on-missing-language-definition`, `--on-missing-tool-binary`. ~349 tools. Not a package manager; only installed tools are used.
+**mdsf** —— [hougesen/mdsf](https://github.com/hougesen/mdsf)：只借助外部工具格式化并检查 Markdown 围栏代码块内部的内容（不重排 Markdown 正文与结构）。
+- 配置 `mdsf.json|toml|yaml`；`languages` 把语言映射到工具（可带备选与列表）；`language_aliases`；`newline` 取 `lf`/`cr`/`crlf`（默认 lf）；自定义工具通过 `binary/arguments/stdin`；`format`/`verify` 子命令、`--cache`、`--on-missing-language-definition`、`--on-missing-tool-binary`。约 349 个工具。它不是包管理器，只用已安装的工具。
 
-**cbfmt** — [lukas-reineke/cbfmt](https://github.com/lukas-reineke/cbfmt): formats codeblocks inside markdown, org and reStructuredText using per-language commands; config `.cbfmt.toml` `[languages]`; ignores non-code markdown. Like mdsf, it does not normalize markdown itself.
+**cbfmt** —— [lukas-reineke/cbfmt](https://github.com/lukas-reineke/cbfmt)：用按语言配置的命令格式化 markdown、org 与 reStructuredText 里的代码块；配置 `.cbfmt.toml` 的 `[languages]`；不碰非代码部分。与 mdsf 一样，它自己不规范化 Markdown。
 
-**tidy-markdown** — [slang800/tidy-markdown](https://github.com/slang800/tidy-markdown): beautifies Markdown and converts basic HTML/Unicode to Markdown equivalents (based on Carrot Creative's styleguide, built on Marked); CLI over STDIN/STDOUT.
+**tidy-markdown** —— [slang800/tidy-markdown](https://github.com/slang800/tidy-markdown)：美化 Markdown，并把基础 HTML 与 Unicode 转换成等价的 Markdown（基于 Carrot Creative 的风格指南，构建在 Marked 之上）；命令行走 STDIN/STDOUT。
 
-Other notable: `Panache` (dprint plugin for Quarto/Pandoc/Markdown, listed at [dprint plugins](https://dprint.dev/plugins/panache/)); `mdfmt` (markdownfmt fork adding front matter); `Flowmark` (YAML frontmatter, line wrapping); `remark-toc` / `mdformat-toc` for TOC generation.
+其它值得注意的：`Panache`（面向 Quarto/Pandoc/Markdown 的 dprint 插件，列在 [dprint plugins](https://dprint.dev/plugins/panache/)）；`mdfmt`（加了 front matter 的 markdownfmt 分支）；`Flowmark`（YAML frontmatter、折行）；`remark-toc` / `mdformat-toc` 用于生成目录。
 
-## 7. VSCode "Markdown All in One"
+## 7. VSCode 扩展「Markdown All in One」
 
-Source: [README](https://github.com/yzhang-gh/vscode-markdown), [src/tableFormatter.ts](https://github.com/yzhang-gh/vscode-markdown/blob/master/src/tableFormatter.ts), [src/listEditing.ts](https://github.com/yzhang-gh/vscode-markdown/blob/master/src/listEditing.ts), [src/print.ts](https://github.com/yzhang-gh/vscode-markdown/blob/master/src/print.ts), package.json.
+出处：[README](https://github.com/yzhang-gh/vscode-markdown)、[src/tableFormatter.ts](https://github.com/yzhang-gh/vscode-markdown/blob/master/src/tableFormatter.ts)、[src/listEditing.ts](https://github.com/yzhang-gh/vscode-markdown/blob/master/src/listEditing.ts)、[src/print.ts](https://github.com/yzhang-gh/vscode-markdown/blob/master/src/print.ts)、package.json。
 
-Formatting-like features:
-- Table of contents: Create/Update commands; auto-updated on save (`markdown.extension.toc.updateOnSave` default true); configurable levels, slugify mode, per-file indent, omission markers `<!-- omit from toc -->` / `<!-- no toc -->`.
-- Section numbering add/update/remove.
-- List editing on Enter/Tab/Backspace; toggle list markers through `- * + 1. 1)` (`list.toggle.candidate-markers`); ordered-list markers auto-fixed as you edit (`orderedList.autoRenumber` default true); indentation adaptive by CommonMark or fixed via `list.indentationSize`.
-- GFM table formatter: registers `DocumentFormattingEditProvider` and `DocumentRangeFormattingEditProvider` for markdown, but `provideDocumentFormattingEdits` only detects and formats GFM tables (`tableFormatter.enabled` default true; `tableFormatter.normalizeIndentation`).
-- Toggle bold (`bold.indicator` default `**`), italic (`italic.indicator` default `*`), inline code, strikethrough, math, heading level; task-list check/uncheck.
-- Print to HTML commands; optional `markdown.extension.print.onFileSave`.
-- Completions (paths, anchors), KaTeX macros, GFM strikethrough/task lists.
+与格式化沾边的功能：
+- 目录：创建与更新命令；保存时自动更新（`markdown.extension.toc.updateOnSave` 默认 true）；级别、slugify 方式、每文件缩进都可配；省略标记 `<!-- omit from toc -->` / `<!-- no toc -->`。
+- 章节编号的添加、更新与删除。
+- 在 Enter/Tab/Backspace 上编辑列表；在 `- * + 1. 1)` 之间切换列表标记（`list.toggle.candidate-markers`）；编辑时自动修正有序列表标记（`orderedList.autoRenumber` 默认 true）；缩进既可按 CommonMark 自适应，也可用 `list.indentationSize` 固定。
+- GFM 表格格式化器：为 markdown 注册了 `DocumentFormattingEditProvider` 与 `DocumentRangeFormattingEditProvider`，但 `provideDocumentFormattingEdits` 只识别并格式化 GFM 表格（`tableFormatter.enabled` 默认 true；`tableFormatter.normalizeIndentation`）。
+- 切换加粗（`bold.indicator` 默认 `**`）、斜体（`italic.indicator` 默认 `*`）、行内代码、删除线、公式、标题级别；勾选与取消任务列表。
+- 打印成 HTML 的命令；可选的 `markdown.extension.print.onFileSave`。
+- 补全（路径、锚点）、KaTeX 宏、GFM 删除线与任务列表。
 
-Format-on-save behavior:
-- Because it registers a markdown document formatter, VS Code `Format Document` / `editor.formatOnSave` will run it — but it only reformats tables, not a full-document normalizer.
-- TOC auto-update runs on save through its own `onDidSaveTextDocument` listener (default on).
-- Ordered-list auto-renumber and list editing run on edit, not save.
-- Optional print-to-HTML runs on save, default off.
+保存时格式化的行为：
+- 因为它注册了 markdown 文档格式化器，VS Code 的 `Format Document` 与 `editor.formatOnSave` 都会调用它 —— 但它只重排表格，不是整篇文档的规范化器。
+- 目录自动更新在保存时通过它自己的 `onDidSaveTextDocument` 监听触发（默认开）。
+- 有序列表自动重编号与列表编辑在编辑时触发，不在保存时。
+- 可选的打印成 HTML 在保存时触发，默认关。
 
-## Cross-tool summary
-| | Front matter | Blank-line policy | Ordered lists | Bullets / indent | Prose wrap | Fenced content |
+## 跨工具对照
+| | front matter | 空行策略 | 有序列表 | 项目符号 / 缩进 | 折行 | 围栏内容 |
 |---|---|---|---|---|---|---|
-| Prettier | YAML `---`, TOML `+++` formatted; JSON no | one blank between blocks; tight/loose preserved | start preserved then sequential; all-1s stay 1s | `-` / `*`; tabWidth-based | option | formatted if parser known, else untouched |
-| dprint | YAML formatted only if yaml plugin, else raw; TOML raw | `maxBlankLines` 1 | renumbered from start; all-1s stay 1s | `-` / `*`; commonMark or 4-space | `textWrap` | formatted by plugins |
-| mdformat | YAML only via plugin | one blank between blocks; tight lists newline | all `1.` unless `--number` | `-` / `*`; 2-space | `--wrap` | code formatter plugins |
-| remark | preserved (remark-frontmatter) | one blank (join/tight controls) | increment by default | `*` default; listItemIndent one | no wrap | handlers/GMF |
-| markdownlint | read via params, not formatted | MD012/MD022/MD031/MD032/MD047 | MD029 style | MD004/MD007/MD030 | MD013 only checks | not touched |
-| deno fmt | same as dprint | same as dprint | same as dprint | same as dprint | `proseWrap` always default | formatted by plugins |
-| markdownfmt | none | gofmt-ish | renumber from 1 | `-` | none | render-based |
-| mdsf/cbfmt | untouched | untouched | untouched | untouched | untouched | external tools |
+| Prettier | YAML `---`、TOML `+++` 会被格式化；JSON 不会 | 块之间一个空行；紧凑与宽松都保留 | 起始编号保留，之后顺序编号；全 1 保持全 1 | `-` / `*`；按 tabWidth | 有选项 | 解析器认识就格式化，否则不动 |
+| dprint | 只有装了 yaml 插件才格式化 YAML，否则原样；TOML 原样 | `maxBlankLines` 1 | 从起始编号重编；全 1 保持全 1 | `-` / `*`；commonMark 或 4 空格 | `textWrap` | 由插件格式化 |
+| mdformat | 只经插件支持 YAML | 块之间一个空行；紧凑列表用换行 | 除非 `--number`，全部 `1.` | `-` / `*`；2 空格 | `--wrap` | 代码格式化器插件 |
+| remark | 保留（remark-frontmatter） | 一个空行（join 与紧凑相关选项控制） | 默认递增 | 默认 `*`；listItemIndent one | 不折行 | handlers/GMF |
+| markdownlint | 只通过参数读取，不格式化 | MD012/MD022/MD031/MD032/MD047 | MD029 样式 | MD004/MD007/MD030 | MD013 只检查 | 不碰 |
+| deno fmt | 与 dprint 相同 | 与 dprint 相同 | 与 dprint 相同 | 与 dprint 相同 | `proseWrap` 默认 always | 由插件格式化 |
+| markdownfmt | 无 | 类似 gofmt | 从 1 重编 | `-` | 无 | 基于重新渲染 |
+| mdsf/cbfmt | 不动 | 不动 | 不动 | 不动 | 不动 | 交给外部工具 |
 
-Every claim above is drawn from the linked primary docs/source; no behavior was inferred from blog posts.
+以上每一条都出自所链接的第一手文档或源码；没有一条行为是从博客文章推断出来的。
