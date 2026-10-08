@@ -158,6 +158,20 @@
           ],
           "markdownDescription": "%fuxiFmt.blankLines.insideLists.description%"
         },
+        "fuxiFmt.blankLines.insideBlockquotes": {
+          "keywords": ["fuxi", "fuxi-fmt"],
+          "enum": [
+            "trim",
+            "preserve"
+          ],
+          "default": "trim",
+          "scope": "resource",
+          "enumDescriptions": [
+            "%fuxiFmt.blankLines.insideBlockquotes.enum.0%",
+            "%fuxiFmt.blankLines.insideBlockquotes.enum.1%"
+          ],
+          "markdownDescription": "%fuxiFmt.blankLines.insideBlockquotes.description%"
+        },
         "fuxiFmt.thematicBreak": {
           "keywords": ["fuxi", "fuxi-fmt"],
           "type": "string",

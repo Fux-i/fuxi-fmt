@@ -136,8 +136,9 @@ describe('BLK-13 thematic break character', () => {
   test('normalises a break inside a block quote, and stops where it would not be one', () => {
     assert.equal(out('> ***\n'), '> ---\n');
     assert.equal(out('> > ***\n'), '> > ---\n');
-    // Inside a quote no blank line is inserted, so the underline would form.
-    assert.equal(out('> text\n> ***\n'), '> text\n> ***\n');
+    // Inside a quote the blank is a '>' line, so the break is separated from the
+    // paragraph and the dashes are safe - the same answer the top level gets.
+    assert.equal(out('> text\n> ***\n'), '> text\n>\n> ---\n');
   });
   test('settles in one pass', () => {
     const src = '***\n\ntext\n\n* * *\n\n> ___\n\n标题\n---\n';

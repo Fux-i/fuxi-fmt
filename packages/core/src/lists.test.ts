@@ -84,9 +84,11 @@ describe('BLK-06 ordered list renumbering', () => {
       );
     });
     test('each quote depth is its own list', () => {
+      // Two lists, so the renumbering restarts - and BLK-01 separates the quoted
+      // block from the list below it with a quoted blank (BLK-14).
       assert.equal(
         out('> > 1. a\n> > 3. b\n> 1. c\n> 3. d\n'),
-        '> > 1. a\n> > 2. b\n> 1. c\n> 2. d\n',
+        '> > 1. a\n> > 2. b\n>\n> 1. c\n> 2. d\n',
       );
     });
     test('a quoted paragraph ends the list', () => {

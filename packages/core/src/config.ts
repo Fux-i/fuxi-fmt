@@ -247,6 +247,7 @@ function readSections(raw: Raw): FormatOptionsInput {
       aroundBlocks?: 'exact' | 'atLeast';
       maxConsecutive?: number | null;
       insideLists?: 'remove' | 'one' | 'preserve';
+      insideBlockquotes?: 'trim' | 'preserve';
     } = {};
     if (from.aroundBlocks !== undefined) {
       to.aroundBlocks = oneOf(from.aroundBlocks, 'blankLines.aroundBlocks', ['exact', 'atLeast']);
@@ -262,6 +263,12 @@ function readSections(raw: Raw): FormatOptionsInput {
       to.insideLists = oneOf(from.insideLists, 'blankLines.insideLists', [
         'remove',
         'one',
+        'preserve',
+      ]);
+    }
+    if (from.insideBlockquotes !== undefined) {
+      to.insideBlockquotes = oneOf(from.insideBlockquotes, 'blankLines.insideBlockquotes', [
+        'trim',
         'preserve',
       ]);
     }

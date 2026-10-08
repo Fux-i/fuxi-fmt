@@ -147,13 +147,19 @@ describe('a protected region inside a block quote (SAFE-01, SAFE-04)', () => {
     const src = '> <div>\n> 中文,abc\n> </div>\n';
     assert.equal(out(src), src);
   });
-  // A blank line ends a block quote. An invented one is an empty line, which the
-  // guard's non-blank count cannot see, so it would split a quote in silence.
-  test('no blank line is invented between two quoted blocks', () => {
+  // A blank line *inside* a quote is a '>' line, and BLK-01 puts one there like it
+  // does anywhere else. An empty line would end the quote, which is why the marker
+  // matters and why the guard's non-blank count cannot police this.
+  test('a blank between two quoted blocks is written with the marker', () => {
     const fence = '> para\n> ```\n> code\n> ```\n';
-    assert.equal(out(fence), fence);
-    const code = '>\n>     indented\n';
-    assert.equal(out(code), code);
+    assert.equal(out(fence), '> para\n>\n> ```\n> code\n> ```\n');
+  });
+  test('the quote keeps the indented code block it was protecting', () => {
+    assert.equal(out('>\n>     indented\n'), '>     indented\n');
+    assert.equal(
+      out('>\n>     indented\n', { blankLines: { insideBlockquotes: 'preserve' } }),
+      '>\n>     indented\n',
+    );
   });
   test('a line without the marker still ends the quote', () => {
     const src = '> para\n\n> other\n';
@@ -174,8 +180,7 @@ describe('BLK-14 a block quote is a prefix, not a wall', () => {
     const src = '> - a\n>   - b\n>     - c\n';
     assert.equal(out(src), src);
   });
-  test('a quoted blank line is the author’s to write', () => {
-    const src = '> - a\n>\n> - b\n';
-    assert.equal(out(src), src);
+  test('a quoted blank between two items of one list is removed like any other', () => {
+    assert.equal(out('> - a\n>\n> - b\n'), '> - a\n> - b\n');
   });
 });

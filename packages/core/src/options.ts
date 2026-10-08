@@ -2,6 +2,7 @@ import { DEFAULT_CJK_CLASSES, DEFAULT_SPACING_SYMBOLS, type CjkClass } from './c
 
 export type AroundBlocks = 'exact' | 'atLeast';
 export type ListBlankLines = 'remove' | 'one' | 'preserve';
+export type BlockquoteBlankLines = 'trim' | 'preserve';
 
 export interface BlankLinesOptions {
   /** Whether blocks are separated by exactly one blank line, or at least one. */
@@ -11,6 +12,13 @@ export interface BlankLinesOptions {
   /** Blank lines between list items (BLK-03). `remove` flips a loose list to
    * tight, `one` flips a tight list to loose, and `preserve` does neither. */
   readonly insideLists: ListBlankLines;
+  /**
+   * The blank lines at the head and tail of a block quote's own content
+   * (BLK-14). `trim` drops them, `preserve` keeps them where the author put
+   * them. Only the edges: blanks between two blocks are BLK-01's business, and
+   * the blank that *ends* a quote is an empty line, which no mode touches.
+   */
+  readonly insideBlockquotes: BlockquoteBlankLines;
 }
 
 export type PunctuationStyle = 'fullwidth' | 'halfwidth' | 'mixed' | 'off';
@@ -202,6 +210,7 @@ export interface BlankLinesInput {
   readonly aroundBlocks?: AroundBlocks;
   readonly maxConsecutive?: number | null;
   readonly insideLists?: ListBlankLines;
+  readonly insideBlockquotes?: BlockquoteBlankLines;
 }
 
 export interface TypographyInput {
@@ -252,7 +261,12 @@ export interface FormatOptionsInput {
 }
 
 export const defaultOptions: FormatOptions = {
-  blankLines: { aroundBlocks: 'exact', maxConsecutive: 1, insideLists: 'remove' },
+  blankLines: {
+    aroundBlocks: 'exact',
+    maxConsecutive: 1,
+    insideLists: 'remove',
+    insideBlockquotes: 'trim',
+  },
   typography: {
     cjkSpacing: true,
     punctuationStyle: 'fullwidth',
@@ -295,6 +309,8 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
       // null is a meaningful value here, so it must not be swallowed by ??.
       maxConsecutive: max === undefined ? defaultOptions.blankLines.maxConsecutive : max,
       insideLists: input?.blankLines?.insideLists ?? defaultOptions.blankLines.insideLists,
+      insideBlockquotes:
+        input?.blankLines?.insideBlockquotes ?? defaultOptions.blankLines.insideBlockquotes,
     },
     typography: {
       cjkSpacing: input?.typography?.cjkSpacing ?? defaultOptions.typography.cjkSpacing,

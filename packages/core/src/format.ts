@@ -21,6 +21,7 @@ import { normalizeQuotes } from './quotes.ts';
 import { applyTypography } from './typography.ts';
 import { normalizeEmphasis } from './emphasis.ts';
 import { normalizeTables, scanTables } from './tables.ts';
+import { applyBlankPolicy } from './blank-policy.ts';
 import { normalizeFullwidthAlphanumerics, normalizeParens, normalizePunctuation } from './widths.ts';
 
 /** The two characters a block marker may be separated by (BLK-09). */
@@ -291,91 +292,22 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   }));
   const blocks = segment(reindented, [...ranges, ...tableRanges]);
 
-  // BLK-03. A blank line between list items decides how the list renders, so the
-  // policy is explicit. Removing one is only safe between items of the *same*
-  // list: a blank between different markers separates two lists, and collapsing
-  // it would merge them.
-  const listBlanks = options.blankLines.insideLists;
-  const isItem = (line: number): boolean => itemLines.has(line) && protectedLine[line] !== true;
-  const listMarkOf = (index: number): string | null => {
-    const block = blocks[index];
-    if (block === undefined) return null;
-    for (let j = block.start; j < block.end; j++) {
-      if (!isItem(j)) continue;
-      const item = listItems.find((candidate) => candidate.line === j);
-      // The prefix is part of a list's identity: a quoted list and a top-level list
-      // are two lists, not one, so a blank line between them separates them (BLK-06,
-      // BLK-03) and must not be removed as if it were inside one.
-      return item === undefined ? null : item.prefix + item.marker;
-    }
-    return null;
-  };
-  const sameList = (a: number, b: number): boolean => {
-    const left = listMarkOf(a);
-    const right = listMarkOf(b);
-    return left !== null && left === right;
-  };
-
-  /**
-   * A gap between two blocks that both sit inside a block quote.
-   *
-   * A blank line ends a block quote, so a blank line inserted between two quoted
-   * blocks splits one quote into two - and an invented blank is an *empty* line,
-   * which the guard's non-blank line count cannot see. The blank-line policy
-   * therefore stands down inside quotes and leaves the author's spacing exactly
-   * as written. Section 7 item 0 records why the alternative - writing a quoted
-   * blank line - is the guard's business rather than this pass's.
-   */
-  const gapInsideQuote = (index: number): boolean => {
-    const block = blocks[index];
-    const previous = blocks[index - 1];
-    if (block === undefined || previous === undefined) return false;
-    const before = reindented[previous.end - 1] ?? '';
-    const after = reindented[block.start] ?? '';
-    return quotePrefix(before).depth > 0 && quotePrefix(after).depth > 0;
-  };
-
-  /** A gap between two blocks that lies inside a list containing a protected block. */
-  const gapIsExcluded = (index: number): boolean => {
-    const block = blocks[index];
-    const previous = blocks[index - 1];
-    if (block === undefined || previous === undefined) return false;
-    return excludedItemLines.has(previous.end - 1) || excludedItemLines.has(block.start);
-  };
-
-  const parts: string[] = [];
+  // BLK-01/02/03. The policy is applied one level at a time: a block quote is a
+  // prefix, so the lines inside it are a document of their own (BLK-14) and a
+  // blank line there is written with that level's chain - which is what lets a
+  // quoted list's blanks be managed without merging two quotes into one.
+  const assembled = applyBlankPolicy(reindented, {
+    options,
+    protectedLine,
+    excludedItemLines,
+    ranges: [...ranges, ...tableRanges],
+  });
+  const parts = assembled.lines;
   // Where every emitted line came from: the input line index, or -1 for a blank
   // the blank-line policy invented. Diagnostics describe the input, so a rule
   // that reports a line maps back through this instead of counting the lines of
   // whatever text it happens to be holding.
-  const partLines: number[] = [];
-  for (let i = 0; i < blocks.length; i++) {
-    const block = blocks[i];
-    if (block === undefined) continue;
-    if (i > 0) {
-      const untouched = gapIsExcluded(i) || gapInsideQuote(i);
-      let blanks = untouched ? block.blanksBefore : blankCount(block.blanksBefore, options);
-      if (!untouched && listBlanks !== 'preserve' && sameList(i - 1, i)) {
-        blanks = listBlanks === 'remove' ? 0 : 1;
-      }
-      for (let k = 0; k < blanks; k++) {
-        parts.push('');
-        partLines.push(-1);
-      }
-    }
-    for (let j = block.start; j < block.end; j++) {
-      // BLK-03 is opt-in: a blank line between items flips a tight list to loose,
-      // so it never happens unless asked for. The j > block.start guard is what
-      // keeps this idempotent - on a second pass each item is already its own
-      // block with its own blank before it.
-      if (listBlanks === 'one' && j > block.start && isItem(j) && !excludedItemLines.has(j)) {
-        parts.push('');
-        partLines.push(-1);
-      }
-      parts.push(reindented[j] ?? texts[j] ?? '');
-      partLines.push(j);
-    }
-  }
+  const partLines = assembled.from;
 
   /**
    * BLK-13. A thematic break is three of the chosen character.

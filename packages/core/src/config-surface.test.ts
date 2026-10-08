@@ -50,6 +50,7 @@ const SAMPLES: Record<string, unknown> = {
   'blankLines.aroundBlocks': 'atLeast',
   'blankLines.maxConsecutive': 3,
   'blankLines.insideLists': 'preserve',
+  'blankLines.insideBlockquotes': 'preserve',
   'typography.cjkSpacing': false,
   'typography.punctuationStyle': 'halfwidth',
   'typography.punctuationChangeList': [',', ';'],
