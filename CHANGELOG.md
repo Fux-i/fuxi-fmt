@@ -4,7 +4,7 @@
 
 格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，本项目遵循[语义化版本](https://semver.org/spec/v2.0.0.html)。发布使用 Linux 内核的标签约定：`vMAJOR.MINOR[.PATCH]`，候选版本以 `-rcN` 结尾。
 
-## [Unreleased]
+## [0.28.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.27.0...v0.28.0) - 2026-10-08
 
 ### 新增
 
