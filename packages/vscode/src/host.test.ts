@@ -210,7 +210,10 @@ describe('the extension bundle against a stubbed host', () => {
     assert.ok(documentProvider);
     clean(vscode);
     vscode.workspaceFolder = dist;
-    vscode.settings = { 'fuxiFmt.table.maxWidth': 30 };
+    // This repository has its own fuxi-fmt.json, and a project file beats the
+    // individual settings for files inside it (CFG-01). The explicit object
+    // override sits above both, which is the layer a test can set.
+    vscode.config = { table: { maxWidth: 30 } };
     const capped = {
       getText: () => '| a very long cell indeed | b |\n| --- | --- |\n| 1 | 2 |\n| x | y |\n',
       uri: { fsPath: join(dist, 'capped.md') },
@@ -226,17 +229,15 @@ describe('the extension bundle against a stubbed host', () => {
     // The log records it, but a note is not a reason to take the editor's focus:
     // opening the panel on every save is how a formatter gets uninstalled.
     assert.equal(vscode.revealed, 0, 'a notice opened the output panel');
-    vscode.settings = {};
+    vscode.config = {};
     vscode.workspaceFolder = undefined;
   });
 
   test('a notice the reader switched off is not published and not logged', () => {
     assert.ok(documentProvider);
     clean(vscode);
-    vscode.settings = {
-      'fuxiFmt.table.maxWidth': 30,
-      'fuxiFmt.diagnostics.tableMaxWidth': false,
-    };
+    vscode.config = { table: { maxWidth: 30 } };
+    vscode.settings = { 'fuxiFmt.diagnostics.tableMaxWidth': false };
     const capped = {
       getText: () => '| a very long cell indeed | b |\n| --- | --- |\n| 1 | 2 |\n| x | y |\n',
       uri: { fsPath: join(dist, 'capped-off.md') },
@@ -246,6 +247,7 @@ describe('the extension bundle against a stubbed host', () => {
     assert.equal(lastPublished(vscode)?.diagnostics.length, 0);
     assert.deepEqual(vscode.outputLines, [], 'a switched-off notice was logged anyway');
     assert.equal(vscode.revealed, 0);
+    vscode.config = {};
     vscode.settings = {};
   });
 

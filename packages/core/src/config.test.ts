@@ -1,5 +1,8 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { findConfigFile, loadOptionsFor, mergeOptions, parseConfig } from './config.ts';
 import { format } from './format.ts';
 import { resolveOptions } from './options.ts';
@@ -100,7 +103,14 @@ describe('CFG-01 discovering a configuration file', () => {
     assert.equal(format('- item\n', loaded.options).output, '* item\n');
   });
   test('a file with no config gets the defaults', () => {
-    const loaded = loadOptionsFor(fixture('noconfig/doc.md'));
-    assert.deepEqual(loaded, { options: {}, configPath: null, notices: [] });
+    // Every path inside this repository now finds the repository's own config, so
+    // the case needs a tree that has none: a directory of its own, outside it.
+    const none = mkdtempSync(join(tmpdir(), 'fuxi-fmt-noconfig-'));
+    try {
+      const loaded = loadOptionsFor(join(none, 'doc.md'));
+      assert.deepEqual(loaded, { options: {}, configPath: null, notices: [] });
+    } finally {
+      rmSync(none, { recursive: true, force: true });
+    }
   });
 });
