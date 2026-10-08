@@ -154,23 +154,35 @@ function headerFor(document: vscode.TextDocument, at: Date): string {
  * about the document as a whole: a refused document is refused whole, so there is
  * no line to name and an empty bracket would be worse than none.
  *
- * The level is one of the same two Latin words the CLI prints, so one search finds
+ * The level is one of the same three Latin words the CLI prints, so one search finds
  * a rule in either log, and the rule id stays where it is because the
  * documentation, the spec and --explain are all keyed on it.
  */
 function lineFor(diagnostic: Diagnostic): string {
-  const level = diagnostic.severity === 'error' ? 'ERROR' : 'WARNING';
   const where = diagnostic.line === undefined ? '' : '[' + String(diagnostic.line + 1) + ']';
-  return level + where + ' ' + diagnostic.ruleId + ' ' + sentence(diagnostic.messageId, diagnostic.args);
+  return (
+    levelOf(diagnostic.severity) +
+    where + ' ' + diagnostic.ruleId + ' ' +
+    sentence(diagnostic.messageId, diagnostic.args)
+  );
+}
+
+/** The level word. Latin in every language, like the rule id (CFG-06). */
+function levelOf(severity: Diagnostic['severity']): string {
+  if (severity === 'error') return 'ERROR';
+  if (severity === 'warning') return 'WARNING';
+  return 'INFO';
 }
 
 /**
- * One switch per warning rule, because a warning that cannot be turned off is a
- * warning that gets the whole feature turned off. Errors have no switch: a
- * refused document is refused for a reason, and silencing the reason would put
- * the reader back where this round started.
+ * One switch per switchable diagnostic, because a complaint that cannot be turned
+ * off is a complaint that gets the whole feature turned off. Errors have no switch:
+ * a refused document is refused for a reason, and silencing the reason would put
+ * the reader back where this round started. A note has one because it reports what
+ * the formatter did rather than anything wrong with the document, and a reader who
+ * has understood the cap should be able to stop reading about it.
  */
-const WARNING_SWITCHES: Readonly<Record<string, string>> = {
+const DIAGNOSTIC_SWITCHES: Readonly<Record<string, string>> = {
   'DET-06': 'diagnostics.unmatchedBacktick',
   'DET-07': 'diagnostics.unmatchedDollarSign',
   'DET-08': 'diagnostics.unclosedWikilink',
@@ -178,25 +190,30 @@ const WARNING_SWITCHES: Readonly<Record<string, string>> = {
   'DET-10': 'diagnostics.raggedTableRow',
   'DET-11': 'diagnostics.listIndentJump',
   'DET-12': 'diagnostics.excludedList',
+  'TBL-01': 'diagnostics.tableMaxWidth',
 };
 
-/** Drop the warnings the reader has switched off. Errors are never dropped. */
+/** Drop the diagnostics the reader has switched off. Errors are never dropped. */
 function visibleDiagnostics(diagnostics: readonly Diagnostic[]): Diagnostic[] {
   const configuration = vscode.workspace.getConfiguration('fuxiFmt');
   return diagnostics.filter((diagnostic) => {
     if (diagnostic.severity === 'error') return true;
-    const key = WARNING_SWITCHES[diagnostic.ruleId];
+    const key = DIAGNOSTIC_SWITCHES[diagnostic.ruleId];
     if (key === undefined) return true;
     return configuration.get<boolean>(key, true);
   });
 }
 
+/** The editor's severity for a core one. */
+function severityOf(severity: Diagnostic['severity']): vscode.DiagnosticSeverity {
+  if (severity === 'error') return vscode.DiagnosticSeverity.Error;
+  if (severity === 'warning') return vscode.DiagnosticSeverity.Warning;
+  return vscode.DiagnosticSeverity.Information;
+}
+
 /** Map a core diagnostic to the editor's, at its line. */
 function toDiagnostic(diagnostic: Diagnostic): vscode.Diagnostic {
-  const severity =
-    diagnostic.severity === 'error'
-      ? vscode.DiagnosticSeverity.Error
-      : vscode.DiagnosticSeverity.Warning;
+  const severity = severityOf(diagnostic.severity);
   // A document-level diagnostic has no line. The editor has no way to attach a
   // comment to a whole file, so it goes on the first line - but the message and
   // the output channel both say the line is unknown rather than pretend.
@@ -223,8 +240,9 @@ function toDiagnostic(diagnostic: Diagnostic): vscode.Diagnostic {
  * document the guard refused simply did not format and nothing said why - which is
  * how two of this round's five reports arrived as "it does nothing".
  *
- * The output panel is revealed only when something was refused or warned about.
- * Popping it open on every save would be a reason to uninstall the extension.
+ * The output panel is revealed only when something was refused or warned about,
+ * never for a note. Popping it open on every save would be a reason to uninstall
+ * the extension.
  */
 function formatAndReport(
   document: vscode.TextDocument,
@@ -237,11 +255,11 @@ function formatAndReport(
   collection.set(document.uri, diagnostics.map(toDiagnostic));
 
   const notices = loaded.notices;
-  const tripped = diagnostics.length > 0 || notices.length > 0;
+  const reported = diagnostics.length > 0 || notices.length > 0;
   // One block per document, and only when there is something under the header: a
   // header on every save would fill the panel with blocks that say nothing, which
   // is the state this replaced.
-  if (tripped) {
+  if (reported) {
     output.appendLine(headerFor(document, new Date()));
     for (const notice of notices) {
       output.appendLine(
@@ -251,7 +269,11 @@ function formatAndReport(
     for (const diagnostic of diagnostics) {
       output.appendLine(lineFor(diagnostic));
     }
-    output.show(true);
+    // The block is written whenever there is anything to say, but a note is not a
+    // reason to take the editor's focus: the Problems panel already carries it.
+    const wantsAttention =
+      notices.length > 0 || diagnostics.some((diagnostic) => diagnostic.severity !== 'info');
+    if (wantsAttention) output.show(true);
   }
   return outcome.edits;
 }

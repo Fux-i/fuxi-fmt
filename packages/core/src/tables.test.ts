@@ -1,10 +1,10 @@
 /**
  * TBL-01, the table surface.
  *
- * Padding is off by default, so most of these tests turn it on and compare bytes;
- * the ones that matter most are the refusals - a ragged table, a delimiter row
- * that disagrees with its header, a row past the cap - because a table is the one
- * block where "less than asked" is invisible in the source.
+ * Padding is on by default, so most of these tests compare bytes; the ones that
+ * matter most are the refusals - a ragged table, a delimiter row that disagrees
+ * with its header, a row past the cap - because a table is the one block where
+ * "less than asked" is invisible in the source.
  *
  * Spec references: TBL-01, DET-10, SAFE-07.
  */
@@ -162,18 +162,62 @@ describe('TBL-01 a header and its delimiter row are joined', () => {
   });
 });
 
-describe('TBL-01 maxWidth skips a line rather than the table', () => {
+describe('TBL-01 maxWidth leaves a row out of the widths rather than out of the table', () => {
   const table = '| a very long cell indeed | b |\n| --- | --- |\n| 1 | 2 |\n| x | y |\n';
-  test('a row past the cap keeps its bytes and the others pad narrow', () => {
-    const capped = out(table, { table: { mode: 'normalize', maxWidth: 30 } });
+  const CAPPED: FormatOptionsInput = { table: { mode: 'normalize', maxWidth: 30 } };
+
+  test('a row past the cap does not set the column widths', () => {
     assert.equal(
-      capped,
-      '| a very long cell indeed | b |\n| --- | --- |\n| 1 | 2 |\n| x | y |\n',
+      out(table, CAPPED),
+      '| a very long cell indeed | b   |\n| --- | --- |\n| 1   | 2   |\n| x   | y   |\n',
     );
   });
+
+  test('the row that was left out is reported, as info, on the line it was written', () => {
+    const result = format(table, CAPPED);
+    assert.deepEqual(
+      result.diagnostics.map(({ ruleId, severity, line, messageId }) => ({
+        ruleId,
+        severity,
+        line,
+        messageId,
+      })),
+      [{ ruleId: 'TBL-01', severity: 'info', line: 0, messageId: 'tbl.rowOverCap' }],
+    );
+  });
+
   test('without a cap the long row sets the width for every row', () => {
     const uncapped = out(table);
     assert.match(uncapped, /^\| a very long cell indeed \| b   \|\n/);
     assert.match(uncapped, /\| 1 +\| 2 +\|\n/);
+  });
+
+  test('the cap stands down when most rows are past it', () => {
+    // A table that is mostly wide is not "a few long rows in a narrow table", so
+    // the cap has nothing to narrow: the rows are padded as if it were not set.
+    const wide =
+      '| a very long row here indeed | b |\n| --- | --- |\n| another very long row | c |\n| a third long row here | d |\n| x | y |\n';
+    const capped = format(wide, CAPPED);
+    assert.equal(capped.output, out(wide));
+    assert.deepEqual(
+      capped.diagnostics.map(({ severity, line, messageId }) => ({ severity, line, messageId })),
+      [{ severity: 'info', line: 0, messageId: 'tbl.capNotApplicable' }],
+    );
+  });
+
+  test('a document with no cap has nothing to report', () => {
+    assert.deepEqual(format(table, NORMALIZE).diagnostics, []);
+  });
+
+  test('the line it names is the line the author wrote, past a fence whose blank edges went away', () => {
+    // BLK-12 removes lines, so a notice reported from the text it left behind has
+    // to be mapped back: a rule that names the line it moved a problem to is the
+    // bug this repository already paid for once.
+    const src =
+      '```\ncode\n\n\n```\n\n| a very long cell indeed | b |\n| --- | --- |\n| 1 | 2 |\n| x | y |\n';
+    assert.deepEqual(
+      format(src, CAPPED).diagnostics.map((diagnostic) => diagnostic.line),
+      [6],
+    );
   });
 });

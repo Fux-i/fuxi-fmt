@@ -65,6 +65,29 @@ describe('CLI warnings and notices', () => {
     assert.match(io.errText(), /config: none, using the defaults/);
     assert.match(io.errText(), /changed: yes/);
   });
+  test('a notice is reported and does not fail the run', () => {
+    // TBL-01's cap reports the row it left out of the column widths. That is a
+    // report about what the formatter did rather than a complaint about the
+    // document, so it must not add to the exit code - and it prints in the same
+    // machine-readable shape as everything else, one severity word lower.
+    const io: FakeIo = {
+      ...fakeIo({ 'a.md': '| a very long cell indeed | b |\n| --- | --- |\n| 1 | 2 |\n| x | y |\n' }),
+      optionsFor: () => ({ table: { mode: 'normalize', maxWidth: 30 } }),
+    };
+    const code = run(['a.md'], io);
+    assert.equal(code, 0, 'a notice is not a failure');
+    assert.match(io.errText(), /^a\.md:1: info: TBL-01 /m);
+  });
+  test('--explain counts notices beside warnings', () => {
+    const io: FakeIo = {
+      ...fakeIo({ 'a.md': '| a very long cell indeed | b |\n| --- | --- |\n| 1 | 2 |\n| x | y |\n' }),
+      optionsFor: () => ({ table: { mode: 'normalize', maxWidth: 30 } }),
+    };
+    const code = run(['--explain', 'a.md'], io);
+    assert.equal(code, 0);
+    assert.match(io.errText(), /warnings: 0/);
+    assert.match(io.errText(), /notices: 1/);
+  });
   test('a configuration notice is printed for the file it affects', () => {
     const io = {
       ...fakeIo({ 'a.md': '#  Title\n' }),

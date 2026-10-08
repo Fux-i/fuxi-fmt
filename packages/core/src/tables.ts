@@ -3,7 +3,7 @@
  *
  * A GFM table is the one block where the source layout *is* the presentation: the
  * columns only line up if the spaces line up, and nothing else in Markdown has
- * that property. So padding is off by default (`table.mode: "preserve"`) and on
+ * that property. So padding is on by default (`table.mode: "normalize"`) and off
  * when asked for.
  *
  * Three decisions are worth stating rather than discovering:
@@ -19,15 +19,20 @@
  * - **Alignment is read, never invented.** The delimiter row's colons are the
  *   author's declaration; this rule reproduces them and pads the dashes to the
  *   column width. A column with no colon stays left-aligned without gaining one.
- * - **A row that would exceed `table.maxWidth` is left byte-identical.** That is
- *   the whole point of the cap: one long row should not make every other row long
- *   as well, and wrapping a cell is not something GFM can do - a row is one line,
- *   and `<br>` would be adding content rather than laying it out.
+ * - **`table.maxWidth` leaves a row out of the widths, not out of the table.** A
+ *   row whose own width is past the cap does not decide the column widths, so one
+ *   long row cannot make every other row long as well; the rows that fit decide
+ *   them and every row is padded to the result. Wrapping a cell is not something
+ *   GFM can do - a row is one line, and `<br>` would be adding content rather than
+ *   laying it out. A table that is *mostly* past the cap has no narrow rows left to
+ *   protect, so the cap stands down and the table is padded as written; either way
+ *   the pass reports what it did, as an `info` diagnostic naming the line.
  *
  * Spec references: TBL-01, SAFE-07, NG-02.
  */
 
 import { contentStartOf, opensBlock, quotePrefix } from './blocks.ts';
+import type { MessageArgs, MessageId } from './messages.ts';
 import type { TableOptions } from './options.ts';
 
 /** Cell contents that differ from the header's are DET-10's business, not this rule's. */
@@ -337,6 +342,20 @@ export function scanTables(
   return tables;
 }
 
+/** What the cap did to one table, for the caller to turn into a diagnostic. */
+export interface TableNotice {
+  /** 0-based index into the `texts` this pass was handed. */
+  readonly line: number;
+  readonly messageId: MessageId;
+  readonly args: MessageArgs;
+}
+
+export interface TableResult {
+  /** Rewritten in place, and shorter when a header/delimiter seam was closed. */
+  readonly lines: string[];
+  readonly notices: readonly TableNotice[];
+}
+
 /**
  * Pad every table, and close the gap between a header and its delimiter row.
  *
@@ -353,9 +372,10 @@ export function normalizeTables(
   texts: readonly string[],
   options: TableOptions,
   isProtected: (index: number) => boolean,
-): string[] {
+): TableResult {
   const out = texts.slice();
-  if (options.mode === 'preserve') return out;
+  const notices: TableNotice[] = [];
+  if (options.mode === 'preserve') return { lines: out, notices };
 
   const tables = scanTables(texts, isProtected);
   const joined = new Set<number>();
@@ -387,6 +407,7 @@ export function normalizeTables(
     // The anchor every row is measured against: where the header's content starts.
     const contentColumn = header.prefix.length;
     const all = [header, ...rows];
+    const allLines = [table.header, ...table.rows];
     const natural = (subset: readonly TableRow[]): number[] =>
       Array.from({ length: columns }, (_, column) =>
         Math.max(
@@ -395,43 +416,65 @@ export function normalizeTables(
         ),
       );
 
+    /**
+     * What the row renders at when it alone defines the columns.
+     *
+     * This is the width the cap is compared against. A padded table renders every
+     * row at the same width - the table's own - so measuring the padded render
+     * found every row past the cap together and could never tell one row from
+     * another. That was the all-or-nothing behaviour this replaced.
+     */
+    const ownWidth = (row: TableRow): number =>
+      displayWidth(
+        renderRow(row, natural([row]), aligns, options.cjkWidth, outer, contentColumn),
+        options.cjkWidth,
+      );
+
     const limit = options.maxWidth;
     let widths = natural(all);
-    const skipped = new Set<TableRow>();
     if (limit !== null) {
-      for (const row of all) {
-        if (displayWidth(renderRow(row, widths, aligns, options.cjkWidth, outer, contentColumn), options.cjkWidth) > limit) {
-          skipped.add(row);
+      const entries = all.map((row, index) => ({
+        row,
+        line: allLines[index] ?? table.header,
+        own: ownWidth(row),
+      }));
+      const over = entries.filter((entry) => entry.own > limit);
+      const kept = entries.filter((entry) => entry.own <= limit);
+      if (over.length > 0 && kept.length > over.length) {
+        // The rows that fit decide the columns, and every row is padded to them: a
+        // row past the cap overflows its column rather than being handed back
+        // untouched, because the other rules have already had their say about it
+        // and half-formatted is worse than either.
+        widths = natural(kept.map((entry) => entry.row));
+        for (const entry of over) {
+          notices.push({ line: entry.line, messageId: 'tbl.rowOverCap', args: [entry.own, limit] });
         }
-      }
-      if (skipped.size > 0) {
-        // Widths are recomputed without the long rows, so one wide cell cannot
-        // stretch every other row to its size. Rows already marked stay marked:
-        // the set has to settle, or the same table would pad differently depending
-        // on where the pass started.
-        const kept = all.filter((row) => !skipped.has(row));
-        if (kept.length === 0) continue;
-        widths = natural(kept);
+      } else if (over.length > 0) {
+        // Most rows are past the cap, so this is a wide table rather than a few
+        // long rows in a narrow one. Narrowing it to the few rows that fit would
+        // leave the rest overflowing at every column, so the cap stands down and
+        // the table is padded as written.
+        notices.push({
+          line: table.header,
+          messageId: 'tbl.capNotApplicable',
+          args: [over.length, entries.length, limit],
+        });
       }
     }
 
-    if (!skipped.has(header)) {
-      out[table.header] = renderRow(header, widths, aligns, options.cjkWidth, outer, contentColumn);
-    }
-    if (!skipped.has(delimiterRow)) {
-      const rendered = delimiters
-        .map((cell, column) => renderDelimiter(alignmentOf(cell), widths[column] ?? MIN_COLUMN))
-        .join(' | ');
-      out[table.delimiter] =
-        normalizePrefix(delimiterRow, contentColumn) + (outer ? '| ' + rendered + ' |' : rendered);
-    }
+    out[table.header] = renderRow(header, widths, aligns, options.cjkWidth, outer, contentColumn);
+    const rendered = delimiters
+      .map((cell, column) => renderDelimiter(alignmentOf(cell), widths[column] ?? MIN_COLUMN))
+      .join(' | ');
+    out[table.delimiter] =
+      normalizePrefix(delimiterRow, contentColumn) + (outer ? '| ' + rendered + ' |' : rendered);
     for (let offset = 0; offset < rows.length; offset++) {
       const row = rows[offset];
       const line = table.rows[offset];
-      if (row === undefined || line === undefined || skipped.has(row)) continue;
+      if (row === undefined || line === undefined) continue;
       out[line] = renderRow(row, widths, aligns, options.cjkWidth, outer, contentColumn);
     }
   }
 
-  return joined.size === 0 ? out : out.filter((_, index) => !joined.has(index));
+  return { lines: joined.size === 0 ? out : out.filter((_, index) => !joined.has(index)), notices };
 }

@@ -82,6 +82,7 @@
   "fuxiFmt.diagnostics.raggedTableRow.description": "表格某行的单元格数量与表头不一致时告警（DET-10）。",
   "fuxiFmt.diagnostics.listIndentJump.description": "列表项的缩进看起来是嵌套、实际却无所属父项时告警；否则该缩进会被静默修正（DET-11）。",
   "fuxiFmt.diagnostics.excludedList.description": "列表内含受保护块、因而整体不做缩进调整时告警（DET-12）。",
+  "fuxiFmt.diagnostics.tableMaxWidth.description": "说明哪些行因超过 `table.maxWidth` 而没有参与列宽计算，以及哪张表的上限根本无法收窄（TBL-01）。",
   "fuxiFmt.endOfLine.description": "写出的换行符样式。`auto` 保持文件原有的风格（BLK-11）。",
   "fuxiFmt.ignore.file.description": "注释文本，出现时让格式化器跳过整个文档（CFG-03）。",
   "fuxiFmt.ignore.start.description": "注释文本，开启一段不参与格式化的区域（CFG-03）。",

@@ -206,6 +206,49 @@ describe('the extension bundle against a stubbed host', () => {
     assert.equal(vscode.revealed, 1, 'the output panel was not revealed for a warning');
   });
 
+  test('a notice is published as information, logged as INFO, and does not open the panel', () => {
+    assert.ok(documentProvider);
+    clean(vscode);
+    vscode.workspaceFolder = dist;
+    vscode.settings = { 'fuxiFmt.table.maxWidth': 30 };
+    const capped = {
+      getText: () => '| a very long cell indeed | b |\n| --- | --- |\n| 1 | 2 |\n| x | y |\n',
+      uri: { fsPath: join(dist, 'capped.md') },
+    };
+    const edits = documentProvider.provider.provideDocumentFormattingEdits(capped);
+
+    assert.ok((edits as unknown[]).length > 0, 'a notice withheld the edits');
+    const published = lastPublished(vscode);
+    assert.equal(published?.diagnostics[0]?.severity, vscode.DiagnosticSeverity.Information);
+    assert.equal(published?.diagnostics[0]?.code, 'TBL-01');
+    assert.equal(published?.diagnostics[0]?.range.start.line, 0);
+    assert.match(String(vscode.outputLines[1]), /^INFO\[1\] TBL-01 /);
+    // The log records it, but a note is not a reason to take the editor's focus:
+    // opening the panel on every save is how a formatter gets uninstalled.
+    assert.equal(vscode.revealed, 0, 'a notice opened the output panel');
+    vscode.settings = {};
+    vscode.workspaceFolder = undefined;
+  });
+
+  test('a notice the reader switched off is not published and not logged', () => {
+    assert.ok(documentProvider);
+    clean(vscode);
+    vscode.settings = {
+      'fuxiFmt.table.maxWidth': 30,
+      'fuxiFmt.diagnostics.tableMaxWidth': false,
+    };
+    const capped = {
+      getText: () => '| a very long cell indeed | b |\n| --- | --- |\n| 1 | 2 |\n| x | y |\n',
+      uri: { fsPath: join(dist, 'capped-off.md') },
+    };
+    documentProvider.provider.provideDocumentFormattingEdits(capped);
+
+    assert.equal(lastPublished(vscode)?.diagnostics.length, 0);
+    assert.deepEqual(vscode.outputLines, [], 'a switched-off notice was logged anyway');
+    assert.equal(vscode.revealed, 0);
+    vscode.settings = {};
+  });
+
   test('the log is one header block per document, and only when it has something in it', () => {
     assert.ok(documentProvider);
     clean(vscode);

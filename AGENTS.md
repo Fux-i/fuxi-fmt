@@ -176,7 +176,7 @@ git tag -n          # verify
 ## Adding a rule
 
 1. Confirm the rule exists in the spec. If it does not, propose the spec change first.
-2. Add it to the rule registry with its spec ID, default severity and typed options, and add
+2. Give it its spec ID, its typed options and the severity it is reported at, and add
    its sentence to the catalogue in `packages/core/src/messages.ts` (CFG-08), in both languages.
    No rule spells a message out where it is used: a sentence built by concatenation cannot be
    translated. Then run `npm run l10n` — the editor's bundles are generated from the catalogue

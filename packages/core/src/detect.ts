@@ -33,7 +33,8 @@ export interface Detection {
   readonly messageId: MessageId;
   readonly args: MessageArgs;
   readonly line: number | undefined;
-  readonly severity: 'error' | 'warning';
+  /** 'info' reports what the formatter did, not a complaint about the document. */
+  readonly severity: 'error' | 'warning' | 'info';
 }
 
 /** 0-based line containing an offset, by binary search over the line starts. */

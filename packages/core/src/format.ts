@@ -60,9 +60,11 @@ export interface Diagnostic {
    * 'error' means the document was refused and the input is the output.
    * 'warning' means the document was formatted and something in it wants a look,
    * so a caller that fails a build on 'error' must not fail it on 'warning' - the
-   * difference between the two is the whole point of having them.
+   * difference between the two is the whole point of having them. 'info' reports
+   * what the formatter did rather than anything wrong with the document, and no
+   * caller fails a build on it either.
    */
-  readonly severity: 'error' | 'warning';
+  readonly severity: 'error' | 'warning' | 'info';
 }
 
 export interface FormatResult {
@@ -117,7 +119,7 @@ function diagnostic(
   messageId: MessageId,
   args: MessageArgs,
   line: number | undefined,
-  severity: 'error' | 'warning',
+  severity: 'error' | 'warning' | 'info',
 ): Diagnostic {
   return { ruleId, messageId, args, message: english(messageId, args), line, severity };
 }
@@ -125,10 +127,22 @@ function diagnostic(
 const asDiagnostic = (detection: Detection): Diagnostic =>
   diagnostic(detection.ruleId, detection.messageId, detection.args, detection.line, detection.severity);
 
-/** Errors first, then by line: a reader wants the refusal before the nits. */
+/**
+ * Errors first, then warnings, then notes; within a severity, by line.
+ *
+ * The order has to be total. "Error against everything else, and a constant for
+ * the rest" is not antisymmetric once there are three severities, and an unstable
+ * sort would shuffle warnings among notes.
+ */
+const SEVERITY_RANK: Readonly<Record<Diagnostic['severity'], number>> = {
+  error: 0,
+  warning: 1,
+  info: 2,
+};
+
 function orderedDiagnostics(diagnostics: readonly Diagnostic[]): Diagnostic[] {
   return [...diagnostics].sort((a, b) => {
-    if (a.severity !== b.severity) return a.severity === 'error' ? -1 : 1;
+    if (a.severity !== b.severity) return SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity];
     const left = a.line ?? -1;
     const right = b.line ?? -1;
     if (left !== right) return left - right;
@@ -380,31 +394,53 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   // BLK-12 runs last of the content rules and before the guard, and it is the only
   // one that removes lines - which is why it is here rather than among the passes
   // that index by line. It is also the only rule the guard has an exception for,
-  // passed to the guard explicitly so the exception is readable where the
-  // guarantee is checked.
-  const edged = options.codeBlock.trimBlankLines ? trimFenceBlanks(spaced) : spaced;
-  // TBL-01 pads table cells, and it runs here because it is the one pass that
-  // measures display width: the inline spacing rules have already run, so a cell
-  // is measured as the text it finally is. It rewrites lines and adds none, so
-  // every pass that indexes by line has finished with the document.
-  const tableLines = splitSourceLines(edged);
+  /**
+   * TBL-01 pads table cells, and it runs here because it is the one pass that
+   * measures display width: the inline spacing rules have already run, so a cell
+   * is measured as the text it finally is. It rewrites lines and adds none.
+   *
+   * It runs *before* BLK-12 because it is the first pass here that reports a line:
+   * BLK-12 is the only rule that removes lines, and a notice has to name the line
+   * the author wrote rather than the line the removals left behind. The two do not
+   * interact - a fence body is a protected region to this pass.
+   */
+  const tableLines = splitSourceLines(spaced);
   const tableProtected = new Array<boolean>(tableLines.length).fill(false);
-  for (const range of atomicRanges(tableLines, scanRegions(edged))) {
+  for (const range of atomicRanges(tableLines, scanRegions(spaced))) {
     for (let i = range.start; i < range.end; i++) tableProtected[i] = true;
   }
   // TBL-01 runs last of the content rules, so the mask the earlier passes carry
   // is not in front of it: protected regions and ignored ranges are re-derived
   // here, for the text it is actually holding.
-  const tableIgnored = ignoreLines(edged, options.ignore);
-  const tabledLines = normalizeTables(
+  const tableIgnored = ignoreLines(spaced, options.ignore);
+  const tabled = normalizeTables(
     tableLines.map((line) => line.text),
     options.table,
     (index) => tableProtected[index] === true || tableIgnored[index] === true,
   );
+  /**
+   * The input line a line of `spaced` came from.
+   *
+   * `spaced` is `structural` after character-level rewrites only, and NG-01 forbids
+   * joining or splitting a line, so the two line arrays run parallel and an index
+   * is enough. If they ever stop running parallel this gives up the line rather
+   * than name the wrong one, which is what `inputLineOf` does for an offset that
+   * lands on an invented blank.
+   */
+  const inputLineAt = (index: number): number | undefined => {
+    if (tableLines.length !== parts.length + 1) return undefined;
+    const line = partLines[index];
+    return line === undefined || line < 0 ? undefined : line;
+  };
+  const tableDiagnostics: Diagnostic[] = tabled.notices.map((notice) =>
+    diagnostic('TBL-01', notice.messageId, notice.args, inputLineAt(notice.line), 'info'),
+  );
   // splitSourceLines keeps the empty line a trailing newline produces, so joining
   // is enough: adding one back would double it.
-  const tabled = tabledLines.join('\n');
-  const candidate = trimTrailingWhitespace(tabled, ignoreRanges(tabled, options.ignore));
+  const tabledText = tabled.lines.join('\n');
+  // BLK-12 removes lines, so it runs once every pass that indexes by line is done.
+  const edged = options.codeBlock.trimBlankLines ? trimFenceBlanks(tabledText) : tabledText;
+  const candidate = trimTrailingWhitespace(edged, ignoreRanges(edged, options.ignore));
 
   // GRT-01: never hand back a document that parses differently. If the guard
   // trips we return the input untouched and say why (GRT-04).
@@ -429,6 +465,10 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   return {
     output,
     changed: output !== source,
-    diagnostics: orderedDiagnostics([...detections.map(asDiagnostic), ...diagnostics]),
+    diagnostics: orderedDiagnostics([
+      ...detections.map(asDiagnostic),
+      ...tableDiagnostics,
+      ...diagnostics,
+    ]),
   };
 }

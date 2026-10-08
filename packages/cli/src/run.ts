@@ -164,7 +164,9 @@ export function run(argv: readonly string[], io: Io): number {
           '  config: ' + (loaded?.configPath ?? 'none, using the defaults') + '\n' +
           '  changed: ' + (result.changed ? 'yes' : 'no') + '\n' +
           '  warnings: ' +
-            String(result.diagnostics.filter((d) => d.severity === 'warning').length) + '\n',
+            String(result.diagnostics.filter((d) => d.severity === 'warning').length) + '\n' +
+          '  notices: ' +
+            String(result.diagnostics.filter((d) => d.severity === 'info').length) + '\n',
       );
     }
 

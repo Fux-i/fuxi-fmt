@@ -30,6 +30,7 @@ const NOT_OPTIONS = new Set([
   'diagnostics.raggedTableRow',
   'diagnostics.listIndentJump',
   'diagnostics.excludedList',
+  'diagnostics.tableMaxWidth',
 ]);
 
 /**

@@ -116,6 +116,13 @@
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.diagnostics.excludedList.description%"
         },
+        "fuxiFmt.diagnostics.tableMaxWidth": {
+          "keywords": ["fuxi", "fuxi-fmt"],
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "markdownDescription": "%fuxiFmt.diagnostics.tableMaxWidth.description%"
+        },
         "fuxiFmt.blankLines.aroundBlocks": {
           "keywords": ["fuxi", "fuxi-fmt"],
           "type": "string",
