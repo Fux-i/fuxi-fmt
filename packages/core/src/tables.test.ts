@@ -124,11 +124,44 @@ describe('TBL-01 the header row decides the content column', () => {
       '> > | a   | b   |\n> > | --- | --- |\n> > | 1   | 2   |\n',
     );
   });
+  test('a table that starts a list item is never split by a blank line', () => {
+    const src = '- | a | b |\n  | --- | --- |\n  | 1 | 2 |\n';
+    assert.equal(out(src), '- | a   | b   |\n  | --- | --- |\n  | 1   | 2   |\n');
+  });
+  test('a quoted table is never split by a blank line either', () => {
+    const src = '> | a | b |\n> | --- | --- |\n> | 1 | 2 |\n';
+    assert.equal(out(src), '> | a   | b   |\n> | --- | --- |\n> | 1   | 2   |\n');
+  });
   test('settles in one pass from an indented delimiter row', () => {
     const once = out('| A   | b     |\n  | --- | ----- |\n| 1   | 2 333 |\n');
     assert.equal(out(once), once);
   });
 });
+describe('TBL-01 a header and its delimiter row are joined', () => {
+  test('a blank line between them is closed, and the table pads', () => {
+    assert.equal(out('| a | b |\n\n| --- | --- |\n'), '| a   | b   |\n| --- | --- |\n');
+  });
+  test('the same inside a block quote, marker chain included', () => {
+    assert.equal(out('> | a | b |\n>\n> | --- | --- |\n'), '> | a   | b   |\n> | --- | --- |\n');
+  });
+  test('two blank lines are closed too', () => {
+    assert.equal(out('| a | b |\n\n\n| --- | --- |\n'), '| a   | b   |\n| --- | --- |\n');
+  });
+  test('a body row after a blank line is not joined', () => {
+    // Only the header-to-delimiter gap is closed. A row after a blank line has
+    // nothing above it announcing a table, so it stays the paragraph it is.
+    const src = '| a | b |\n| --- | --- |\n| 1 | 2 |\n\n| 3 | 4 |\n';
+    assert.equal(out(src), '| a   | b   |\n| --- | --- |\n| 1   | 2   |\n\n| 3 | 4 |\n');
+  });
+  test('preserve sees two paragraphs and leaves them alone', () => {
+    // The join is part of normalize, not a structural rule: under preserve the
+    // blank line means these lines are not a table at all, so there is nothing to
+    // hand back to the author unchanged.
+    const src = '| a | b |\n\n| --- | --- |\n';
+    assert.equal(out(src, { table: { mode: 'preserve' } }), src);
+  });
+});
+
 describe('TBL-01 maxWidth skips a line rather than the table', () => {
   const table = '| a very long cell indeed | b |\n| --- | --- |\n| 1 | 2 |\n| x | y |\n';
   test('a row past the cap keeps its bytes and the others pad narrow', () => {

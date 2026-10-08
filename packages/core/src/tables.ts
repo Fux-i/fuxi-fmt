@@ -27,7 +27,7 @@
  * Spec references: TBL-01, SAFE-07, NG-02.
  */
 
-import { contentStartOf, quotePrefix } from './blocks.ts';
+import { contentStartOf, opensBlock, quotePrefix } from './blocks.ts';
 import type { TableOptions } from './options.ts';
 
 /** Cell contents that differ from the header's are DET-10's business, not this rule's. */
@@ -243,10 +243,111 @@ function renderRow(
 }
 
 /**
- * Pad every table in the line array.
+ * One table as a block: where it starts, where its delimiter row is, and which
+ * blank lines sit between the two.
  *
- * Lines are changed but never added or removed, so every pass that indexes by line
- * still sees the document it was built for.
+ * `blanks` exists because a delimiter row is often written a line or two below
+ * its header. That is not a table in CommonMark - the delimiter has to follow the
+ * header paragraph directly - but the delimiter's presence says the author meant
+ * one, so the join closes the gap instead of refusing the document.
+ */
+export interface TableBlock {
+  /** Line index of the header row. */
+  readonly header: number;
+  /** Line index of the delimiter row that declares the columns. */
+  readonly delimiter: number;
+  /** Body row line indices, in order. */
+  readonly rows: readonly number[];
+  /** Blank lines between the header and the delimiter row. */
+  readonly blanks: readonly number[];
+}
+
+/** A line that is blank at this quote depth: nothing but the chain is written. */
+function isBlankAtLevel(text: string, depth: number): boolean {
+  const quote = quotePrefix(text);
+  return quote.depth === depth && text.slice(quote.end).trim().length === 0;
+}
+
+/**
+ * Whether this line continues a table row written above it.
+ *
+ * A row is a continuation line: the same quote chain as the header, and nothing
+ * but whitespace between that chain and the cells. A list marker or heading hash
+ * there opens a block of its own, which is how a table stops at a container
+ * boundary - and why one cannot span two of them.
+ */
+function isRowLine(text: string, depth: number): boolean {
+  const quote = quotePrefix(text);
+  if (quote.depth !== depth) return false;
+  if (opensBlock(text.slice(quote.end))) return false;
+  return tableRow(text) !== null;
+}
+
+/**
+ * Every table in the line array, as a block.
+ *
+ * One scan serves all three readers, so they cannot disagree about what a table
+ * is: the aligner pads these rows, segmentation treats the block as atomic - a
+ * blank line between a header and its delimiter row is never inserted, because
+ * that blank is the one thing that would stop the table being one - and DET-13
+ * reports the delimiter rows this scan did not claim.
+ */
+export function scanTables(
+  texts: readonly string[],
+  isProtected: (index: number) => boolean,
+): TableBlock[] {
+  const tables: TableBlock[] = [];
+  let i = 0;
+  while (i < texts.length) {
+    const headerLine = texts[i] ?? '';
+    if (
+      isProtected(i) ||
+      tableRow(headerLine) === null ||
+      delimiterCells(headerLine) !== null
+    ) {
+      i++;
+      continue;
+    }
+    const depth = quotePrefix(headerLine).depth;
+    const blanks: number[] = [];
+    let j = i + 1;
+    while (j < texts.length && !isProtected(j) && isBlankAtLevel(texts[j] ?? '', depth)) {
+      blanks.push(j);
+      j++;
+    }
+    const delimiterLine = texts[j] ?? '';
+    if (
+      j >= texts.length ||
+      isProtected(j) ||
+      !isRowLine(delimiterLine, depth) ||
+      delimiterCells(delimiterLine) === null
+    ) {
+      i++;
+      continue;
+    }
+    const rows: number[] = [];
+    let k = j + 1;
+    while (k < texts.length && !isProtected(k) && isRowLine(texts[k] ?? '', depth)) {
+      rows.push(k);
+      k++;
+    }
+    tables.push({ header: i, delimiter: j, rows, blanks });
+    i = k;
+  }
+  return tables;
+}
+
+/**
+ * Pad every table, and close the gap between a header and its delimiter row.
+ *
+ * \`normalize\` does both. The join is part of it rather than a rule of its own
+ * because under \`preserve\` there is no table to repair: a delimiter row a blank
+ * line below its header is two paragraphs in CommonMark, and \`preserve\` hands
+ * paragraphs back as written. Asking for the table is what asks for the join.
+ *
+ * Lines are rewritten and never added. The join is the one place a line is
+ * removed, and this pass runs last of the content rules, so nothing that indexes
+ * by line is still holding the old numbering.
  */
 export function normalizeTables(
   texts: readonly string[],
@@ -256,22 +357,21 @@ export function normalizeTables(
   const out = texts.slice();
   if (options.mode === 'preserve') return out;
 
-  let i = 0;
-  while (i + 1 < texts.length) {
-    const header = tableRow(texts[i] ?? '');
-    const delimiters = header === null ? null : delimiterCells(texts[i + 1] ?? '');
-    if (header === null || delimiters === null || isProtected(i) || isProtected(i + 1)) {
-      i++;
-      continue;
-    }
+  const tables = scanTables(texts, isProtected);
+  const joined = new Set<number>();
+  for (const table of tables) for (const blank of table.blanks) joined.add(blank);
 
+  for (const table of tables) {
+    const headerLine = texts[table.header] ?? '';
+    const delimiterLine = texts[table.delimiter] ?? '';
+    const header = tableRow(headerLine);
+    const delimiters = delimiterCells(delimiterLine);
+    const delimiterRow = tableRow(delimiterLine);
+    if (header === null || delimiters === null || delimiterRow === null) continue;
     const rows: TableRow[] = [];
-    let end = i + 2;
-    while (end < texts.length) {
-      const row = tableRow(texts[end] ?? '');
-      if (row === null || isProtected(end)) break;
-      rows.push(row);
-      end++;
+    for (const line of table.rows) {
+      const row = tableRow(texts[line] ?? '');
+      if (row !== null) rows.push(row);
     }
 
     // A ragged table cannot be padded - a missing cell is a content error that
@@ -280,10 +380,7 @@ export function normalizeTables(
     const columns = header.cells.length;
     const complete =
       delimiters.length === columns && rows.every((row) => row.cells.length === columns);
-    if (!complete) {
-      i = end;
-      continue;
-    }
+    if (!complete) continue;
 
     const aligns = delimiters.map(alignmentOf);
     const outer = header.leadingPipe;
@@ -313,32 +410,28 @@ export function normalizeTables(
         // the set has to settle, or the same table would pad differently depending
         // on where the pass started.
         const kept = all.filter((row) => !skipped.has(row));
-        if (kept.length === 0) {
-          i = end;
-          continue;
-        }
+        if (kept.length === 0) continue;
         widths = natural(kept);
       }
     }
 
     if (!skipped.has(header)) {
-      out[i] = renderRow(header, widths, aligns, options.cjkWidth, outer, contentColumn);
+      out[table.header] = renderRow(header, widths, aligns, options.cjkWidth, outer, contentColumn);
     }
-    const delimiterRow = tableRow(texts[i + 1] ?? '');
-    if (delimiterRow !== null && !skipped.has(delimiterRow)) {
+    if (!skipped.has(delimiterRow)) {
       const rendered = delimiters
         .map((cell, column) => renderDelimiter(alignmentOf(cell), widths[column] ?? MIN_COLUMN))
         .join(' | ');
-      out[i + 1] = normalizePrefix(delimiterRow, contentColumn) + (outer ? '| ' + rendered + ' |' : rendered);
+      out[table.delimiter] =
+        normalizePrefix(delimiterRow, contentColumn) + (outer ? '| ' + rendered + ' |' : rendered);
     }
     for (let offset = 0; offset < rows.length; offset++) {
       const row = rows[offset];
-      if (row === undefined || skipped.has(row)) continue;
-      out[i + 2 + offset] = renderRow(row, widths, aligns, options.cjkWidth, outer, contentColumn);
+      const line = table.rows[offset];
+      if (row === undefined || line === undefined || skipped.has(row)) continue;
+      out[line] = renderRow(row, widths, aligns, options.cjkWidth, outer, contentColumn);
     }
-
-    i = end;
   }
 
-  return out;
+  return joined.size === 0 ? out : out.filter((_, index) => !joined.has(index));
 }

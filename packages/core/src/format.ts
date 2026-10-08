@@ -20,7 +20,7 @@ import {
 import { normalizeQuotes } from './quotes.ts';
 import { applyTypography } from './typography.ts';
 import { normalizeEmphasis } from './emphasis.ts';
-import { normalizeTables } from './tables.ts';
+import { normalizeTables, scanTables } from './tables.ts';
 import { normalizeFullwidthAlphanumerics, normalizeParens, normalizePunctuation } from './widths.ts';
 
 /** The two characters a block marker may be separated by (BLK-09). */
@@ -276,7 +276,20 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   // between Han and Latin change a cell's width after the fact. A table measured
   // before them came out one column short - and one column wider on the next pass,
   // which is not idempotent. Segmentation does not need the padding either way.
-  const blocks = segment(reindented, ranges);
+  // A table is one block, not a run of lines that happen to share a kind: the
+  // header may open a list item ('- | a | b |'), and the delimiter row under it
+  // reads as a table line of its own. Without this the blank-line policy saw two
+  // blocks there and inserted a blank line between them - the one line that stops
+  // the two being a table at all.
+  const tableRanges: AtomicRange[] = scanTables(
+    reindented,
+    (index) => protectedLine[index] === true,
+  ).map((table) => ({
+    start: table.header,
+    end: (table.rows[table.rows.length - 1] ?? table.delimiter) + 1,
+    kind: 'table' as BlockKind,
+  }));
+  const blocks = segment(reindented, [...ranges, ...tableRanges]);
 
   // BLK-03. A blank line between list items decides how the list renders, so the
   // policy is explicit. Removing one is only safe between items of the *same*

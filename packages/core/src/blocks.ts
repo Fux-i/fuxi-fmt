@@ -111,6 +111,19 @@ const LIST_MARKER = /^[ \t]*(?:[-*+]|\d{1,9}[.)])(?=[ \t]|$)/;
 const HEADING_MARKER = /^[ \t]*#{1,6}(?=[ \t]|$)/;
 
 /**
+ * Whether a line opens a block of its own: a list marker or a heading hash at its
+ * head, past whatever quote chain it carries.
+ *
+ * TBL-01 needs this because a table row is a *continuation* line - the same
+ * container as the row above it, with nothing but whitespace between the chain
+ * and the cells. `- | --- | --- |` under `| a | b |` opens a list item, so the two
+ * are two blocks and not one table, however table-shaped the second line looks.
+ */
+export function opensBlock(text: string): boolean {
+  return LIST_MARKER.test(text) || HEADING_MARKER.test(text);
+}
+
+/**
  * Where the content of a line starts, past the block markers at its head and the
  * whitespace the last of them is separated by.
  *
