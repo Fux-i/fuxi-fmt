@@ -43,39 +43,39 @@
 
 配置写在 `"markdown"` 键下。完整选项表与默认值来自 [resolve_config.rs](https://github.com/dprint/dprint-plugin-markdown/blob/main/src/configuration/resolve_config.rs)、[types.rs](https://github.com/dprint/dprint-plugin-markdown/blob/main/src/configuration/types.rs)、[builder.rs](https://github.com/dprint/dprint-plugin-markdown/blob/main/src/configuration/builder.rs)；渲染后的表格见 [dprint docs](https://dprint.dev/plugins/markdown/config/)。
 
-| 选项 | 默认值 | 取值 / 含义 |
-|---|---|---|
-| `lineWidth` | 80（全局回退值）| 最大行宽 |
-| `newLineKind` | `lf` | `auto`/`crlf`/`lf`/`system` |
-| `textWrap` | `maintain` | `always`、`maintain`（保留换行）、`maintainAndWrap`（保留换行但把过长行断开）、`never`、`sentence`（每句一行）|
-| `wrapUnspacedScripts` | false | 折行时允许在 CJK 这类无空格文字内部断开 |
-| `wrapCodeSpans` | true | 允许在行内代码内部换行 |
-| `emphasisKind` | `underscores` | `asterisks` / `underscores` |
-| `strongKind` | `asterisks` | `asterisks` / `underscores` |
-| `hardBreakKind` | `backslash` | `backslash` / `doubleSpace` |
-| `maxBlankLines` | 1（最小 1）| 块之间保留的连续空行上限 |
-| `heading.kind`（旧名 `headingKind`）| `atx` | `atx` / `setext`（setext 只用于 1–2 级）|
-| `heading.blankLinesAbove` | 未设置 | 标题上方的固定空行数（最小 1）；未设置时保留原文空行，上限为 `maxBlankLines` |
-| `list.unorderedMarker`（旧名 `unorderedListKind`）| `dashes` | `dashes` / `asterisks`（另一个字符用作交替标记）|
-| `list.indentKind`（旧名 `listIndentKind`）| `commonMark` | `commonMark`（对齐到标记宽度）/ `pythonMarkdown`（固定 ≥4 空格）|
-| `codeBlock.skipFormat` | false | 围栏代码内容保持原样 |
-| `codeBlock.raiseSyntaxErrors` | false | 代码块格式化器报错时让整个文件失败 |
-| `codeBlock.preserveIndentation` | false | 保留代码缩进，而不是取消缩进 |
-| `codeBlock.preserveBlankLines` | false | 保留围栏内首尾的空行 |
-| `codeBlock.useTabs` | 未设置 | 覆盖代码格式化器的 `useTabs` |
-| `codeBlock.indentWidth` | 未设置 | 覆盖代码格式化器的 `indentWidth` |
-| `html.skipFormat` | false | 行内与块级 HTML 的排版保持原样 |
-| `html.useTabs` | false（全局值）| 用制表符缩进 HTML |
-| `html.indentWidth` | 2（全局值）| HTML 缩进宽度 |
-| `html.selfClosingSpace` | true | `<br />` 还是 `<br/>` |
-| `html.preferSingleLine` | false | 放得下的多行 HTML 折叠成一行 |
-| `table.skipFormat` | false | 不对齐表格 |
-| `table.cellPadding` | `align` | `align` / `space` / `none` |
-| `ignoreDirective` |“dprint-ignore”| 行级忽略指令 |
-| `ignoreFileDirective` |“dprint-ignore-file”| 文件级忽略指令 |
-| `ignoreStartDirective` |“dprint-ignore-start”| 区间开始 |
-| `ignoreEndDirective` |“dprint-ignore-end”| 区间结束 |
-| `tags` | {} | 自定义标签到文件后缀的映射，供代码块格式化使用 |
+| 选项                                               | 默认值                | 取值 / 含义                                                                                                    |
+| -------------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `lineWidth`                                        | 80（全局回退值）      | 最大行宽                                                                                                       |
+| `newLineKind`                                      | `lf`                  | `auto`/`crlf`/`lf`/`system`                                                                                    |
+| `textWrap`                                         | `maintain`            | `always`、`maintain`（保留换行）、`maintainAndWrap`（保留换行但把过长行断开）、`never`、`sentence`（每句一行） |
+| `wrapUnspacedScripts`                              | false                 | 折行时允许在 CJK 这类无空格文字内部断开                                                                        |
+| `wrapCodeSpans`                                    | true                  | 允许在行内代码内部换行                                                                                         |
+| `emphasisKind`                                     | `underscores`         | `asterisks` / `underscores`                                                                                    |
+| `strongKind`                                       | `asterisks`           | `asterisks` / `underscores`                                                                                    |
+| `hardBreakKind`                                    | `backslash`           | `backslash` / `doubleSpace`                                                                                    |
+| `maxBlankLines`                                    | 1（最小 1）           | 块之间保留的连续空行上限                                                                                       |
+| `heading.kind`（旧名 `headingKind`）               | `atx`                 | `atx` / `setext`（setext 只用于 1–2 级）                                                                       |
+| `heading.blankLinesAbove`                          | 未设置                | 标题上方的固定空行数（最小 1）；未设置时保留原文空行，上限为 `maxBlankLines`                                   |
+| `list.unorderedMarker`（旧名 `unorderedListKind`） | `dashes`              | `dashes` / `asterisks`（另一个字符用作交替标记）                                                               |
+| `list.indentKind`（旧名 `listIndentKind`）         | `commonMark`          | `commonMark`（对齐到标记宽度）/ `pythonMarkdown`（固定 ≥4 空格）                                               |
+| `codeBlock.skipFormat`                             | false                 | 围栏代码内容保持原样                                                                                           |
+| `codeBlock.raiseSyntaxErrors`                      | false                 | 代码块格式化器报错时让整个文件失败                                                                             |
+| `codeBlock.preserveIndentation`                    | false                 | 保留代码缩进，而不是取消缩进                                                                                   |
+| `codeBlock.preserveBlankLines`                     | false                 | 保留围栏内首尾的空行                                                                                           |
+| `codeBlock.useTabs`                                | 未设置                | 覆盖代码格式化器的 `useTabs`                                                                                   |
+| `codeBlock.indentWidth`                            | 未设置                | 覆盖代码格式化器的 `indentWidth`                                                                               |
+| `html.skipFormat`                                  | false                 | 行内与块级 HTML 的排版保持原样                                                                                 |
+| `html.useTabs`                                     | false（全局值）       | 用制表符缩进 HTML                                                                                              |
+| `html.indentWidth`                                 | 2（全局值）           | HTML 缩进宽度                                                                                                  |
+| `html.selfClosingSpace`                            | true                  | `<br />` 还是 `<br/>`                                                                                          |
+| `html.preferSingleLine`                            | false                 | 放得下的多行 HTML 折叠成一行                                                                                   |
+| `table.skipFormat`                                 | false                 | 不对齐表格                                                                                                     |
+| `table.cellPadding`                                | `align`               | `align` / `space` / `none`                                                                                     |
+| `ignoreDirective`                                  | “dprint-ignore”       | 行级忽略指令                                                                                                   |
+| `ignoreFileDirective`                              | “dprint-ignore-file”  | 文件级忽略指令                                                                                                 |
+| `ignoreStartDirective`                             | “dprint-ignore-start” | 区间开始                                                                                                       |
+| `ignoreEndDirective`                               | “dprint-ignore-end”   | 区间结束                                                                                                       |
+| `tags`                                             | {}                    | 自定义标签到文件后缀的映射，供代码块格式化使用                                                                 |
 
 说明：
 
@@ -147,41 +147,41 @@
 
 **可自动修复的规则，以及修复动作具体做什么**（修复动作取自源码）：
 
-| 规则 | 名称 | 修复动作 |
-|---|---|---|
-| MD004 | ul-style | 把无序标记替换成配置的样式标记 |
-| MD005 | list-indent | 增删空格，让同级列表项对齐 |
-| MD007 | ul-indent | 增删空格，达到配置的无序列表缩进（默认 2）|
-| MD009 | no-trailing-spaces | 删除行尾空格（允许的硬换行空格除外）|
-| MD010 | no-hard-tabs | 每个制表符替换为空格 |
-| MD011 | no-reversed-links | 把 `(url)[text]` 改写为 `[text](url)` |
-| MD012 | no-multiple-blanks | 删除超过配置上限的空行（默认 1）|
-| MD014 | commands-show-output | 删除 `$` 提示符 |
-| MD018 | no-missing-space-atx | 在井号之后插入一个空格 |
-| MD019 | no-multiple-space-atx | 删除开头井号后的多余空格 |
-| MD020 | no-missing-space-closed-atx | 把闭合 ATX 标题改写成两侧井号内各一个空格 |
-| MD021 | no-multiple-space-closed-atx | 删除闭合 ATX 井号内的多余空格 |
-| MD022 | blanks-around-headings | 在标题上下插入空行（`lines_above/below` 默认 1；`include_front_matter` false）|
-| MD023 | heading-start-left | 删除标题前的缩进 |
-| MD026 | no-trailing-punctuation | 删除标题末尾的标点 |
-| MD027 | no-multiple-space-blockquote | 删除 `>` 之后的多余空格 |
-| MD029 | ol-prefix | 把有序列表前缀改写成配置的样式：`one_or_ordered`（默认）、`one`、`ordered`、`zero`；保留右对齐与补零 |
-| MD030 | list-marker-space | 设置列表标记后的空格数（`ul_single/ol_single/ul_multi/ol_multi`，默认都是 1）|
-| MD031 | blanks-around-fences | 在围栏代码上下插入空行（尊重引用块前缀）|
-| MD032 | blanks-around-lists | 在列表上下插入空行 |
-| MD034 | no-bare-urls | 把裸 URL 用 `<...>` 包起来 |
-| MD037 | no-space-in-emphasis | 删除强调标记内侧的空格 |
-| MD038 | no-space-in-code | 删除行内代码反引号内侧的空格 |
-| MD039 | no-space-in-links | 删除链接文本内侧的空格 |
-| MD044 | proper-names | 把大小写写错的词替换成配置的专有名词（`names`）|
-| MD047 | single-trailing-newline | 补上结尾换行 |
-| MD049 | emphasis-style | 把强调标记替换成配置的样式（默认 `consistent`）|
-| MD050 | strong-style | 把加粗标记替换成配置的样式（默认 `consistent`）|
-| MD051 | link-fragments | 修正链接片段的大小写 |
-| MD053 | link-image-reference-definitions | 删除未使用的引用定义行 |
-| MD054 | link-image-style | 把链接或图片转换成配置的行内、autolink、完整或快捷样式 |
-| MD058 | blanks-around-tables | 在表格上下插入空行 |
-| MD060 | table-column-style | 按样式（`tight`/`compact`）增删表格竖线周围的空格 |
+| 规则  | 名称                             | 修复动作                                                                                             |
+| ----- | -------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| MD004 | ul-style                         | 把无序标记替换成配置的样式标记                                                                       |
+| MD005 | list-indent                      | 增删空格，让同级列表项对齐                                                                           |
+| MD007 | ul-indent                        | 增删空格，达到配置的无序列表缩进（默认 2）                                                           |
+| MD009 | no-trailing-spaces               | 删除行尾空格（允许的硬换行空格除外）                                                                 |
+| MD010 | no-hard-tabs                     | 每个制表符替换为空格                                                                                 |
+| MD011 | no-reversed-links                | 把 `(url)[text]` 改写为 `[text](url)`                                                                |
+| MD012 | no-multiple-blanks               | 删除超过配置上限的空行（默认 1）                                                                     |
+| MD014 | commands-show-output             | 删除 `$` 提示符                                                                                      |
+| MD018 | no-missing-space-atx             | 在井号之后插入一个空格                                                                               |
+| MD019 | no-multiple-space-atx            | 删除开头井号后的多余空格                                                                             |
+| MD020 | no-missing-space-closed-atx      | 把闭合 ATX 标题改写成两侧井号内各一个空格                                                            |
+| MD021 | no-multiple-space-closed-atx     | 删除闭合 ATX 井号内的多余空格                                                                        |
+| MD022 | blanks-around-headings           | 在标题上下插入空行（`lines_above/below` 默认 1；`include_front_matter` false）                       |
+| MD023 | heading-start-left               | 删除标题前的缩进                                                                                     |
+| MD026 | no-trailing-punctuation          | 删除标题末尾的标点                                                                                   |
+| MD027 | no-multiple-space-blockquote     | 删除 `>` 之后的多余空格                                                                              |
+| MD029 | ol-prefix                        | 把有序列表前缀改写成配置的样式：`one_or_ordered`（默认）、`one`、`ordered`、`zero`；保留右对齐与补零 |
+| MD030 | list-marker-space                | 设置列表标记后的空格数（`ul_single/ol_single/ul_multi/ol_multi`，默认都是 1）                        |
+| MD031 | blanks-around-fences             | 在围栏代码上下插入空行（尊重引用块前缀）                                                             |
+| MD032 | blanks-around-lists              | 在列表上下插入空行                                                                                   |
+| MD034 | no-bare-urls                     | 把裸 URL 用 `<...>` 包起来                                                                           |
+| MD037 | no-space-in-emphasis             | 删除强调标记内侧的空格                                                                               |
+| MD038 | no-space-in-code                 | 删除行内代码反引号内侧的空格                                                                         |
+| MD039 | no-space-in-links                | 删除链接文本内侧的空格                                                                               |
+| MD044 | proper-names                     | 把大小写写错的词替换成配置的专有名词（`names`）                                                      |
+| MD047 | single-trailing-newline          | 补上结尾换行                                                                                         |
+| MD049 | emphasis-style                   | 把强调标记替换成配置的样式（默认 `consistent`）                                                      |
+| MD050 | strong-style                     | 把加粗标记替换成配置的样式（默认 `consistent`）                                                      |
+| MD051 | link-fragments                   | 修正链接片段的大小写                                                                                 |
+| MD053 | link-image-reference-definitions | 删除未使用的引用定义行                                                                               |
+| MD054 | link-image-style                 | 把链接或图片转换成配置的行内、autolink、完整或快捷样式                                               |
+| MD058 | blanks-around-tables             | 在表格上下插入空行                                                                                   |
+| MD060 | table-column-style               | 按样式（`tight`/`compact`）增删表格竖线周围的空格                                                    |
 
 不可修复（没有 `fixInfo`）：MD001、MD003、MD013、MD024、MD025、MD028、MD033、MD035、MD036、MD040、MD041、MD042、MD043、MD045、MD046、MD048、MD052、MD055、MD056、MD059。（值得注意的是 MD003 标题样式与 MD046/MD048 代码样式与围栏样式只报告不修。）
 
@@ -237,15 +237,15 @@
 
 ## 跨工具对照
 
-| | front matter | 空行策略 | 有序列表 | 项目符号 / 缩进 | 折行 | 围栏内容 |
-|---|---|---|---|---|---|---|
-| Prettier | YAML `---`、TOML `+++` 会被格式化；JSON 不会 | 块之间一个空行；紧凑与宽松都保留 | 起始编号保留，之后顺序编号；全 1 保持全 1 | `-` / `*`；按 tabWidth | 有选项 | 解析器认识就格式化，否则不动 |
-| dprint | 只有装了 yaml 插件才格式化 YAML，否则原样；TOML 原样 | `maxBlankLines` 1 | 从起始编号重编；全 1 保持全 1 | `-` / `*`；commonMark 或 4 空格 | `textWrap` | 由插件格式化 |
-| mdformat | 只经插件支持 YAML | 块之间一个空行；紧凑列表用换行 | 除非 `--number`，全部 `1.` | `-` / `*`；2 空格 | `--wrap` | 代码格式化器插件 |
-| remark | 保留（remark-frontmatter）| 一个空行（join 与紧凑相关选项控制）| 默认递增 | 默认 `*`；listItemIndent one | 不折行 | handlers/GMF |
-| markdownlint | 只通过参数读取，不格式化 | MD012/MD022/MD031/MD032/MD047 | MD029 样式 | MD004/MD007/MD030 | MD013 只检查 | 不碰 |
-| deno fmt | 与 dprint 相同 | 与 dprint 相同 | 与 dprint 相同 | 与 dprint 相同 | `proseWrap` 默认 always | 由插件格式化 |
-| markdownfmt | 无 | 类似 gofmt | 从 1 重编 | `-` | 无 | 基于重新渲染 |
-| mdsf/cbfmt | 不动 | 不动 | 不动 | 不动 | 不动 | 交给外部工具 |
+|              | front matter                                         | 空行策略                            | 有序列表                                  | 项目符号 / 缩进                 | 折行                    | 围栏内容                     |
+| ------------ | ---------------------------------------------------- | ----------------------------------- | ----------------------------------------- | ------------------------------- | ----------------------- | ---------------------------- |
+| Prettier     | YAML `---`、TOML `+++` 会被格式化；JSON 不会         | 块之间一个空行；紧凑与宽松都保留    | 起始编号保留，之后顺序编号；全 1 保持全 1 | `-` / `*`；按 tabWidth          | 有选项                  | 解析器认识就格式化，否则不动 |
+| dprint       | 只有装了 yaml 插件才格式化 YAML，否则原样；TOML 原样 | `maxBlankLines` 1                   | 从起始编号重编；全 1 保持全 1             | `-` / `*`；commonMark 或 4 空格 | `textWrap`              | 由插件格式化                 |
+| mdformat     | 只经插件支持 YAML                                    | 块之间一个空行；紧凑列表用换行      | 除非 `--number`，全部 `1.`                | `-` / `*`；2 空格               | `--wrap`                | 代码格式化器插件             |
+| remark       | 保留（remark-frontmatter）                           | 一个空行（join 与紧凑相关选项控制） | 默认递增                                  | 默认 `*`；listItemIndent one    | 不折行                  | handlers/GMF                 |
+| markdownlint | 只通过参数读取，不格式化                             | MD012/MD022/MD031/MD032/MD047       | MD029 样式                                | MD004/MD007/MD030               | MD013 只检查            | 不碰                         |
+| deno fmt     | 与 dprint 相同                                       | 与 dprint 相同                      | 与 dprint 相同                            | 与 dprint 相同                  | `proseWrap` 默认 always | 由插件格式化                 |
+| markdownfmt  | 无                                                   | 类似 gofmt                          | 从 1 重编                                 | `-`                             | 无                      | 基于重新渲染                 |
+| mdsf/cbfmt   | 不动                                                 | 不动                                | 不动                                      | 不动                            | 不动                    | 交给外部工具                 |
 
 以上每一条都出自所链接的第一手文档或源码；没有一条行为是从博客文章推断出来的。

@@ -209,4 +209,3 @@ Issues live as GitHub issues on `Fux-i/fuxi-fmt`, driven with the `gh` CLI. See 
 ### Triage labels
 
 The five canonical triage roles use their default label strings. See `docs/agents/triage-labels.md`.
-
