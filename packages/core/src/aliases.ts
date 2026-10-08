@@ -31,9 +31,30 @@ export interface ConfigNotice {
 /** A notice before its English sentence has been rendered from the catalogue. */
 type PendingNotice = Omit<ConfigNotice, 'message'>;
 
-/** Sections that hold options, and therefore the only places a leaf can live. */
-const SECTIONS = ['blankLines', 'typography', 'list', 'codeBlock', 'ignore'] as const;
-const TOP_LEVEL_LEAVES = ['endOfLine', 'preset'] as const;
+/**
+ * The option surface is the vocabulary. A key is a section if its value is a
+ * record of options, and a top-level leaf otherwise. Both lists used to be
+ * written out by hand here, which is how `table` and `thematicBreak` came to be
+ * announced as typos while the reader went on applying them.
+ */
+const OPTION_SURFACE = defaultOptions as unknown as Raw;
+
+/** Sections hold options, and therefore the only places a leaf can live. */
+const SECTIONS: readonly string[] = Object.keys(OPTION_SURFACE).filter((key) =>
+  isRecord(OPTION_SURFACE[key]),
+);
+
+/** Keys whose value is the option itself rather than a section of them. */
+const TOP_LEVEL_LEAVES: readonly string[] = Object.keys(OPTION_SURFACE).filter(
+  (key) => !isRecord(OPTION_SURFACE[key]),
+);
+
+/**
+ * Keys a configuration file may state that never reach the resolved options:
+ * `preset` names a layer of values, and config.ts consumes it before the options
+ * exist.
+ */
+const CONFIG_ONLY_LEAVES: readonly string[] = ['preset'];
 
 function isRecord(value: unknown): value is Raw {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -160,8 +181,9 @@ export function applyAliases(raw: Raw): { readonly raw: Raw; readonly notices: C
   }
 
   for (const key of Object.keys(root)) {
-    if ((TOP_LEVEL_LEAVES as readonly string[]).includes(key)) continue;
-    if (!(SECTIONS as readonly string[]).includes(key)) {
+    if (CONFIG_ONLY_LEAVES.includes(key)) continue;
+    if (TOP_LEVEL_LEAVES.includes(key)) continue;
+    if (!SECTIONS.includes(key)) {
       notices.push({ kind: 'unknown', key, messageId: 'cfg.unknownKey', args: [key] });
     }
   }

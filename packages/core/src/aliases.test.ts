@@ -13,7 +13,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseConfig, parseConfigDetailed } from './config.ts';
-import { resolveOptions } from './options.ts';
+import { defaultOptions, resolveOptions } from './options.ts';
 
 const noticesOf = (json: string) => parseConfigDetailed(json).notices;
 
@@ -98,5 +98,14 @@ describe('CFG-07 retired configuration names', () => {
 
   test('the preset key is an option, not a typo', () => {
     assert.deepEqual(noticesOf('{"preset":"default"}'), []);
+  });
+
+  test('every top-level option the resolver knows is an option, not a typo', () => {
+    const stated: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(defaultOptions)) {
+      stated[key] = typeof value === 'object' && value !== null ? {} : value;
+    }
+    const parsed = parseConfigDetailed(JSON.stringify(stated));
+    assert.deepEqual(parsed.notices.map((notice) => notice.key), []);
   });
 });
