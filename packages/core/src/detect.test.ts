@@ -257,6 +257,54 @@ describe('DET-12 a list left alone because it contains a protected block', () =>
 });
 
 
+describe('DET-13 a delimiter row that belongs to no table', () => {
+  test('a header in another container leaves the delimiter row incomplete', () => {
+    const input = '> | a | b |\n| --- | --- |\n| 1 | 2 |\n';
+    const result = format(input);
+    assert.equal(result.output, input);
+    assert.deepEqual(result.diagnostics.map((d) => d.ruleId), ['DET-13']);
+    assert.equal(result.diagnostics[0]?.severity, 'error');
+    assert.equal(result.diagnostics[0]?.line, 1);
+  });
+
+  test('a delimiter row with no table row above it', () => {
+    const result = format('正文\n| --- | --- |\n');
+    assert.deepEqual(result.diagnostics.map((d) => d.ruleId), ['DET-13']);
+    assert.equal(result.diagnostics[0]?.line, 1);
+  });
+
+  test('a delimiter row that opens a block of its own', () => {
+    const result = format('| a | b |\n- | --- | --- |\n');
+    assert.deepEqual(result.diagnostics.map((d) => d.ruleId), ['DET-13']);
+    assert.equal(result.diagnostics[0]?.line, 1);
+  });
+
+  test('a delimiter row at the top of the document', () => {
+    const result = format('| --- | --- |\n| 1 | 2 |\n');
+    assert.deepEqual(result.diagnostics.map((d) => d.ruleId), ['DET-13']);
+    assert.equal(result.diagnostics[0]?.line, 0);
+  });
+
+  test('a header a blank line above it is complete, because the join closes it', () => {
+    assert.deepEqual(format('| a | b |\n\n| --- | --- |\n').diagnostics, []);
+    assert.deepEqual(format('> | a | b |\n>\n> | --- | --- |\n').diagnostics, []);
+  });
+
+  test('a body row that looks like a delimiter row is part of its table', () => {
+    assert.deepEqual(format('| a | b |\n| --- | --- |\n| --- | --- |\n').diagnostics, []);
+  });
+
+  test('a delimiter row inside a fence is code', () => {
+    assert.deepEqual(format(FENCE + '\n| --- | --- |\n' + FENCE + '\n').diagnostics, []);
+  });
+
+  test('a delimiter row inside an ignored range is not reported', () => {
+    const input =
+      '<!-- fuxi-fmt-ignore-start -->\n| --- | --- |\n<!-- fuxi-fmt-ignore-end -->\n';
+    assert.deepEqual(format(input).diagnostics, []);
+  });
+});
+
 describe('DET-01 … DET-04 inside a block quote', () => {
   test('an unterminated fence inside a quote refuses the document and names the line', () => {
     const input = '> text\n> ' + FENCE + '\n> 中文abc\n';

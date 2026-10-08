@@ -1,5 +1,6 @@
 {
   "block kind changed: {0} -> {1}": "块的类型发生了变化：{0} -> {1}",
+  "delimiter row with no header row above it in the same container: a table needs both, so this document was not formatted": "分隔行在同一个容器里没有上方的表头行：一张表格两样都要有，因此这篇文档没有被格式化",
   "list item is indented as if nested but belongs to no parent: the indentation reads as a nested list that never becomes one": "列表项的缩进看起来是嵌套，实际却不属于任何父项：这个缩进读起来像嵌套列表，但从未真正嵌套",
   "list.indentWidth was split into list.orderedIndent and list.unorderedIndent; it was rewritten as {0} and the old key will be removed in the next release": "list.indentWidth 已拆分为 list.orderedIndent 和 list.unorderedIndent；已改写为 {0}，旧配置项将在下一个版本中移除",
   "non-blank line count changed: {0} -> {1}": "非空行数发生了变化：{0} -> {1}",

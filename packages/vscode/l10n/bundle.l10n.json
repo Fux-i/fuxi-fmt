@@ -1,5 +1,6 @@
 {
   "block kind changed: {0} -> {1}": "block kind changed: {0} -> {1}",
+  "delimiter row with no header row above it in the same container: a table needs both, so this document was not formatted": "delimiter row with no header row above it in the same container: a table needs both, so this document was not formatted",
   "list item is indented as if nested but belongs to no parent: the indentation reads as a nested list that never becomes one": "list item is indented as if nested but belongs to no parent: the indentation reads as a nested list that never becomes one",
   "list.indentWidth was split into list.orderedIndent and list.unorderedIndent; it was rewritten as {0} and the old key will be removed in the next release": "list.indentWidth was split into list.orderedIndent and list.unorderedIndent; it was rewritten as {0} and the old key will be removed in the next release",
   "non-blank line count changed: {0} -> {1}": "non-blank line count changed: {0} -> {1}",

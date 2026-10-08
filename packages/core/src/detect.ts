@@ -19,6 +19,7 @@ import { contentStartOf } from './blocks.ts';
 const BACKSLASH = 92;
 import type { CharRange } from './ignores.ts';
 import { assignParents, scanListItems } from './list-scan.ts';
+import { isDelimiterRow as isTableDelimiterRow, scanTables } from './tables.ts';
 import type { MessageArgs, MessageId } from './messages.ts';
 import { isEscaped, type Region, type SourceLine } from './scan.ts';
 
@@ -108,6 +109,7 @@ export function detect(
   detections.push(...unmatchedDelimiters(source, lines, mask));
   detections.push(...unclosedInline(source, lines, mask));
   detections.push(...raggedTables(lines, mask));
+  detections.push(...incompleteTables(lines, mask));
   detections.push(...listJumps(lines, mask));
   return detections;
 }
@@ -285,6 +287,43 @@ function raggedTables(lines: readonly SourceLine[], mask: Uint8Array): Detection
       });
     }
     i += 2;
+  }
+  return out;
+}
+
+/**
+ * DET-13: a delimiter row that belongs to no table.
+ *
+ * A table is a header row and a delimiter row in the same container, and
+ * `scanTables` is the definition of that - the aligner, segmentation and this
+ * rule all read the same one, so they cannot disagree about what a table is.
+ * This rule is its complement: a delimiter row the scan did not claim is a table
+ * that was never completed. That is what a table straddling two containers looks
+ * like from inside either of them - at least one side is missing its half - and
+ * it is also what a stray delimiter row is. Nothing can align it and nothing can
+ * join it, so the document is refused rather than guessed at.
+ */
+function incompleteTables(lines: readonly SourceLine[], mask: Uint8Array): Detection[] {
+  const texts = lines.map((line) => line.text);
+  const isProtected = (index: number): boolean => mask[lines[index]?.start ?? 0] === 1;
+  const claimed = new Set<number>();
+  for (const table of scanTables(texts, isProtected)) {
+    claimed.add(table.header);
+    claimed.add(table.delimiter);
+    for (const line of table.rows) claimed.add(line);
+    for (const line of table.blanks) claimed.add(line);
+  }
+  const out: Detection[] = [];
+  for (let i = 0; i < texts.length; i++) {
+    if (claimed.has(i) || isProtected(i)) continue;
+    if (!isTableDelimiterRow(texts[i] ?? '')) continue;
+    out.push({
+      ruleId: 'DET-13',
+      messageId: 'det.tableIncomplete',
+      args: [],
+      line: i,
+      severity: 'error',
+    });
   }
   return out;
 }
