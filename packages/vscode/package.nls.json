@@ -15,7 +15,7 @@
   "fuxiFmt.table.mode.description": "Pad table cells so the columns line up, or leave the author's layout alone (TBL-01).",
   "fuxiFmt.table.mode.enum.0": "Leave every table exactly as written.",
   "fuxiFmt.table.mode.enum.1": "Pad the cells and fill the delimiter row to the column width.",
-  "fuxiFmt.table.maxWidth.description": "A row whose padded line would be wider than this is left as written, so a few long rows cannot stretch the rest (TBL-01). null means no cap.",
+  "fuxiFmt.table.maxWidth.description": "A row wider than this on its own does not set the column widths, so a few long rows cannot stretch the rest (TBL-01). Defaults to 80 columns; null means no cap.",
   "fuxiFmt.table.cjkWidth.description": "Columns a wide character occupies in your font: 2 for a fixed-pitch font whose CJK glyphs are two Latin advances, 1 for a proportional one (TBL-01).",
   "fuxiFmt.table.cjkWidth.enum.0": "Two columns (the usual case for a monospaced font).",
   "fuxiFmt.table.cjkWidth.enum.1": "One column (a proportional font, or one whose CJK glyphs are not double width).",

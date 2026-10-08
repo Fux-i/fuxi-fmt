@@ -291,7 +291,7 @@ export const defaultOptions: FormatOptions = {
   },
   codeBlock: { fenceChar: 'backticks', fenceLength: true, trimBlankLines: true },
   thematicBreak: 'dashes',
-  table: { mode: 'normalize', maxWidth: null, cjkWidth: 2 },
+  table: { mode: 'normalize', maxWidth: 80, cjkWidth: 2 },
   endOfLine: 'lf',
   ignore: {
     file: 'fuxi-fmt-ignore-file',

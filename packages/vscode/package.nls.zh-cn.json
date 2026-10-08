@@ -15,7 +15,7 @@
   "fuxiFmt.table.mode.description": "是否补齐表格单元格使各列对齐，或保持作者原有的排版（TBL-01）。",
   "fuxiFmt.table.mode.enum.0": "完全保持表格原样。",
   "fuxiFmt.table.mode.enum.1": "补齐单元格，并把分隔行的短横线填到列宽。",
-  "fuxiFmt.table.maxWidth.description": "补齐后超过此宽度的行保持原样，因此少数长行不会把其余行一起撑宽（TBL-01）。null 表示不限制。",
+  "fuxiFmt.table.maxWidth.description": "自身宽度超过此值的行不参与列宽计算，因此少数长行不会把其余行一起撑宽（TBL-01）。默认 80 列，null 表示不限制。",
   "fuxiFmt.table.cjkWidth.description": "宽字符在你的字体中占几列：等宽字体里中日韩字形占两个西文字宽时为 2，比例字体为 1（TBL-01）。",
   "fuxiFmt.table.cjkWidth.enum.0": "两列（等宽字体的常见情形）。",
   "fuxiFmt.table.cjkWidth.enum.1": "一列（比例字体，或中日韩字形不是双宽的字体）。",

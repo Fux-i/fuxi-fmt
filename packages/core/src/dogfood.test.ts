@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { format } from './format.ts';
+import type { FormatResult } from './format.ts';
 import { checkSemantics } from './guard.ts';
 
 /**
@@ -30,11 +31,17 @@ describe('dogfood: the repository formatter as its own input', () => {
       const source = readFileSync(join(root, file), 'utf8');
       const first = format(source);
 
-      assert.deepEqual(first.diagnostics, [], 'the guard withheld a result');
+      // A note is not a refusal: TBL-01 reports the rows its cap left out of the
+      // column widths, which is the formatter saying what it did. What must not
+      // happen is an error, which is the guard withholding the result.
+      const withheld = (result: FormatResult) =>
+        result.diagnostics.filter((diagnostic) => diagnostic.severity === 'error');
+      assert.deepEqual(withheld(first), [], 'the guard withheld a result');
       assert.deepEqual(checkSemantics(source, first.output), [], 'semantics changed');
 
       const second = format(first.output);
-      assert.deepEqual(second.diagnostics, []);
+      assert.deepEqual(withheld(second), []);
+      assert.deepEqual(second.diagnostics, first.diagnostics, 'the second pass reported something else');
       assert.equal(second.output, first.output, 'formatting did not settle in one pass');
     });
   }

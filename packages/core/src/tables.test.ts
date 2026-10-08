@@ -162,6 +162,25 @@ describe('TBL-01 a header and its delimiter row are joined', () => {
   });
 });
 
+describe('TBL-01 the cap is on by default', () => {
+  const wide =
+    '| a very long cell that goes past eighty columns on its own without any doubt | b |\n| --- | --- |\n| 1 | 2 |\n| x | y |\n';
+
+  test('a table wider than 80 columns is capped without being asked', () => {
+    // A table is the one block whose source layout is its presentation, and 80
+    // columns is where a terminal line ends; a cap nobody sets is a cap nobody has.
+    assert.deepEqual(
+      format(wide).diagnostics.map(({ severity, messageId }) => ({ severity, messageId })),
+      [{ severity: 'info', messageId: 'tbl.rowOverCap' }],
+    );
+  });
+
+  test('and 80 is where it ends, not 79', () => {
+    const exactly80 = '| a cell that makes this row exactly eighty columns wide, no more | b |\n| --- | --- |\n| 1 | 2 |\n| x | y |\n';
+    assert.deepEqual(format(exactly80).diagnostics, []);
+  });
+});
+
 describe('TBL-01 maxWidth leaves a row out of the widths rather than out of the table', () => {
   const table = '| a very long cell indeed | b |\n| --- | --- |\n| 1 | 2 |\n| x | y |\n';
   const CAPPED: FormatOptionsInput = { table: { mode: 'normalize', maxWidth: 30 } };

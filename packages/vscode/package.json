@@ -428,7 +428,7 @@
             "integer",
             "null"
           ],
-          "default": null,
+          "default": 80,
           "scope": "resource",
           "minimum": 1,
           "markdownDescription": "%fuxiFmt.table.maxWidth.description%"
