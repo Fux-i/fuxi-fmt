@@ -389,7 +389,7 @@
         "fuxiFmt.table.mode": {
           "keywords": ["fuxi", "fuxi-fmt"],
           "type": "string",
-          "default": "preserve",
+          "default": "normalize",
           "scope": "resource",
           "enum": [
             "preserve",

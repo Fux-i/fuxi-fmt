@@ -47,10 +47,12 @@ export type CjkWidth = 1 | 2;
 /**
  * Table padding and alignment (TBL-01).
  *
- * `preserve` is the default because padding rewrites nearly every line of every
- * table, and a table is the one block whose source layout is its presentation.
- * `maxWidth` caps the padded width: a row that would exceed it is left exactly as
- * written, so a few long rows cannot make the rest long with them.
+ * `normalize` is the default: a table is the one block whose source layout *is*
+ * its presentation, which is exactly why a ragged one is worth fixing - a column
+ * only lines up if every row starts at the same column. `preserve` hands the
+ * layout back to the author. `maxWidth` caps the padded width: a row that would
+ * exceed it is left exactly as written, so a few long rows cannot make the rest
+ * long with them.
  * `cjkWidth` is how many columns a wide character occupies in the font being
  * read - two in a fixed-pitch font, one in a proportional one.
  */
@@ -275,7 +277,7 @@ export const defaultOptions: FormatOptions = {
   },
   codeBlock: { fenceChar: 'backticks', fenceLength: true, trimBlankLines: true },
   thematicBreak: 'dashes',
-  table: { mode: 'preserve', maxWidth: null, cjkWidth: 2 },
+  table: { mode: 'normalize', maxWidth: null, cjkWidth: 2 },
   endOfLine: 'lf',
   ignore: {
     file: 'fuxi-fmt-ignore-file',

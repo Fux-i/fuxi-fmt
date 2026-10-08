@@ -271,11 +271,12 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     reindented[change.line] = change.text;
   }
 
-  // TBL-01 pads table cells. It rewrites lines but never adds or removes one, so
-  // the passes above and below that index by line still see the document they
-  // were built for.
-  const tabled = normalizeTables(reindented, options.table, (index) => protectedLine[index] === true);
-  const blocks = segment(tabled, ranges);
+  // TBL-01 used to run here, and it had to move below the inline passes: padding
+  // is measured in display columns, and the spacing rules that insert a space
+  // between Han and Latin change a cell's width after the fact. A table measured
+  // before them came out one column short - and one column wider on the next pass,
+  // which is not idempotent. Segmentation does not need the padding either way.
+  const blocks = segment(reindented, ranges);
 
   // BLK-03. A blank line between list items decides how the list renders, so the
   // policy is explicit. Removing one is only safe between items of the *same*
@@ -316,8 +317,8 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     const block = blocks[index];
     const previous = blocks[index - 1];
     if (block === undefined || previous === undefined) return false;
-    const before = tabled[previous.end - 1] ?? '';
-    const after = tabled[block.start] ?? '';
+    const before = reindented[previous.end - 1] ?? '';
+    const after = reindented[block.start] ?? '';
     return quotePrefix(before).depth > 0 && quotePrefix(after).depth > 0;
   };
 
@@ -358,7 +359,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
         parts.push('');
         partLines.push(-1);
       }
-      parts.push(tabled[j] ?? texts[j] ?? '');
+      parts.push(reindented[j] ?? texts[j] ?? '');
       partLines.push(j);
     }
   }
@@ -437,7 +438,28 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   // passed to the guard explicitly so the exception is readable where the
   // guarantee is checked.
   const edged = options.codeBlock.trimBlankLines ? trimFenceBlanks(spaced) : spaced;
-  const candidate = trimTrailingWhitespace(edged, ignoreRanges(edged, options.ignore));
+  // TBL-01 pads table cells, and it runs here because it is the one pass that
+  // measures display width: the inline spacing rules have already run, so a cell
+  // is measured as the text it finally is. It rewrites lines and adds none, so
+  // every pass that indexes by line has finished with the document.
+  const tableLines = splitSourceLines(edged);
+  const tableProtected = new Array<boolean>(tableLines.length).fill(false);
+  for (const range of atomicRanges(tableLines, scanRegions(edged))) {
+    for (let i = range.start; i < range.end; i++) tableProtected[i] = true;
+  }
+  // TBL-01 runs last of the content rules, so the mask the earlier passes carry
+  // is not in front of it: protected regions and ignored ranges are re-derived
+  // here, for the text it is actually holding.
+  const tableIgnored = ignoreLines(edged, options.ignore);
+  const tabledLines = normalizeTables(
+    tableLines.map((line) => line.text),
+    options.table,
+    (index) => tableProtected[index] === true || tableIgnored[index] === true,
+  );
+  // splitSourceLines keeps the empty line a trailing newline produces, so joining
+  // is enough: adding one back would double it.
+  const tabled = tabledLines.join('\n');
+  const candidate = trimTrailingWhitespace(tabled, ignoreRanges(tabled, options.ignore));
 
   // GRT-01: never hand back a document that parses differently. If the guard
   // trips we return the input untouched and say why (GRT-04).

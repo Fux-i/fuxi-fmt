@@ -45,9 +45,13 @@ describe('TBL-01 padding and alignment', () => {
     const src = '| a | b | c |\n| :--- | ---: | :-: |\n| 1 | 2 | 3 |\n';
     assert.equal(out(src), '| a   |   b |  c  |\n| :-- | --: | :-: |\n| 1   |   2 |  3  |\n');
   });
-  test('leaves the author layout alone by default', () => {
+  test('pads by default, because normalize is the default', () => {
     const src = '| a | bbbb |\n| --- | --- |\n| 111 | 2 |\n';
-    assert.equal(out(src, {}), src);
+    assert.equal(out(src, {}), '| a   | bbbb |\n| --- | ---- |\n| 111 | 2    |\n');
+  });
+  test('preserve still leaves the author layout alone', () => {
+    const src = '| a | bbbb |\n| --- | --- |\n| 111 | 2 |\n';
+    assert.equal(out(src, { table: { mode: 'preserve' } }), src);
   });
   test('pads a table inside a block quote, marker chain included', () => {
     const src = '> | a | b |\n> | --- | --- |\n> | 1 | 2 |\n';
@@ -91,6 +95,40 @@ describe('TBL-01 what padding refuses to touch', () => {
   });
 });
 
+describe('TBL-01 the header row decides the content column', () => {
+  test('a delimiter row written with extra indentation joins its table', () => {
+    const src = '| A   | b     |\n  | --- | ----- |\n| 1   | 2 333 |\n';
+    assert.equal(out(src), '| A   | b     |\n| --- | ----- |\n| 1   | 2 333 |\n');
+  });
+  test('an indented body row is dedented to the header', () => {
+    assert.equal(
+      out('| a | b |\n| --- | --- |\n  | 1 | 2 |\n'),
+      '| a   | b   |\n| --- | --- |\n| 1   | 2   |\n',
+    );
+  });
+  test('an indented header moves the whole table to its column', () => {
+    assert.equal(
+      out('  | a | b |\n| --- | --- |\n| 1 | 2 |\n'),
+      '  | a   | b   |\n  | --- | --- |\n  | 1   | 2   |\n',
+    );
+  });
+  test('the quote chain is kept and only the whitespace after it is rewritten', () => {
+    assert.equal(
+      out('> | a | b |\n>   | --- | --- |\n> | 1 | 2 |\n'),
+      '> | a   | b   |\n> | --- | --- |\n> | 1   | 2   |\n',
+    );
+  });
+  test('a nested quote table aligns inside its own chain', () => {
+    assert.equal(
+      out('> > | a | b |\n> > | --- | --- |\n> >   | 1 | 2 |\n'),
+      '> > | a   | b   |\n> > | --- | --- |\n> > | 1   | 2   |\n',
+    );
+  });
+  test('settles in one pass from an indented delimiter row', () => {
+    const once = out('| A   | b     |\n  | --- | ----- |\n| 1   | 2 333 |\n');
+    assert.equal(out(once), once);
+  });
+});
 describe('TBL-01 maxWidth skips a line rather than the table', () => {
   const table = '| a very long cell indeed | b |\n| --- | --- |\n| 1 | 2 |\n| x | y |\n';
   test('a row past the cap keeps its bytes and the others pad narrow', () => {

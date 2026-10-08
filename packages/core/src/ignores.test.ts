@@ -36,4 +36,13 @@ describe('CFG-03 the ignore-start and ignore-end directives', () => {
   test('a document with no directives is unaffected', () => {
     assert.equal(format('#标题\n').output, '# 标题\n');
   });
+
+  test('a table inside a marked range keeps its layout', () => {
+    // TBL-01 runs last of the content rules, so the line mask the earlier passes
+    // share is not in front of it: it has to be told about ignored ranges again.
+    const source =
+      '<!-- fuxi-fmt-ignore-start -->\n| a | bbbb |\n| --- | --- |\n| 111 | 2 |\n<!-- fuxi-fmt-ignore-end -->\n';
+    const output = format(source).output;
+    assert.ok(output.includes('| a | bbbb |\n| --- | --- |\n| 111 | 2 |\n'), output);
+  });
 });

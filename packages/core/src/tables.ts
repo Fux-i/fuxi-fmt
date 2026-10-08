@@ -27,7 +27,7 @@
  * Spec references: TBL-01, SAFE-07, NG-02.
  */
 
-import { contentStartOf } from './blocks.ts';
+import { contentStartOf, quotePrefix } from './blocks.ts';
 import type { TableOptions } from './options.ts';
 
 /** Cell contents that differ from the header's are DET-10's business, not this rule's. */
@@ -196,12 +196,36 @@ function renderDelimiter(align: Align, width: number): string {
  * that reads the classification. GFM reads both forms the same way; this formatter
  * has one classifier, so the author's form is kept.
  */
+/**
+ * The prefix a row is rendered with.
+ *
+ * A table only lines up if every row starts its content at the same column, and
+ * the header row is the anchor: it is the table's first line and it may carry a
+ * list marker or a quote chain that cannot move. So a row whose prefix is its
+ * chain plus whitespace gets that whitespace rewritten to reach the header's
+ * column. Two rows keep what they have: one whose prefix carries a block marker
+ * of its own (a table that starts a list item), and one whose chain already
+ * reaches the column - eating the separator would leave '>| a |', which BLK-09
+ * would put back on the next pass.
+ */
+function normalizePrefix(row: TableRow, contentColumn: number): string {
+  const chainEnd = quotePrefix(row.prefix).end;
+  // A prefix that carries a block marker of its own is the row's structure, not
+  // its layout: '- | a | b |' opens the list item this table lives in.
+  if (row.prefix.slice(chainEnd).trim().length > 0) return row.prefix;
+  // The chain keeps its separator: '>| a |' is not what BLK-09 leaves behind, and
+  // a chain that already reaches past the column cannot be aligned without it.
+  const minimum = chainEnd === 0 ? 0 : 1;
+  return row.prefix.slice(0, chainEnd) + ' '.repeat(Math.max(minimum, contentColumn - chainEnd));
+}
+
 function renderRow(
   row: TableRow,
   widths: readonly number[],
   aligns: readonly Align[],
   cjkWidth: 1 | 2,
   outer: boolean,
+  contentColumn: number,
 ): string {
   const last = row.cells.length - 1;
   const cells = row.cells.map((cell, index) => {
@@ -215,7 +239,7 @@ function renderRow(
     if (!outer && index === last) return cell.trim();
     return renderCell(cell, widths[index] ?? MIN_COLUMN, aligns[index] ?? 'none', cjkWidth);
   });
-  return row.prefix + (outer ? '| ' + cells.join(' | ') + ' |' : cells.join(' | '));
+  return normalizePrefix(row, contentColumn) + (outer ? '| ' + cells.join(' | ') + ' |' : cells.join(' | '));
 }
 
 /**
@@ -263,6 +287,8 @@ export function normalizeTables(
 
     const aligns = delimiters.map(alignmentOf);
     const outer = header.leadingPipe;
+    // The anchor every row is measured against: where the header's content starts.
+    const contentColumn = header.prefix.length;
     const all = [header, ...rows];
     const natural = (subset: readonly TableRow[]): number[] =>
       Array.from({ length: columns }, (_, column) =>
@@ -277,7 +303,7 @@ export function normalizeTables(
     const skipped = new Set<TableRow>();
     if (limit !== null) {
       for (const row of all) {
-        if (displayWidth(renderRow(row, widths, aligns, options.cjkWidth, outer), options.cjkWidth) > limit) {
+        if (displayWidth(renderRow(row, widths, aligns, options.cjkWidth, outer, contentColumn), options.cjkWidth) > limit) {
           skipped.add(row);
         }
       }
@@ -296,19 +322,19 @@ export function normalizeTables(
     }
 
     if (!skipped.has(header)) {
-      out[i] = renderRow(header, widths, aligns, options.cjkWidth, outer);
+      out[i] = renderRow(header, widths, aligns, options.cjkWidth, outer, contentColumn);
     }
     const delimiterRow = tableRow(texts[i + 1] ?? '');
     if (delimiterRow !== null && !skipped.has(delimiterRow)) {
       const rendered = delimiters
         .map((cell, column) => renderDelimiter(alignmentOf(cell), widths[column] ?? MIN_COLUMN))
         .join(' | ');
-      out[i + 1] = delimiterRow.prefix + (outer ? '| ' + rendered + ' |' : rendered);
+      out[i + 1] = normalizePrefix(delimiterRow, contentColumn) + (outer ? '| ' + rendered + ' |' : rendered);
     }
     for (let offset = 0; offset < rows.length; offset++) {
       const row = rows[offset];
       if (row === undefined || skipped.has(row)) continue;
-      out[i + 2 + offset] = renderRow(row, widths, aligns, options.cjkWidth, outer);
+      out[i + 2 + offset] = renderRow(row, widths, aligns, options.cjkWidth, outer, contentColumn);
     }
 
     i = end;
