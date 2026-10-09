@@ -257,14 +257,49 @@ describe('DET-12 a list left alone because it contains a protected block', () =>
 });
 
 
+describe('DET-12 and DET-11: a protected region is not a list', () => {
+  // scanListItems documents that it takes only lines a list can occupy, and
+  // feeding it a fence body manufactured a list out of code: the fake item's
+  // own line was protected, so findExcludedLists read it as "a list containing
+  // a protected block" and warned about a fence that contains no list at all.
+  // Every region kind is pinned here, not just a fence.
+  const cases: readonly (readonly [string, string])[] = [
+    ['a fenced code block', FENCE + '\n- list\n' + FENCE + '\n'],
+    ['front matter', '---\ntitle: x\n- list\n---\n'],
+    ['a math block', '$$\n- list\n$$\n'],
+    ['an indented code block', 'text\n\n    - list\n'],
+    ['an HTML block', '<div>\n- list\n</div>\n'],
+    ['an ignored range', '<!-- fuxi-fmt-ignore-start -->\n- list\n<!-- fuxi-fmt-ignore-end -->\n'],
+    ['a quoted fence', '> ' + FENCE + '\n> - list\n> ' + FENCE + '\n'],
+  ];
+  for (const [name, input] of cases) {
+    test('DET-12: a list written inside ' + name + ' is code, not a list', () => {
+      assert.deepEqual(format(input).diagnostics, []);
+    });
+  }
+
+  test('DET-11: an item inside a fence is not the parent a real item falls out of', () => {
+    // The fence body made a fake item, the real item then looked like a child
+    // that had broken out of it, and DET-11 sent the author to a nesting that
+    // never existed. Without the fence this line is not reported either.
+    const input = FENCE + '\n  - fake\n' + FENCE + '\n   - real\n';
+    assert.deepEqual(format(input).diagnostics, []);
+    assert.equal(format(input).output, FENCE + '\n  - fake\n' + FENCE + '\n\n   - real\n');
+  });
+});
+
 describe('DET-13 a delimiter row that belongs to no table', () => {
   test('a header in another container leaves the delimiter row incomplete', () => {
     const input = '> | a | b |\n| --- | --- |\n| 1 | 2 |\n';
     const result = format(input);
     assert.equal(result.output, input);
-    assert.deepEqual(result.diagnostics.map((d) => d.ruleId), ['DET-13']);
+    // Both halves are unclaimed: the delimiter row has no header in its
+    // container, and the row below it belongs to no table either.
+    assert.deepEqual(result.diagnostics.map((d) => [d.ruleId, d.line]), [
+      ['DET-13', 1],
+      ['DET-13', 2],
+    ]);
     assert.equal(result.diagnostics[0]?.severity, 'error');
-    assert.equal(result.diagnostics[0]?.line, 1);
   });
 
   test('a delimiter row with no table row above it', () => {

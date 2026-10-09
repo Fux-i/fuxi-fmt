@@ -2,8 +2,12 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { assignParents, findExcludedLists, planListIndent, scanListItems } from './list-scan.ts';
 
+/** These unit tests exercise the scan alone; nothing here is a protected region. */
+const none = (): boolean => false;
+const scan = (lines: readonly string[]) => scanListItems(lines, none);
+
 const setup = (lines: readonly string[]) => {
-  const items = scanListItems(lines);
+  const items = scan(lines);
   return { items, parents: assignParents(items) };
 };
 

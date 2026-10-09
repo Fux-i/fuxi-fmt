@@ -337,7 +337,10 @@ function incompleteTables(lines: readonly SourceLine[], mask: Uint8Array): Detec
  * invisible in the source, which is why the author is told.
  */
 function listJumps(lines: readonly SourceLine[], mask: Uint8Array): Detection[] {
-  const items = scanListItems(lines.map((line) => line.text));
+  const items = scanListItems(
+    lines.map((line) => line.text),
+    (index) => mask[lines[index]?.start ?? 0] === 1,
+  );
   const brokeOut: boolean[] = [];
   const parents = assignParents(items, brokeOut);
   const out: Detection[] = [];

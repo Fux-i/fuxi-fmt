@@ -10,6 +10,7 @@ import { normalizeMarkers, normalizeThematicBreak, normalizeUnorderedMarker } fr
 import { resolveOptions, type FormatOptions, type FormatOptionsInput } from './options.ts';
 import { assignParents, findExcludedLists, planListIndent, scanListItems } from './list-scan.ts';
 import {
+  isBlockRegionKind,
   looksLikeYamlKey,
   protectedMask,
   scanRegions,
@@ -150,6 +151,34 @@ function orderedDiagnostics(diagnostics: readonly Diagnostic[]): Diagnostic[] {
   });
 }
 
+/**
+ * The lines a protected region covers.
+ *
+ * A block region (SAFE-01 – SAFE-04, FM-01) occupies whole lines. A region that
+ * is not a block kind can still contain a line ending - an HTML comment, a code
+ * span the author wrapped across lines - and every structural pass decides by
+ * line, so those lines are protected too. SAFE-01 is a promise about bytes; this
+ * is its line-level reading, and the only one, so no two passes can disagree
+ * about which lines the formatter must not touch.
+ */
+function protectedLines(
+  text: string,
+  lines: readonly SourceLine[],
+  regions: readonly Region[],
+): boolean[] {
+  const out = new Array<boolean>(lines.length).fill(false);
+  for (const region of regions) {
+    const start = lineAt(lines, region.start);
+    const last = lineAt(lines, Math.max(region.start, region.end - 1));
+    if (start < 0 || last < 0 || last < start) continue;
+    const newline = text.indexOf('\n', region.start);
+    const spansLines = newline !== -1 && newline < region.end;
+    if (!isBlockRegionKind(region.kind) && !spansLines) continue;
+    for (let i = start; i <= last; i++) out[i] = true;
+  }
+  return out;
+}
+
 function atomicRanges(lines: readonly SourceLine[], regions: readonly Region[]): AtomicRange[] {
   const ranges: AtomicRange[] = [];
   for (const region of regions) {
@@ -207,10 +236,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     return { output: source, changed: false, diagnostics: orderedDiagnostics(detections.map(asDiagnostic)) };
   }
 
-  const protectedLine = new Array<boolean>(lines.length).fill(false);
-  for (const range of ranges) {
-    for (let i = range.start; i < range.end; i++) protectedLine[i] = true;
-  }
+  const protectedLine = protectedLines(base, lines, regions);
   // CFG-03: an ignored range is copied verbatim, like a protected region.
   const ignoredLines = ignoreLines(base, options.ignore);
   for (let i = 0; i < protectedLine.length; i++) {
@@ -230,7 +256,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   // on source offsets, which is what makes it safe here: it keeps the line count,
   // so every line-indexed range the segmenter and fence pass use stays valid.
   // Lists containing a protected block are excluded from the plan (option b).
-  const listItems = scanListItems(texts);
+  const listItems = scanListItems(texts, (index) => protectedLine[index] === true);
   const itemLines = new Set(listItems.map((item) => item.line));
   const listBrokeOut: boolean[] = [];
   const listParents = assignParents(listItems, listBrokeOut);
@@ -405,10 +431,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
    * interact - a fence body is a protected region to this pass.
    */
   const tableLines = splitSourceLines(spaced);
-  const tableProtected = new Array<boolean>(tableLines.length).fill(false);
-  for (const range of atomicRanges(tableLines, scanRegions(spaced))) {
-    for (let i = range.start; i < range.end; i++) tableProtected[i] = true;
-  }
+  const tableProtected = protectedLines(spaced, tableLines, scanRegions(spaced));
   // TBL-01 runs last of the content rules, so the mask the earlier passes carry
   // is not in front of it: protected regions and ignored ranges are re-derived
   // here, for the text it is actually holding.

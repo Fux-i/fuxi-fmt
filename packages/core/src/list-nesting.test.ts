@@ -2,7 +2,11 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { assignParents, scanListItems } from './list-scan.ts';
 
-const parentsOf = (lines: readonly string[]): number[] => assignParents(scanListItems(lines));
+/** These unit tests exercise the scan alone; nothing here is a protected region. */
+const none = (): boolean => false;
+const scan = (lines: readonly string[]) => scanListItems(lines, none);
+
+const parentsOf = (lines: readonly string[]): number[] => assignParents(scan(lines));
 
 describe('BLK-08 parent assignment', () => {
   test('a flat list has no parents', () => {
@@ -22,7 +26,7 @@ describe('BLK-08 parent assignment', () => {
   });
 
   test('the case that killed the stack version has no parent at all', () => {
-    const items = scanListItems(['  - nested']);
+    const items = scan(['  - nested']);
     assert.deepEqual(assignParents(items), [-1]);
     assert.equal(items[0]?.indent, 2);
   });
@@ -31,7 +35,7 @@ describe('BLK-08 parent assignment', () => {
     const lines = ['  - a', '    - b', '  - c'];
     assert.deepEqual(parentsOf(lines), [-1, 0, -1]);
     assert.deepEqual(
-      scanListItems(lines).map((item) => item.indent),
+      scan(lines).map((item) => item.indent),
       [2, 4, 2],
     );
   });

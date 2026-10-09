@@ -95,8 +95,9 @@ function assemble(
   // BLK-03 reads list identity at this level: an item quoted *here* is not an item
   // here at all, it is a quote block, and its own level decides about its items.
   const itemAt = new Map<number, ListItem>();
-  for (const item of scanListItems(texts)) {
-    if (item.prefix === '' && !isProtected(item.line)) itemAt.set(item.line, item);
+  for (const item of scanListItems(texts, isProtected)) {
+    // A quoted item is a quote block at this level, not an item (BLK-14).
+    if (item.prefix === '') itemAt.set(item.line, item);
   }
   const markOf = (block: Block): string | null => {
     for (let j = block.start; j < block.end; j++) {

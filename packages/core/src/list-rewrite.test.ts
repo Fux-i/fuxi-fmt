@@ -2,8 +2,12 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { assignParents, planListIndent, scanListItems } from './list-scan.ts';
 
+/** These unit tests exercise the scan alone; nothing here is a protected region. */
+const none = (): boolean => false;
+const scan = (lines: readonly string[]) => scanListItems(lines, none);
+
 const apply = (lines: readonly string[]): string[] => {
-  const items = scanListItems(lines);
+  const items = scan(lines);
   const out = [...lines];
   for (const change of planListIndent(lines, items, assignParents(items))) out[change.line] = change.text;
   return out;
@@ -57,7 +61,7 @@ describe('BLK-08 marker rewriting', () => {
 
   test('planning changes nothing on its own', () => {
     const lines = ['- a', '    - b'];
-    const items = scanListItems(lines);
+    const items = scan(lines);
     planListIndent(lines, items, assignParents(items));
     assert.deepEqual(lines, ['- a', '    - b']);
   });

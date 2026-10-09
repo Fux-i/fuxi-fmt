@@ -6,9 +6,11 @@
  * indented. Nothing here infers depth: it records the marker column and the
  * content column, both of which are facts about the line.
  *
- * Callers must pass only lines that a list can occupy - not fence bodies, front
- * matter or other protected regions. That filtering belongs to the caller
- * because it depends on the document scan, not on the line.
+ * The caller must say which lines a list can occupy, and this scan takes that as
+ * a parameter rather than trusting a comment: a fence body fed in here becomes a
+ * list, and then the fence is reported as a list containing a protected block.
+ * Two callers shipped that bug. A required parameter is the difference between a
+ * contract and a hope.
  *
  * Known limits, deliberately: a bare marker with no content and no trailing
  * space is not recognised, and a spaced thematic break ('- - -') is
@@ -39,9 +41,13 @@ export interface ListItem {
 
 const ITEM = /^(\s*)([-*+]|\d{1,9}[.)])(\s+)(.*)$/;
 
-export function scanListItems(lines: readonly string[]): ListItem[] {
+export function scanListItems(
+  lines: readonly string[],
+  isProtectedLine: (index: number) => boolean,
+): ListItem[] {
   const items: ListItem[] = [];
   for (let i = 0; i < lines.length; i++) {
+    if (isProtectedLine(i)) continue;
     const text = lines[i] ?? '';
     // A quoted list is a list: the marker chain is a prefix, so the item is read
     // from inside it and its indentation is measured from there. Without this a
