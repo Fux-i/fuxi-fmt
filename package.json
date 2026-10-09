@@ -22,10 +22,12 @@
     "l10n": "node packages/vscode/generate-l10n.mjs"
   },
   "devDependencies": {
+    "@types/markdown-it": "^14.2.0",
     "@types/node": "^24.0.0",
     "@types/vscode": "^1.138.0",
     "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.28.2",
+    "markdown-it": "^14.3.2",
     "typescript": "^5.9.0"
   }
 }
