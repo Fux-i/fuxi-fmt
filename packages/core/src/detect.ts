@@ -19,7 +19,7 @@ import { contentStartOf } from './blocks.ts';
 const BACKSLASH = 92;
 import type { CharRange } from './ignores.ts';
 import { assignParents, scanListItems } from './list-scan.ts';
-import { isDelimiterRow as isTableDelimiterRow, scanTables } from './tables.ts';
+import { isDelimiterRow as isTableDelimiterRow, scanTables, tableRow } from './tables.ts';
 import type { MessageArgs, MessageId } from './messages.ts';
 import { isEscaped, type Region, type SourceLine } from './scan.ts';
 
@@ -292,17 +292,27 @@ function raggedTables(lines: readonly SourceLine[], mask: Uint8Array): Detection
   return out;
 }
 
+/** A line the classifier reads as a table row: a leading pipe, then some cells. */
+const TABLE_ROW_START = /^[ \t]*\|/;
+
 /**
- * DET-13: a delimiter row that belongs to no table.
+ * DET-13: a table line that belongs to no table.
  *
  * A table is a header row and a delimiter row in the same container, and
  * `scanTables` is the definition of that - the aligner, segmentation and this
  * rule all read the same one, so they cannot disagree about what a table is.
- * This rule is its complement: a delimiter row the scan did not claim is a table
- * that was never completed. That is what a table straddling two containers looks
- * like from inside either of them - at least one side is missing its half - and
- * it is also what a stray delimiter row is. Nothing can align it and nothing can
- * join it, so the document is refused rather than guessed at.
+ * This rule is its complement, and a table can be left half-written in two
+ * directions:
+ *
+ * - a **delimiter row** the scan did not claim: the author declared a table and
+ *   wrote no header for it. That is what a table straddling two containers looks
+ *   like from inside either of them - at least one side is missing its half.
+ * - a **row** the scan did not claim: the line reads as a table row, and no
+ *   table holds it - the shape of a table that a blank line cut in two, or of a
+ *   header whose delimiter row was never written.
+ *
+ * Neither can be aligned and neither can be joined, so the document is refused
+ * rather than guessed at. A bare pipe has no cells and stays prose.
  */
 function incompleteTables(lines: readonly SourceLine[], mask: Uint8Array): Detection[] {
   const texts = lines.map((line) => line.text);
@@ -317,10 +327,21 @@ function incompleteTables(lines: readonly SourceLine[], mask: Uint8Array): Detec
   const out: Detection[] = [];
   for (let i = 0; i < texts.length; i++) {
     if (claimed.has(i) || isProtected(i)) continue;
-    if (!isTableDelimiterRow(texts[i] ?? '')) continue;
+    const text = texts[i] ?? '';
+    if (isTableDelimiterRow(text)) {
+      out.push({
+        ruleId: 'DET-13',
+        messageId: 'det.tableIncomplete',
+        args: [],
+        line: i,
+        severity: 'error',
+      });
+      continue;
+    }
+    if (!TABLE_ROW_START.test(text) || tableRow(text) === null) continue;
     out.push({
       ruleId: 'DET-13',
-      messageId: 'det.tableIncomplete',
+      messageId: 'det.tableRowOrphan',
       args: [],
       line: i,
       severity: 'error',

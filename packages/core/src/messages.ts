@@ -95,6 +95,10 @@ export const MESSAGES = {
     en: 'delimiter row with no header row above it in the same container: a table needs both, so this document was not formatted',
     zh: '分隔行在同一个容器里没有上方的表头行：一张表格两样都要有，因此这篇文档没有被格式化',
   },
+  'det.tableRowOrphan': {
+    en: 'table row that belongs to no table: a table needs a header row and a delimiter row, so this document was not formatted',
+    zh: '这一行看起来是表格行，却不属于任何表格：一张表格要有表头行与分隔行，因此这篇文档没有被格式化',
+  },
   'det.listExcluded': {
     en: 'this list is not reindented: it contains a protected block, and moving code the author placed at a fixed indentation is what SAFE-02 exists to prevent',
     zh: '这个列表不做缩进调整：其中含有受保护的块，而移动作者固定在某个缩进位置的代码正是 SAFE-02 要防止的',

@@ -147,11 +147,17 @@ describe('TBL-01 a header and its delimiter row are joined', () => {
   test('two blank lines are closed too', () => {
     assert.equal(out('| a | b |\n\n\n| --- | --- |\n'), '| a   | b   |\n| --- | --- |\n');
   });
-  test('a body row after a blank line is not joined', () => {
-    // Only the header-to-delimiter gap is closed. A row after a blank line has
-    // nothing above it announcing a table, so it stays the paragraph it is.
+  test('a body row after a blank line is not joined, and DET-13 refuses it', () => {
+    // Only the header-to-delimiter gap is closed. A row after a blank line is
+    // not joined, and because it still reads as a table row that belongs to no
+    // table, DET-13 refuses the document rather than half-formatting it.
     const src = '| a | b |\n| --- | --- |\n| 1 | 2 |\n\n| 3 | 4 |\n';
-    assert.equal(out(src), '| a   | b   |\n| --- | --- |\n| 1   | 2   |\n\n| 3 | 4 |\n');
+    const result = format(src, NORMALIZE);
+    assert.equal(result.output, src);
+    assert.deepEqual(
+      result.diagnostics.map(({ ruleId, severity, line }) => ({ ruleId, severity, line })),
+      [{ ruleId: 'DET-13', severity: 'error', line: 4 }],
+    );
   });
   test('preserve sees two paragraphs and leaves them alone', () => {
     // The join is part of normalize, not a structural rule: under preserve the

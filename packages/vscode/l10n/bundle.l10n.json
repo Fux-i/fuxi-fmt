@@ -6,6 +6,7 @@
   "non-blank line count changed: {0} -> {1}": "non-blank line count changed: {0} -> {1}",
   "protected region count changed: {0} -> {1}": "protected region count changed: {0} -> {1}",
   "table row has {0} cells where the header has {1}: the row does not render in the columns above it": "table row has {0} cells where the header has {1}: the row does not render in the columns above it",
+  "table row that belongs to no table: a table needs a header row and a delimiter row, so this document was not formatted": "table row that belongs to no table: a table needs a header row and a delimiter row, so this document was not formatted",
   "the delimiter row has {0} cells where the header has {1}: the columns cannot be aligned": "the delimiter row has {0} cells where the header has {1}: the columns cannot be aligned",
   "this list is not reindented: it contains a protected block, and moving code the author placed at a fixed indentation is what SAFE-02 exists to prevent": "this list is not reindented: it contains a protected block, and moving code the author placed at a fixed indentation is what SAFE-02 exists to prevent",
   "this row is {0} columns wide on its own, past table.maxWidth ({1}), so it did not set the column widths the other rows were padded to; raise table.maxWidth to include it": "this row is {0} columns wide on its own, past table.maxWidth ({1}), so it did not set the column widths the other rows were padded to; raise table.maxWidth to include it",

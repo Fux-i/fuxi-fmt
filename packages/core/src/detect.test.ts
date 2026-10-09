@@ -310,14 +310,18 @@ describe('DET-13 a delimiter row that belongs to no table', () => {
 
   test('a delimiter row that opens a block of its own', () => {
     const result = format('| a | b |\n- | --- | --- |\n');
-    assert.deepEqual(result.diagnostics.map((d) => d.ruleId), ['DET-13']);
-    assert.equal(result.diagnostics[0]?.line, 1);
+    assert.deepEqual(result.diagnostics.map((d) => [d.ruleId, d.line]), [
+      ['DET-13', 0],
+      ['DET-13', 1],
+    ]);
   });
 
   test('a delimiter row at the top of the document', () => {
     const result = format('| --- | --- |\n| 1 | 2 |\n');
-    assert.deepEqual(result.diagnostics.map((d) => d.ruleId), ['DET-13']);
-    assert.equal(result.diagnostics[0]?.line, 0);
+    assert.deepEqual(result.diagnostics.map((d) => [d.ruleId, d.line]), [
+      ['DET-13', 0],
+      ['DET-13', 1],
+    ]);
   });
 
   test('a header a blank line above it is complete, because the join closes it', () => {
@@ -337,6 +341,42 @@ describe('DET-13 a delimiter row that belongs to no table', () => {
     const input =
       '<!-- fuxi-fmt-ignore-start -->\n| --- | --- |\n<!-- fuxi-fmt-ignore-end -->\n';
     assert.deepEqual(format(input).diagnostics, []);
+  });
+
+  test('a body row separated from its table by a blank line is an incomplete table', () => {
+    // The mirror of the delimiter case. A line that reads as a table row and
+    // belongs to no table is a table that was never completed: the row cannot be
+    // aligned with the table above it and cannot be joined to it either, so the
+    // document is refused rather than silently rendered as prose.
+    const input = '| A   | b   |\n| --- | --- |\n\n| 1   | 2 333 |\n';
+    const result = format(input);
+    assert.equal(result.output, input);
+    assert.deepEqual(result.diagnostics.map((d) => d.ruleId), ['DET-13']);
+    assert.equal(result.diagnostics[0]?.severity, 'error');
+    assert.equal(result.diagnostics[0]?.messageId, 'det.tableRowOrphan');
+    assert.equal(result.diagnostics[0]?.line, 3);
+  });
+
+  test('a table-shaped line with no table above it is an incomplete table', () => {
+    const result = format('正文\n| a | b |\n');
+    assert.deepEqual(result.diagnostics.map((d) => d.ruleId), ['DET-13']);
+    assert.equal(result.diagnostics[0]?.messageId, 'det.tableRowOrphan');
+    assert.equal(result.diagnostics[0]?.line, 1);
+  });
+
+  test('a row claimed by a table is not an incomplete table', () => {
+    assert.deepEqual(format('| a | b |\n| --- | --- |\n| 1 | 2 |\n').diagnostics, []);
+  });
+
+  test('a pipe with no cells is prose, not a table row', () => {
+    // '|' and 'a | b' both fail the classifier's leading-pipe test, and a bare
+    // pipe has no cells at all; neither is a row that a table failed to claim.
+    assert.deepEqual(format('正文\n|\n').diagnostics, []);
+    assert.deepEqual(format('a | b\n').diagnostics, []);
+  });
+
+  test('an orphan row inside a fence is code, not a row', () => {
+    assert.deepEqual(format(FENCE + '\n| 1 | 2 |\n' + FENCE + '\n').diagnostics, []);
   });
 });
 

@@ -6,6 +6,7 @@
   "non-blank line count changed: {0} -> {1}": "非空行数发生了变化：{0} -> {1}",
   "protected region count changed: {0} -> {1}": "受保护区域的数量发生了变化：{0} -> {1}",
   "table row has {0} cells where the header has {1}: the row does not render in the columns above it": "表格这一行有 {0} 个单元格，而表头有 {1} 个：这一行不会按上面的列渲染",
+  "table row that belongs to no table: a table needs a header row and a delimiter row, so this document was not formatted": "这一行看起来是表格行，却不属于任何表格：一张表格要有表头行与分隔行，因此这篇文档没有被格式化",
   "the delimiter row has {0} cells where the header has {1}: the columns cannot be aligned": "表格的分隔行有 {0} 个单元格，而表头有 {1} 个：这些列无法对齐",
   "this list is not reindented: it contains a protected block, and moving code the author placed at a fixed indentation is what SAFE-02 exists to prevent": "这个列表不做缩进调整：其中含有受保护的块，而移动作者固定在某个缩进位置的代码正是 SAFE-02 要防止的",
   "this row is {0} columns wide on its own, past table.maxWidth ({1}), so it did not set the column widths the other rows were padded to; raise table.maxWidth to include it": "这一行自身宽 {0} 列，超过 table.maxWidth（{1}），因此没有参与其余行补齐所用的列宽；调大 table.maxWidth 可以让它参与",
