@@ -177,7 +177,7 @@ describe('TBL-01 the cap is on by default', () => {
     // columns is where a terminal line ends; a cap nobody sets is a cap nobody has.
     assert.deepEqual(
       format(wide).diagnostics.map(({ severity, messageId }) => ({ severity, messageId })),
-      [{ severity: 'info', messageId: 'tbl.rowOverCap' }],
+      [{ severity: 'info', messageId: 'tbl.rowsOverCap' }],
     );
   });
 
@@ -198,16 +198,27 @@ describe('TBL-01 maxWidth leaves a row out of the widths rather than out of the 
     );
   });
 
-  test('the row that was left out is reported, as info, on the line it was written', () => {
+  test('the rows past the cap are reported once, at the header, as info', () => {
+    // One notice for the table, not one per row: the editor draws a squiggle per
+    // diagnostic, and a wide table used to produce a column of them.
     const result = format(table, CAPPED);
     assert.deepEqual(
-      result.diagnostics.map(({ ruleId, severity, line, messageId }) => ({
+      result.diagnostics.map(({ ruleId, severity, line, messageId, args }) => ({
         ruleId,
         severity,
         line,
         messageId,
+        args,
       })),
-      [{ ruleId: 'TBL-01', severity: 'info', line: 0, messageId: 'tbl.rowOverCap' }],
+      [
+        {
+          ruleId: 'TBL-01',
+          severity: 'info',
+          line: 0,
+          messageId: 'tbl.rowsOverCap',
+          args: [1, 3, 30],
+        },
+      ],
     );
   });
 
@@ -217,16 +228,45 @@ describe('TBL-01 maxWidth leaves a row out of the widths rather than out of the 
     assert.match(uncapped, /\| 1 +\| 2 +\|\n/);
   });
 
-  test('the cap stands down when most rows are past it', () => {
-    // A table that is mostly wide is not "a few long rows in a narrow table", so
-    // the cap has nothing to narrow: the rows are padded as if it were not set.
-    const wide =
-      '| a very long row here indeed | b |\n| --- | --- |\n| another very long row | c |\n| a third long row here | d |\n| x | y |\n';
-    const capped = format(wide, CAPPED);
-    assert.equal(capped.output, out(wide));
+  test('most rows past the cap do not stop the cap: the rows that fit set the columns', () => {
+    // The old rule let the cap stand down whenever the rows past it were at least
+    // half the table, which padded every short row out to the longest one. A row
+    // past the cap is left out of the widths, full stop; it is not a reason to
+    // stop normalising the table.
+    const LONG = 'x'.repeat(90);
+    const src =
+      '| short | v |\n| --- | --- |\n| ' + LONG + ' | a |\n| ' + LONG + ' | b |\n| ' + LONG + ' | c |\n| d | e |\n';
+    const result = format(src, CAPPED);
+    assert.equal(
+      result.output,
+      '| short | v   |\n| ----- | --- |\n| ' + LONG + ' | a   |\n| ' + LONG + ' | b   |\n| ' + LONG + ' | c   |\n| d     | e   |\n',
+    );
     assert.deepEqual(
-      capped.diagnostics.map(({ severity, line, messageId }) => ({ severity, line, messageId })),
-      [{ severity: 'info', line: 0, messageId: 'tbl.capNotApplicable' }],
+      result.diagnostics.map(({ severity, line, messageId, args }) => ({
+        severity,
+        line,
+        messageId,
+        args,
+      })),
+      [{ severity: 'info', line: 0, messageId: 'tbl.rowsOverCap', args: [3, 5, 30] }],
+    );
+  });
+
+  test('when no row is within the cap there is no width to normalise with, and the table is left alone', () => {
+    // Not a branch about "every row is over": it is what an empty reference set
+    // means. Nothing informs the columns, so nothing is rewritten.
+    const LONG = 'x'.repeat(90);
+    const src = '| ' + LONG + ' | v |\n| --- | --- |\n| ' + LONG + ' | a |\n| ' + LONG + ' | b |\n';
+    const result = format(src, CAPPED);
+    assert.equal(result.output, src);
+    assert.deepEqual(
+      result.diagnostics.map(({ severity, line, messageId, args }) => ({
+        severity,
+        line,
+        messageId,
+        args,
+      })),
+      [{ severity: 'info', line: 0, messageId: 'tbl.rowsOverCap', args: [3, 3, 30] }],
     );
   });
 

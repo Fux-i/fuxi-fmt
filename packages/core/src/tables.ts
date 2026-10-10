@@ -440,25 +440,22 @@ export function normalizeTables(
       }));
       const over = entries.filter((entry) => entry.own > limit);
       const kept = entries.filter((entry) => entry.own <= limit);
-      if (over.length > 0 && kept.length > over.length) {
-        // The rows that fit decide the columns, and every row is padded to them: a
-        // row past the cap overflows its column rather than being handed back
-        // untouched, because the other rules have already had their say about it
-        // and half-formatted is worse than either.
-        widths = natural(kept.map((entry) => entry.row));
-        for (const entry of over) {
-          notices.push({ line: entry.line, messageId: 'tbl.rowOverCap', args: [entry.own, limit] });
-        }
-      } else if (over.length > 0) {
-        // Most rows are past the cap, so this is a wide table rather than a few
-        // long rows in a narrow one. Narrowing it to the few rows that fit would
-        // leave the rest overflowing at every column, so the cap stands down and
-        // the table is padded as written.
+      if (over.length > 0) {
+        // One report for the table, at its header. A row past the cap is a fact
+        // about the table rather than a fault in the row, and a notice per row is
+        // a column of squiggles in the editor for one wide table.
         notices.push({
           line: table.header,
-          messageId: 'tbl.capNotApplicable',
+          messageId: 'tbl.rowsOverCap',
           args: [over.length, entries.length, limit],
         });
+        // The rows within the cap decide the columns, always. There is no
+        // "mostly past the cap" case: a row past the cap is left out of the
+        // widths and overflows its column, and it never widens the table for the
+        // rows that fit. If no row is within the cap then nothing informs the
+        // columns, so this table keeps the layout the author wrote.
+        if (kept.length === 0) continue;
+        widths = natural(kept.map((entry) => entry.row));
       }
     }
 

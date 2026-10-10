@@ -143,13 +143,9 @@ export const MESSAGES = {
     en: '{0} is not a fuxi-fmt option; it was ignored',
     zh: '{0} 不是 fuxi-fmt 的配置项；已忽略',
   },
-  'tbl.rowOverCap': {
-    en: 'this row is {0} columns wide on its own, past table.maxWidth ({1}), so it did not set the column widths the other rows were padded to; raise table.maxWidth to include it',
-    zh: '这一行自身宽 {0} 列，超过 table.maxWidth（{1}），因此没有参与其余行补齐所用的列宽；调大 table.maxWidth 可以让它参与',
-  },
-  'tbl.capNotApplicable': {
-    en: 'this table has {0} of {1} rows wider than table.maxWidth ({2}), so the cap cannot narrow it and every row was padded as written',
-    zh: '这张表 {1} 行里有 {0} 行宽于 table.maxWidth（{2}），上限无法收窄它，整张表都按原样补齐',
+  'tbl.rowsOverCap': {
+    en: 'this table has {0} of {1} rows wider than table.maxWidth ({2}): those rows are left out of the column widths',
+    zh: '这张表 {1} 行里有 {0} 行超过 table.maxWidth（{2}）：这些行不参与列宽计算',
   },
 } satisfies Readonly<Record<string, MessageEntry>>;
 
