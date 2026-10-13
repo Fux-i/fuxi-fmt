@@ -246,6 +246,39 @@ export function rewriteInline(
  * and the guard would refuse it. Moving code the author placed at a fixed
  * indentation is what SAFE-02 exists to prevent.
  */
+/**
+ * The per-line normalisation, before anything is segmented.
+ *
+ * BLK-11 expands the hard tabs, BLK-04, BLK-05, BLK-07 and BLK-09 write the
+ * markers, BLK-06 renumbers the ordered ones and BLK-10 sets the fence character
+ * and length. Every one of them keeps the line count, which is what lets them run
+ * on the line array at this point: the ranges the fence pass and the segmenter
+ * hold are line indices, and they stay valid.
+ *
+ * A protected line is copied byte for byte (SAFE-01), which is why the predicate
+ * is passed in rather than re-derived here.
+ */
+export function normalizeLines(
+  lines: readonly SourceLine[],
+  protectedLine: readonly boolean[],
+  options: FormatOptions,
+  ranges: readonly AtomicRange[],
+): readonly string[] {
+  const tabWidth = options.list.tabWidth;
+  const marked = lines.map((line, index) => {
+    if (protectedLine[index] === true) return line.text;
+    const expanded = tabWidth === 0 ? line.text : line.text.split('\t').join(' '.repeat(tabWidth));
+    return normalizeUnorderedMarker(normalizeMarkers(expanded), options.list.unorderedMarker);
+  });
+  // BLK-06 then BLK-10: the ordered markers are what the fence pass measures the
+  // text around, so the fences are written last.
+  return normalizeFences(
+    renumberOrderedLists(marked, protectedLine, options.list),
+    ranges,
+    options.codeBlock,
+  );
+}
+
 export function planLists(
   texts: readonly string[],
   protectedLine: readonly boolean[],
@@ -366,15 +399,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     if (ignoredLines[i] === true) protectedLine[i] = true;
   }
 
-  const tabWidth = options.list.tabWidth;
-  const normalizedTexts = lines.map((line, index) => {
-    if (protectedLine[index] === true) return line.text;
-    const expanded = tabWidth === 0 ? line.text : line.text.split('\t').join(' '.repeat(tabWidth));
-    return normalizeUnorderedMarker(normalizeMarkers(expanded), options.list.unorderedMarker);
-  });
-
-  const renumbered = renumberOrderedLists(normalizedTexts, protectedLine, options.list);
-  const texts = normalizeFences(renumbered, ranges, options.codeBlock);
+  const texts = normalizeLines(lines, protectedLine, options, ranges);
   const listPlan = planLists(texts, protectedLine, options.list);
   detections.push(...listPlan.diagnostics);
   const reindented = listPlan.reindented;
