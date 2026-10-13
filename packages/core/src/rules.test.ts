@@ -12,7 +12,8 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
-import { RULE_IDS } from './rules.ts';
+import { RULE_IDS, RULE_SEVERITY, severityOf } from './rules.ts';
+import { format } from './format.ts';
 
 const DIR = new URL('./', import.meta.url);
 
@@ -20,6 +21,45 @@ const DIR = new URL('./', import.meta.url);
 const sources = readdirSync(DIR)
   .filter((name) => name.endsWith('.ts') && !name.endsWith('.test.ts'))
   .sort();
+
+describe('CFG-02 the severity of a rule', () => {
+  test('every rule declares one of the three levels, and the table is the only source', () => {
+    const levels: readonly string[] = ['error', 'warning', 'info'];
+    for (const id of RULE_IDS) {
+      const declared = severityOf(id);
+      assert.ok(levels.includes(declared), id + ' declares ' + String(declared));
+      assert.equal(RULE_SEVERITY[id], declared);
+    }
+  });
+
+  test('a refusal is an error, a look-at-this is a warning, and a note is a note', () => {
+    assert.equal(severityOf('DET-01'), 'error');
+    assert.equal(severityOf('DET-13'), 'error');
+    assert.equal(severityOf('GRT-01'), 'error');
+    assert.equal(severityOf('SAFE-01'), 'error');
+    assert.equal(severityOf('DET-06'), 'warning');
+    assert.equal(severityOf('TYPO-11'), 'warning');
+    assert.equal(severityOf('TBL-01'), 'info');
+  });
+
+  test('the severity a document reports is the severity the table declares', () => {
+    const sources = [
+      '```\ncode\n',
+      '| a | b |\n| --- |\n| 1 | 2 | 3 |\n',
+      '#标题\n\n中文abc\n',
+      '中文"没配对的引号\n',
+    ];
+    for (const source of sources) {
+      for (const diagnostic of format(source).diagnostics) {
+        assert.equal(
+          diagnostic.severity,
+          severityOf(diagnostic.ruleId),
+          diagnostic.ruleId + ' in ' + JSON.stringify(source),
+        );
+      }
+    }
+  });
+});
 
 describe('CFG-02 the rule inventory', () => {
   test('every id has the shape of a rule id, and none repeats', () => {

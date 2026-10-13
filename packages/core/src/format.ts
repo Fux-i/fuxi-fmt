@@ -2,7 +2,7 @@ import { classifyContent, quotePrefix, segment, type AtomicRange, type BlockKind
 import { detect, type Detection } from './detect.ts';
 import { checkSemantics } from './guard.ts';
 import { english, type MessageArgs, type MessageId } from './messages.ts';
-import type { RuleId } from './rules.ts';
+import { severityOf, type RuleId, type Severity } from './rules.ts';
 import { hasIgnoreFile, ignoreLines, ignoreRanges, type CharRange } from './ignores.ts';
 import { applyEndOfLine, normalizeInput, trimTrailingWhitespace, type Eol } from './hygiene.ts';
 import { renumberOrderedLists } from './lists.ts';
@@ -58,7 +58,7 @@ export interface Diagnostic {
    * what the formatter did rather than anything wrong with the document, and no
    * caller fails a build on it either.
    */
-  readonly severity: 'error' | 'warning' | 'info';
+  readonly severity: Severity;
 }
 
 export interface FormatResult {
@@ -86,13 +86,21 @@ function diagnostic(
   messageId: MessageId,
   args: MessageArgs,
   line: number | undefined,
-  severity: 'error' | 'warning' | 'info',
 ): Diagnostic {
-  return { ruleId, messageId, args, message: english(messageId, args), line, severity };
+  // CFG-02: the level is a property of the rule, so it comes from the table
+  // rather than from the caller.
+  return {
+    ruleId,
+    messageId,
+    args,
+    message: english(messageId, args),
+    line,
+    severity: severityOf(ruleId),
+  };
 }
 
 const asDiagnostic = (detection: Detection): Diagnostic =>
-  diagnostic(detection.ruleId, detection.messageId, detection.args, detection.line, detection.severity);
+  diagnostic(detection.ruleId, detection.messageId, detection.args, detection.line);
 
 /**
  * Errors first, then warnings, then notes; within a severity, by line.
@@ -228,7 +236,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   // of the file, so the document is refused before any rule touches a text we
   // already know we misread (GRT-04).
   const detections = detect(base, lines, regions, ignoreRanges(base, options.ignore));
-  if (detections.some((diagnostic) => diagnostic.severity === 'error')) {
+  if (detections.some((detection) => severityOf(detection.ruleId) === 'error')) {
     return { output: source, changed: false, diagnostics: orderedDiagnostics(detections.map(asDiagnostic)) };
   }
 
@@ -288,7 +296,6 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
       messageId: 'det.listExcluded',
       args: [],
       line: item.line,
-      severity: 'warning',
     });
   }
 
@@ -421,7 +428,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     (index) => tableProtected[index] === true || tableIgnored[index] === true,
   );
   const tableDiagnostics: Diagnostic[] = tabled.notices.map((notice) =>
-    diagnostic('TBL-01', notice.messageId, notice.args, provenance.lineAt(notice.line), 'info'),
+    diagnostic('TBL-01', notice.messageId, notice.args, provenance.lineAt(notice.line)),
   );
   // splitSourceLines keeps the empty line a trailing newline produces, so joining
   // is enough: adding one back would double it.
@@ -438,7 +445,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
       output: source,
       changed: false,
       diagnostics: violations.map((violation) =>
-        diagnostic(violation.ruleId, violation.messageId, violation.args, violation.line, 'error'),
+        diagnostic(violation.ruleId, violation.messageId, violation.args, violation.line),
       ),
     };
   }
@@ -448,7 +455,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   // TYPO-11: an unpaired quote is a warning, never a failure. The line keeps what
   // the author wrote, and the author is told which line to look at.
   const diagnostics: Diagnostic[] = inline.unpaired.map((offset) =>
-    diagnostic('TYPO-11', 'typo.unpairedQuote', [], provenance.offsetAt(offset), 'warning'),
+    diagnostic('TYPO-11', 'typo.unpairedQuote', [], provenance.offsetAt(offset)),
   );
   return {
     output,

@@ -31,7 +31,6 @@ export interface Detection {
   readonly args: MessageArgs;
   readonly line: number | undefined;
   /** 'info' reports what the formatter did, not a complaint about the document. */
-  readonly severity: 'error' | 'warning' | 'info';
 }
 
 /** A block region that reached end of file without its terminator. */
@@ -64,7 +63,7 @@ export function detect(
     if (region.closed !== false) continue;
     const rule = UNTERMINATED[region.kind];
     if (rule === undefined) continue;
-    detections.push({ ...rule, args: [], line: lineIndexOf(lines, region.start), severity: 'error' });
+    detections.push({ ...rule, args: [], line: lineIndexOf(lines, region.start) });
   }
   detections.push(...unterminatedComments(source, lines, mask));
   detections.push(...unmatchedDelimiters(source, lines, mask));
@@ -95,7 +94,6 @@ function unterminatedComments(
         messageId: 'det.commentUnterminated',
         args: [],
         line: lineIndexOf(lines, at),
-        severity: 'error',
       },
     ];
   }
@@ -131,7 +129,6 @@ function unmatchedDelimiters(
       messageId: 'det.backtickUnmatched',
       args: [],
       line,
-      severity: 'warning',
     });
   }
   for (const line of [...dollarLines].sort((a, b) => a - b)) {
@@ -140,7 +137,6 @@ function unmatchedDelimiters(
       messageId: 'det.dollarUnmatched',
       args: [],
       line,
-      severity: 'warning',
     });
   }
   return out;
@@ -159,7 +155,7 @@ function unclosedInline(
       const newline = source.indexOf('\n', at);
       const close = source.indexOf(closeMark, at + needle.length);
       if (close !== -1 && (newline === -1 || close < newline)) continue;
-      out.push({ ruleId, messageId, args: [], line: lineIndexOf(lines, at), severity: 'warning' });
+      out.push({ ruleId, messageId, args: [], line: lineIndexOf(lines, at) });
     }
   };
   scan('[[', ']]', 'DET-08', 'det.wikilinkUnclosed');
@@ -188,7 +184,6 @@ function raggedTables(lines: readonly SourceLine[], mask: Uint8Array): Detection
         messageId: 'det.tableHeaderRagged',
         args: [declared.length, headerCells.length],
         line: i + 1,
-        severity: 'warning',
       });
     }
 
@@ -203,7 +198,6 @@ function raggedTables(lines: readonly SourceLine[], mask: Uint8Array): Detection
         messageId: 'det.tableRowRagged',
         args: [cells.length, headerCells.length],
         line: j,
-        severity: 'warning',
       });
     }
     i += 2;
@@ -253,7 +247,6 @@ function incompleteTables(lines: readonly SourceLine[], mask: Uint8Array): Detec
         messageId: 'det.tableIncomplete',
         args: [],
         line: i,
-        severity: 'error',
       });
       continue;
     }
@@ -263,7 +256,6 @@ function incompleteTables(lines: readonly SourceLine[], mask: Uint8Array): Detec
       messageId: 'det.tableRowOrphan',
       args: [],
       line: i,
-      severity: 'error',
     });
   }
   return out;
@@ -293,7 +285,6 @@ function listJumps(lines: readonly SourceLine[], mask: Uint8Array): Detection[] 
       messageId: 'det.listItemOrphan',
       args: [],
       line: item.line,
-      severity: 'warning',
     });
   }
   return out;
