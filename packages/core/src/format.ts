@@ -18,6 +18,7 @@ import {
   protectedMask,
   scanRegions,
   splitSourceLines,
+  type SourceLine,
 } from './scan.ts';
 import { normalizeQuotes } from './quotes.ts';
 import { applyTypography } from './typography.ts';
@@ -131,6 +132,46 @@ function opensParagraph(text: string): boolean {
   const body = item === null ? afterQuote : afterQuote.slice(item[0].length);
   if (body.trim().length === 0) return false;
   return classifyContent(body) === 'paragraph';
+}
+
+/**
+ * Where every line of a rebuilt text came from.
+ *
+ * The blank-line policy inserts and removes lines, so an index into the text the
+ * later passes hold is not an index into the input. A line reported to the author
+ * has to be the line they wrote, so this carries the mapping and gives up
+ * (undefined) rather than guess.
+ *
+ * It is the only such mapping. It used to be two closures inside format() with two
+ * different give-up rules, and the one fact they shared was written down twice.
+ */
+export interface LineMap {
+  /** The input line a line of the rebuilt text came from, or undefined. */
+  lineAt(index: number): number | undefined;
+  /** The input line an offset into the rebuilt text sits on, or undefined. */
+  offsetAt(offset: number): number | undefined;
+}
+
+/**
+ * Build the map for a rebuilt text whose line `i` came from input line `from[i]`.
+ *
+ * A negative entry is a line the policy invented, and an index past the end of
+ * `from` is one the journal does not cover - which is the empty line a trailing
+ * newline produces. Both answer undefined rather than name a line that is not the
+ * author's.
+ */
+export function lineProvenance(lines: readonly SourceLine[], from: readonly number[]): LineMap {
+  const source = (index: number): number | undefined => {
+    const mapped = from[index];
+    return mapped === undefined || mapped < 0 ? undefined : mapped;
+  };
+  return {
+    lineAt: source,
+    offsetAt: (offset) => {
+      const index = lineIndexOf(lines, offset);
+      return index < 0 ? undefined : source(index);
+    },
+  };
 }
 
 export function format(source: string, input?: FormatOptionsInput): FormatResult {
@@ -311,20 +352,10 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
 
   const structural = trimmed.length === 0 ? '' : trimmed.join('\n') + '\n';
   const structuralLines = splitSourceLines(structural);
-  /**
-   * The input line an offset into the rebuilt text sits on.
-   *
-   * Everything from here on is indexed against `structural`, whose lines the
-   * blank-line policy may have inserted or removed. A line reported to the author
-   * has to be the line they wrote, so this maps through `partLines` and gives up
-   * (undefined) rather than guess when the offset lands on an invented blank.
-   */
-  const inputLineOf = (offset: number): number | undefined => {
-    const index = lineIndexOf(structuralLines, offset);
-    if (index < 0) return undefined;
-    const mapped = partLines[index];
-    return mapped === undefined || mapped < 0 ? undefined : mapped;
-  };
+  // Everything from here on is indexed against `structural`, whose lines the
+  // blank-line policy may have inserted or removed, so a line reported to the
+  // author is mapped back through `parts`.
+  const provenance = lineProvenance(structuralLines, partLines);
   // Width first, so that spacing sees ordinary digits; punctuation before
   // spacing, so that TYPO-07 can remove the gaps a conversion leaves behind.
   // The three width passes each rewrite one character for one character, so
@@ -365,22 +396,8 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     options.table,
     (index) => tableProtected[index] === true || tableIgnored[index] === true,
   );
-  /**
-   * The input line a line of `spaced` came from.
-   *
-   * `spaced` is `structural` after character-level rewrites only, and NG-01 forbids
-   * joining or splitting a line, so the two line arrays run parallel and an index
-   * is enough. If they ever stop running parallel this gives up the line rather
-   * than name the wrong one, which is what `inputLineOf` does for an offset that
-   * lands on an invented blank.
-   */
-  const inputLineAt = (index: number): number | undefined => {
-    if (tableLines.length !== parts.length + 1) return undefined;
-    const line = partLines[index];
-    return line === undefined || line < 0 ? undefined : line;
-  };
   const tableDiagnostics: Diagnostic[] = tabled.notices.map((notice) =>
-    diagnostic('TBL-01', notice.messageId, notice.args, inputLineAt(notice.line), 'info'),
+    diagnostic('TBL-01', notice.messageId, notice.args, provenance.lineAt(notice.line), 'info'),
   );
   // splitSourceLines keeps the empty line a trailing newline produces, so joining
   // is enough: adding one back would double it.
@@ -407,7 +424,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   // TYPO-11: an unpaired quote is a warning, never a failure. The line keeps what
   // the author wrote, and the author is told which line to look at.
   const diagnostics: Diagnostic[] = quoted.unpaired.map((offset) =>
-    diagnostic('TYPO-11', 'typo.unpairedQuote', [], inputLineOf(offset), 'warning'),
+    diagnostic('TYPO-11', 'typo.unpairedQuote', [], provenance.offsetAt(offset), 'warning'),
   );
   return {
     output,
