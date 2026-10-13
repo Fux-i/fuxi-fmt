@@ -43,6 +43,8 @@ export type { LoadedConfig, ParsedConfig } from './config.ts';
 export { applyAliases } from './aliases.ts';
 export { english, MESSAGES, placeholdersOf, render, templateOf, translate } from './messages.ts';
 export type { MessageArgs, MessageEntry, MessageId } from './messages.ts';
+export { RULE_IDS } from './rules.ts';
+export type { RuleId } from './rules.ts';
 export type { ConfigNotice } from './aliases.ts';
 export type { Violation } from './guard.ts';
 export { applyTypography } from './typography.ts';

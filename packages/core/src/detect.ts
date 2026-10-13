@@ -18,13 +18,14 @@ import type { CharRange } from './ignores.ts';
 import { assignParents, scanListItems } from './list-scan.ts';
 import { isDelimiterRow, scanTables, tableCells, tableRow } from './tables.ts';
 import type { MessageArgs, MessageId } from './messages.ts';
+import type { RuleId } from './rules.ts';
 import { isEscaped, lineIndexOf, protectedMask, type Region, type SourceLine } from './scan.ts';
 
 const BACKTICK = 96;
 const DOLLAR = 36;
 
 export interface Detection {
-  readonly ruleId: string;
+  readonly ruleId: RuleId;
   /** The catalogue entry (CFG-08). The English is rendered by the caller. */
   readonly messageId: MessageId;
   readonly args: MessageArgs;
@@ -34,7 +35,9 @@ export interface Detection {
 }
 
 /** A block region that reached end of file without its terminator. */
-const UNTERMINATED: Readonly<Record<string, { readonly ruleId: string; readonly messageId: MessageId }>> = {
+const UNTERMINATED: Readonly<
+  Record<string, { readonly ruleId: RuleId; readonly messageId: MessageId }>
+> = {
   frontMatter: {
     ruleId: 'DET-02',
     messageId: 'det.frontMatterUnterminated',
@@ -150,7 +153,7 @@ function unclosedInline(
   mask: Uint8Array,
 ): Detection[] {
   const out: Detection[] = [];
-  const scan = (needle: string, closeMark: string, ruleId: string, messageId: MessageId): void => {
+  const scan = (needle: string, closeMark: string, ruleId: RuleId, messageId: MessageId): void => {
     for (let at = source.indexOf(needle); at !== -1; at = source.indexOf(needle, at + 1)) {
       if (mask[at] === 1) continue;
       const newline = source.indexOf('\n', at);

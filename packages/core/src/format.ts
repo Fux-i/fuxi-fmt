@@ -2,6 +2,7 @@ import { classifyContent, quotePrefix, segment, type AtomicRange, type BlockKind
 import { detect, type Detection } from './detect.ts';
 import { checkSemantics } from './guard.ts';
 import { english, type MessageArgs, type MessageId } from './messages.ts';
+import type { RuleId } from './rules.ts';
 import { hasIgnoreFile, ignoreLines, ignoreRanges, type CharRange } from './ignores.ts';
 import { applyEndOfLine, normalizeInput, trimTrailingWhitespace, type Eol } from './hygiene.ts';
 import { renumberOrderedLists } from './lists.ts';
@@ -30,7 +31,7 @@ const SPACE = 32;
 const TAB = 9;
 
 export interface Diagnostic {
-  readonly ruleId: string;
+  readonly ruleId: RuleId;
   /** The catalogue entry this sentence came from (CFG-08). */
   readonly messageId: MessageId;
   /** The values its placeholders take, so a translation can place them too. */
@@ -80,7 +81,7 @@ function blankCount(existing: number, options: FormatOptions): number {
  * takes the entry and the arguments and renders its own.
  */
 function diagnostic(
-  ruleId: string,
+  ruleId: RuleId,
   messageId: MessageId,
   args: MessageArgs,
   line: number | undefined,

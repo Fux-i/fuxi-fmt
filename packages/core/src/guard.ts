@@ -20,10 +20,11 @@
 
 import { classifyContent, quoteContentOf } from './blocks.ts';
 import type { MessageArgs, MessageId } from './messages.ts';
+import type { RuleId } from './rules.ts';
 import { lineIndexOf, scanRegions, splitSourceLines, type Region } from './scan.ts';
 
 export interface Violation {
-  readonly ruleId: string;
+  readonly ruleId: RuleId;
   /** The catalogue entry (CFG-08), so the sentence renders in any language. */
   readonly messageId: MessageId;
   readonly args: MessageArgs;
