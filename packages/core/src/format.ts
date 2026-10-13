@@ -213,6 +213,46 @@ export function rewriteInline(
   };
 }
 
+/**
+ * TBL-01, then BLK-12, then the trailing whitespace, in the order they require.
+ *
+ * TBL-01 pads table cells and is the first pass here that reports a line; BLK-12
+ * drops the blank lines at the edges of a fence body and is the only rule that
+ * removes lines. Run the other way round, a notice would name the line the
+ * removals left behind rather than the line the author wrote - which is the whole
+ * reason the table pass does not run earlier either, where it would measure a cell
+ * before the spacing rules had widened it.
+ *
+ * Trimming trailing whitespace closes the stage because it is about the file
+ * rather than the document, and a Markdown hard break is two spaces at the end of
+ * a line: it has to see the lines as they will be written.
+ */
+export function closeContent(
+  spaced: string,
+  options: FormatOptions,
+  provenance: LineMap,
+): { readonly text: string; readonly diagnostics: readonly Diagnostic[] } {
+  const tableLines = splitSourceLines(spaced);
+  // TBL-01 runs last of the content rules, so the mask the earlier passes carried
+  // is gone: protected regions and ignored ranges are re-derived for the text this
+  // pass is actually holding.
+  const tableProtected = protectedLines(spaced, tableLines, scanRegions(spaced));
+  const tableIgnored = ignoreLines(spaced, options.ignore);
+  const tabled = normalizeTables(
+    tableLines.map((line) => line.text),
+    options.table,
+    (index) => tableProtected[index] === true || tableIgnored[index] === true,
+  );
+  const diagnostics = tabled.notices.map((notice) =>
+    diagnostic('TBL-01', notice.messageId, notice.args, provenance.lineAt(notice.line)),
+  );
+  // splitSourceLines keeps the empty line a trailing newline produces, so joining
+  // is enough: adding one back would double it.
+  const tabledText = tabled.lines.join('\n');
+  const edged = options.codeBlock.trimBlankLines ? trimFenceBlanks(tabledText) : tabledText;
+  return { text: trimTrailingWhitespace(edged, ignoreRanges(edged, options.ignore)), diagnostics };
+}
+
 export function format(source: string, input?: FormatOptionsInput): FormatResult {
   const options = resolveOptions(input);
 
@@ -403,39 +443,9 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   const widthMask = protectedMask(structural, ignoreRanges(structural, options.ignore));
   const inline = rewriteInline(structural, options, widthMask);
   const spaced = inline.text;
-  // BLK-12 runs last of the content rules and before the guard, and it is the only
-  // one that removes lines - which is why it is here rather than among the passes
-  // that index by line. It is also the only rule the guard has an exception for,
-  /**
-   * TBL-01 pads table cells, and it runs here because it is the one pass that
-   * measures display width: the inline spacing rules have already run, so a cell
-   * is measured as the text it finally is. It rewrites lines and adds none.
-   *
-   * It runs *before* BLK-12 because it is the first pass here that reports a line:
-   * BLK-12 is the only rule that removes lines, and a notice has to name the line
-   * the author wrote rather than the line the removals left behind. The two do not
-   * interact - a fence body is a protected region to this pass.
-   */
-  const tableLines = splitSourceLines(spaced);
-  const tableProtected = protectedLines(spaced, tableLines, scanRegions(spaced));
-  // TBL-01 runs last of the content rules, so the mask the earlier passes carry
-  // is not in front of it: protected regions and ignored ranges are re-derived
-  // here, for the text it is actually holding.
-  const tableIgnored = ignoreLines(spaced, options.ignore);
-  const tabled = normalizeTables(
-    tableLines.map((line) => line.text),
-    options.table,
-    (index) => tableProtected[index] === true || tableIgnored[index] === true,
-  );
-  const tableDiagnostics: Diagnostic[] = tabled.notices.map((notice) =>
-    diagnostic('TBL-01', notice.messageId, notice.args, provenance.lineAt(notice.line)),
-  );
-  // splitSourceLines keeps the empty line a trailing newline produces, so joining
-  // is enough: adding one back would double it.
-  const tabledText = tabled.lines.join('\n');
-  // BLK-12 removes lines, so it runs once every pass that indexes by line is done.
-  const edged = options.codeBlock.trimBlankLines ? trimFenceBlanks(tabledText) : tabledText;
-  const candidate = trimTrailingWhitespace(edged, ignoreRanges(edged, options.ignore));
+  const closed = closeContent(spaced, options, provenance);
+  const candidate = closed.text;
+  const tableDiagnostics = closed.diagnostics;
 
   // GRT-01: never hand back a document that parses differently. If the guard
   // trips we return the input untouched and say why (GRT-04).
