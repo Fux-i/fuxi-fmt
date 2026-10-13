@@ -8,7 +8,12 @@ import { applyEndOfLine, normalizeInput, trimTrailingWhitespace, type Eol } from
 import { renumberOrderedLists } from './lists.ts';
 import { normalizeFences, trimFenceBlanks } from './fences.ts';
 import { normalizeMarkers, normalizeThematicBreak, normalizeUnorderedMarker } from './markers.ts';
-import { resolveOptions, type FormatOptions, type FormatOptionsInput } from './options.ts';
+import {
+  resolveOptions,
+  type FormatOptions,
+  type FormatOptionsInput,
+  type ListOptions,
+} from './options.ts';
 import { assignParents, findExcludedLists, planListIndent, scanListItems } from './list-scan.ts';
 import {
   atomicRanges,
@@ -227,6 +232,80 @@ export function rewriteInline(
  * rather than the document, and a Markdown hard break is two spaces at the end of
  * a line: it has to see the lines as they will be written.
  */
+/**
+ * BLK-08 normalises list indentation, and DET-12 says when it must not.
+ *
+ * This runs on the line array rather than on source offsets, which is what makes
+ * it safe at this point in the pipeline: it keeps the line count, so every
+ * line-indexed range the fence pass and the segmenter use stays valid.
+ *
+ * A list that holds a protected block is left alone entirely. BLK-08 refuses to
+ * reindent it, and the blank-line policy has to refuse too, because a deeply
+ * indented item after an inserted blank line is an indented code block: the tidy
+ * version of the document would parse differently from the one the author wrote,
+ * and the guard would refuse it. Moving code the author placed at a fixed
+ * indentation is what SAFE-02 exists to prevent.
+ */
+export function planLists(
+  texts: readonly string[],
+  protectedLine: readonly boolean[],
+  list: ListOptions,
+): {
+  readonly reindented: readonly string[];
+  readonly excludedItemLines: ReadonlySet<number>;
+  readonly diagnostics: readonly Detection[];
+} {
+  const listItems = scanListItems(texts, (index) => protectedLine[index] === true);
+  const listBrokeOut: boolean[] = [];
+  const listParents = assignParents(listItems, listBrokeOut);
+  const excludedLists = new Set(findExcludedLists(texts, listItems, listParents, protectedLine));
+
+  // Which list items belong to a list that holds a protected block, by walking each
+  // item up to the root of its chain.
+  const excludedItemLines = new Set<number>();
+  for (let i = 0; i < listItems.length; i++) {
+    const item = listItems[i];
+    if (item === undefined) continue;
+    let at = i;
+    const seen = new Set<number>();
+    for (;;) {
+      const parent = listParents[at];
+      if (parent === undefined || parent === -1 || seen.has(at)) break;
+      seen.add(at);
+      at = parent;
+    }
+    if (excludedLists.has(at)) excludedItemLines.add(item.line);
+  }
+
+  const diagnostics: Detection[] = [];
+  for (const root of excludedLists) {
+    const item = listItems[root];
+    if (item === undefined) continue;
+    diagnostics.push({
+      ruleId: 'DET-12',
+      messageId: 'det.listExcluded',
+      args: [],
+      line: item.line,
+    });
+  }
+
+  const reindented = [...texts];
+  const orderedMin = list.orderedIndent === 'aligned' ? 0 : list.orderedIndent;
+  const unorderedMin = list.unorderedIndent === 'aligned' ? 0 : list.unorderedIndent;
+  for (const change of planListIndent(
+    texts,
+    listItems,
+    listParents,
+    excludedLists,
+    orderedMin,
+    unorderedMin,
+    listBrokeOut,
+  )) {
+    reindented[change.line] = change.text;
+  }
+  return { reindented, excludedItemLines, diagnostics };
+}
+
 export function closeContent(
   spaced: string,
   options: FormatOptions,
@@ -296,64 +375,10 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
 
   const renumbered = renumberOrderedLists(normalizedTexts, protectedLine, options.list);
   const texts = normalizeFences(renumbered, ranges, options.codeBlock);
-  // BLK-08: normalise list indentation. This runs on the line array rather than
-  // on source offsets, which is what makes it safe here: it keeps the line count,
-  // so every line-indexed range the segmenter and fence pass use stays valid.
-  // Lists containing a protected block are excluded from the plan (option b).
-  const listItems = scanListItems(texts, (index) => protectedLine[index] === true);
-  const itemLines = new Set(listItems.map((item) => item.line));
-  const listBrokeOut: boolean[] = [];
-  const listParents = assignParents(listItems, listBrokeOut);
-  const excludedLists = new Set(
-    findExcludedLists(texts, listItems, listParents, protectedLine),
-  );
-  // Which list items belong to a list that contains a protected block. Such a
-  // list is left alone entirely: BLK-08 already refuses to reindent it, and the
-  // blank-line policy has to refuse too. Inserting a blank line inside that list
-  // is not cosmetic - a deeply indented item after a blank line is an indented
-  // code block, so the "tidy" version of the document parses differently from the
-  // version the author wrote, and the guard refuses it. That refusal was real:
-  // a list with a code block and an over-indented child would not format at all.
-  const excludedItemLines = new Set<number>();
-  for (let i = 0; i < listItems.length; i++) {
-    const item = listItems[i];
-    if (item === undefined) continue;
-    let at = i;
-    const seen = new Set<number>();
-    for (;;) {
-      const parent = listParents[at];
-      if (parent === undefined || parent === -1 || seen.has(at)) break;
-      seen.add(at);
-      at = parent;
-    }
-    if (excludedLists.has(at)) excludedItemLines.add(item.line);
-  }
-  for (const root of excludedLists) {
-    const item = listItems[root];
-    if (item === undefined) continue;
-    detections.push({
-      ruleId: 'DET-12',
-      messageId: 'det.listExcluded',
-      args: [],
-      line: item.line,
-    });
-  }
-
-  const reindented = [...texts];
-  const orderedMin = options.list.orderedIndent === 'aligned' ? 0 : options.list.orderedIndent;
-  const unorderedMin =
-    options.list.unorderedIndent === 'aligned' ? 0 : options.list.unorderedIndent;
-  for (const change of planListIndent(
-    texts,
-    listItems,
-    listParents,
-    excludedLists,
-    orderedMin,
-    unorderedMin,
-    listBrokeOut,
-  )) {
-    reindented[change.line] = change.text;
-  }
+  const listPlan = planLists(texts, protectedLine, options.list);
+  detections.push(...listPlan.diagnostics);
+  const reindented = listPlan.reindented;
+  const excludedItemLines = listPlan.excludedItemLines;
 
   // TBL-01 used to run here, and it had to move below the inline passes: padding
   // is measured in display columns, and the spacing rules that insert a space
