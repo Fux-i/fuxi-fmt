@@ -4,6 +4,19 @@
 
 格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，本项目遵循[语义化版本](https://semver.org/spec/v2.0.0.html)。发布使用 Linux 内核的标签约定：`vMAJOR.MINOR[.PATCH]`，候选版本以 `-rcN` 结尾。
 
+## [0.30.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.29.0...v0.30.0) - 2026-10-13
+
+### 变更
+
+- **格式化结果与 0.29.0 逐字节相同。** 仓库内 25 份 Markdown 文档与全部语料 fixture 的 `format()`
+  输出经哈希比对确认；没有新选项、没有新规则、没有新诊断，升级不会改变任何一份文档的输出。
+- **编辑器的设置清单改为从核心的选项词汇表生成。** `packages/vscode/package.json` 里那 35 条设置
+  过去是选项面的第二份手写副本（类型、默认值、可取值与描述键），现在由 `npm run manifest` 生成，
+  并且有测试在它过期时失败。新增一个选项不再需要第二处手写。
+- **内部重构：每条事实收敛到唯一一处所有者。** 表格语法、行首读法、受保护区域的三类投影、偏移
+  到行号的换算、规则 ID 及其严重级别与消息归属、选项词汇表，各自只有一个定义；`format()` 里四段
+  管线各自成为有名字、有测试的接口。
+
 ## [0.29.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.28.0...v0.29.0) - 2026-10-09
 
 ### 修复
