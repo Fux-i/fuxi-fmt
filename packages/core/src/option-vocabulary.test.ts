@@ -13,7 +13,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { OPTION_VOCABULARY, defaultOptions } from './options.ts';
+import { OPTION_VOCABULARY, defaultOptions, resolveOptions } from './options.ts';
 
 const isPlain = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof Set);
@@ -41,6 +41,10 @@ function at(root: unknown, path: string): unknown {
 describe('CFG-01 the option vocabulary', () => {
   test('it names every leaf of the resolved options, and no others', () => {
     assert.deepEqual(leaves(OPTION_VOCABULARY).sort(), leaves(defaultOptions).sort());
+  });
+
+  test('resolving nothing yields every leaf the vocabulary names', () => {
+    assert.deepEqual(leaves(resolveOptions({})).sort(), leaves(OPTION_VOCABULARY).sort());
   });
 
   test('every closed vocabulary admits its own default', () => {

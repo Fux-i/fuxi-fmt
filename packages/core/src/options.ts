@@ -321,78 +321,42 @@ export const defaultOptions: FormatOptions = {
   },
 };
 
+/**
+ * Take the input's value where it has one, and the default where it does not.
+ *
+ * A leaf that is `null` is a value: `null` means unbounded for a cap, so the
+ * fallback applies only to `undefined`. Walking the vocabulary rather than
+ * spelling out every field means a leaf added there is resolved by construction.
+ */
+function resolveNode(
+  spec: Record<string, unknown>,
+  defaults: Record<string, unknown>,
+  input: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(spec)) {
+    const leaf = child as Record<string, unknown>;
+    const given = input?.[key];
+    if (typeof leaf['kind'] === 'string') {
+      out[key] = given === undefined ? defaults[key] : given;
+      if (leaf['kind'] === 'stringSet') out[key] = new Set(out[key] as Iterable<string>);
+      continue;
+    }
+    out[key] = resolveNode(
+      leaf,
+      (defaults[key] ?? {}) as Record<string, unknown>,
+      given as Record<string, unknown> | undefined,
+    );
+  }
+  return out;
+}
+
 export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
-  const max = input?.blankLines?.maxConsecutive;
-  return {
-    blankLines: {
-      aroundBlocks: input?.blankLines?.aroundBlocks ?? defaultOptions.blankLines.aroundBlocks,
-      // null is a meaningful value here, so it must not be swallowed by ??.
-      maxConsecutive: max === undefined ? defaultOptions.blankLines.maxConsecutive : max,
-      insideLists: input?.blankLines?.insideLists ?? defaultOptions.blankLines.insideLists,
-      insideBlockquotes:
-        input?.blankLines?.insideBlockquotes ?? defaultOptions.blankLines.insideBlockquotes,
-    },
-    typography: {
-      cjkSpacing: input?.typography?.cjkSpacing ?? defaultOptions.typography.cjkSpacing,
-      punctuationStyle:
-        input?.typography?.punctuationStyle ?? defaultOptions.typography.punctuationStyle,
-      punctuationChangeList:
-        input?.typography?.punctuationChangeList ??
-        defaultOptions.typography.punctuationChangeList,
-      halfwidthAlphanumerics:
-        input?.typography?.halfwidthAlphanumerics ??
-        defaultOptions.typography.halfwidthAlphanumerics,
-      ideographicSpace:
-        input?.typography?.ideographicSpace ?? defaultOptions.typography.ideographicSpace,
-      hashtag: input?.typography?.hashtag ?? defaultOptions.typography.hashtag,
-      parenStyle: input?.typography?.parenStyle ?? defaultOptions.typography.parenStyle,
-      context: input?.typography?.context ?? defaultOptions.typography.context,
-      quotes: input?.typography?.quotes ?? defaultOptions.typography.quotes,
-      emphasis: {
-        strong: input?.typography?.emphasis?.strong ?? defaultOptions.typography.emphasis.strong,
-        em: input?.typography?.emphasis?.em ?? defaultOptions.typography.emphasis.em,
-        strikethrough:
-          input?.typography?.emphasis?.strikethrough ??
-          defaultOptions.typography.emphasis.strikethrough,
-      },
-      cjkClasses: input?.typography?.cjkClasses ?? defaultOptions.typography.cjkClasses,
-      spacingSymbols: new Set(
-        input?.typography?.spacingSymbols ?? defaultOptions.typography.spacingSymbols,
-      ),
-    },
-    list: {
-      orderedStyle: input?.list?.orderedStyle ?? defaultOptions.list.orderedStyle,
-      orderedDelimiter: input?.list?.orderedDelimiter ?? defaultOptions.list.orderedDelimiter,
-      orderedIndent: input?.list?.orderedIndent ?? defaultOptions.list.orderedIndent,
-      unorderedIndent: input?.list?.unorderedIndent ?? defaultOptions.list.unorderedIndent,
-      tabWidth: input?.list?.tabWidth ?? defaultOptions.list.tabWidth,
-      unorderedMarker: input?.list?.unorderedMarker ?? defaultOptions.list.unorderedMarker,
-    },
-    codeBlock: {
-      fenceChar: input?.codeBlock?.fenceChar ?? defaultOptions.codeBlock.fenceChar,
-      fenceLength:
-        input?.codeBlock?.fenceLength ?? defaultOptions.codeBlock.fenceLength,
-      trimBlankLines:
-        input?.codeBlock?.trimBlankLines ?? defaultOptions.codeBlock.trimBlankLines,
-    },
-    thematicBreak: input?.thematicBreak ?? defaultOptions.thematicBreak,
-    table: {
-      mode: input?.table?.mode ?? defaultOptions.table.mode,
-      // null is a meaningful value here too: no cap at all.
-      maxWidth:
-        input?.table?.maxWidth === undefined
-          ? defaultOptions.table.maxWidth
-          : input.table.maxWidth,
-      cjkWidth: input?.table?.cjkWidth ?? defaultOptions.table.cjkWidth,
-    },
-    endOfLine: input?.endOfLine ?? defaultOptions.endOfLine,
-    ignore: {
-      file: input?.ignore?.file ?? defaultOptions.ignore.file,
-      start: input?.ignore?.start ?? defaultOptions.ignore.start,
-      end: input?.ignore?.end ?? defaultOptions.ignore.end,
-      line: input?.ignore?.line ?? defaultOptions.ignore.line,
-    },
-  };
+  return resolveNode(
+    OPTION_VOCABULARY as unknown as Record<string, unknown>,
+    defaultOptions as unknown as Record<string, unknown>,
+    input as unknown as Record<string, unknown> | undefined,
+  ) as unknown as FormatOptions;
 }
 
 /** How one leaf of the option surface is read, and what it accepts (CFG-01). */
@@ -404,6 +368,7 @@ export interface LeafSpec {
     | 'int'
     | 'nullableInt'
     | 'stringList'
+    | 'stringSet'
     | 'nonEmptyString';
   /** For the closed vocabularies: every accepted member. */
   readonly values?: readonly (string | number)[];
@@ -447,7 +412,7 @@ export const OPTION_VOCABULARY = {
       strikethrough: { kind: 'oneOf', values: STRIKE_STYLES },
     },
     cjkClasses: { kind: 'oneOfList', values: CJK_CLASSES },
-    spacingSymbols: { kind: 'stringList' },
+    spacingSymbols: { kind: 'stringSet' },
   },
   list: {
     orderedStyle: { kind: 'oneOf', values: ORDERED_STYLES },

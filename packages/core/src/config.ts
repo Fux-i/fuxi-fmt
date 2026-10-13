@@ -216,7 +216,7 @@ function readLeaf(spec: Record<string, unknown>, value: unknown, key: string): u
     }
     return names;
   }
-  if (kind === 'stringList') return strings(value, key);
+  if (kind === 'stringList' || kind === 'stringSet') return strings(value, key);
   if (kind === 'nonEmptyString') {
     if (typeof value === 'string' && value.length > 0) return value;
     throw new Error('config: ' + key + ' must be a non-empty string');
