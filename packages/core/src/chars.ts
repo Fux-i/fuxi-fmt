@@ -1,6 +1,9 @@
 /** Shared character classification for the typography rules. */
 
-export type CjkClass = 'han' | 'kana' | 'hangul' | 'bopomofo' | 'enclosed';
+/** Every script class the CJK rules know, and the one place the list exists. */
+export const CJK_CLASSES = ['han', 'kana', 'hangul', 'bopomofo', 'enclosed'] as const;
+
+export type CjkClass = (typeof CJK_CLASSES)[number];
 
 /**
  * Which scripts count as CJK for spacing and punctuation decisions.

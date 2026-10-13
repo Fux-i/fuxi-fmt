@@ -1,8 +1,11 @@
-import { DEFAULT_CJK_CLASSES, DEFAULT_SPACING_SYMBOLS, type CjkClass } from './chars.ts';
+import { CJK_CLASSES, DEFAULT_CJK_CLASSES, DEFAULT_SPACING_SYMBOLS, type CjkClass } from './chars.ts';
 
-export type AroundBlocks = 'exact' | 'atLeast';
-export type ListBlankLines = 'remove' | 'one' | 'preserve';
-export type BlockquoteBlankLines = 'trim' | 'preserve';
+export const AROUND_BLOCKS = ['exact', 'atLeast'] as const;
+export type AroundBlocks = (typeof AROUND_BLOCKS)[number];
+export const LIST_BLANK_LINES = ['remove', 'one', 'preserve'] as const;
+export type ListBlankLines = (typeof LIST_BLANK_LINES)[number];
+export const BLOCKQUOTE_BLANK_LINES = ['trim', 'preserve'] as const;
+export type BlockquoteBlankLines = (typeof BLOCKQUOTE_BLANK_LINES)[number];
 
 export interface BlankLinesOptions {
   /** Whether blocks are separated by exactly one blank line, or at least one. */
@@ -21,8 +24,10 @@ export interface BlankLinesOptions {
   readonly insideBlockquotes: BlockquoteBlankLines;
 }
 
-export type PunctuationStyle = 'fullwidth' | 'halfwidth' | 'mixed' | 'off';
-export type ParenStyle = 'mixed' | 'fullwidth' | 'halfwidth' | 'preserve';
+export const PUNCTUATION_STYLES = ['fullwidth', 'halfwidth', 'mixed', 'off'] as const;
+export type PunctuationStyle = (typeof PUNCTUATION_STYLES)[number];
+export const PAREN_STYLES = ['mixed', 'fullwidth', 'halfwidth', 'preserve'] as const;
+export type ParenStyle = (typeof PAREN_STYLES)[number];
 /**
  * How "Chinese context" is decided.
  *
@@ -32,7 +37,8 @@ export type ParenStyle = 'mixed' | 'fullwidth' | 'halfwidth' | 'preserve';
  * inside a Latin run half-width but cannot see a CJK character that a space or
  * an emphasis marker put out of reach.
  */
-export type ContextMode = 'line' | 'adjacent';
+export const CONTEXT_MODES = ['line', 'adjacent'] as const;
+export type ContextMode = (typeof CONTEXT_MODES)[number];
 /**
  * Straight double quotes become paired Chinese quotation marks.
  *
@@ -40,7 +46,8 @@ export type ContextMode = 'line' | 'adjacent';
  * codepoint family and no rule can tell "don't" from an opening single quote
  * without guessing, so nothing is guessed.
  */
-export type QuoteStyle = 'preserve' | 'paired';
+export const QUOTE_STYLES = ['preserve', 'paired'] as const;
+export type QuoteStyle = (typeof QUOTE_STYLES)[number];
 /**
  * Which character a thematic break is written with (BLK-13).
  *
@@ -48,9 +55,12 @@ export type QuoteStyle = 'preserve' | 'paired';
  * other three normalise every break to exactly three of the chosen character,
  * because length and internal spaces carry no meaning.
  */
-export type ThematicBreak = 'dashes' | 'asterisks' | 'underscores' | 'preserve';
-export type TableMode = 'preserve' | 'normalize';
-export type CjkWidth = 1 | 2;
+export const THEMATIC_BREAKS = ['dashes', 'asterisks', 'underscores', 'preserve'] as const;
+export type ThematicBreak = (typeof THEMATIC_BREAKS)[number];
+export const TABLE_MODES = ['preserve', 'normalize'] as const;
+export type TableMode = (typeof TABLE_MODES)[number];
+export const CJK_WIDTHS = [1, 2] as const;
+export type CjkWidth = (typeof CJK_WIDTHS)[number];
 
 /**
  * Table padding and alignment (TBL-01).
@@ -70,9 +80,12 @@ export interface TableOptions {
   readonly cjkWidth: CjkWidth;
 }
 
-export type StrongStyle = 'asterisks' | 'underscores' | 'preserve';
-export type EmStyle = 'asterisk' | 'underscore' | 'preserve';
-export type StrikeStyle = 'double' | 'single' | 'preserve';
+export const STRONG_STYLES = ['asterisks', 'underscores', 'preserve'] as const;
+export type StrongStyle = (typeof STRONG_STYLES)[number];
+export const EM_STYLES = ['asterisk', 'underscore', 'preserve'] as const;
+export type EmStyle = (typeof EM_STYLES)[number];
+export const STRIKE_STYLES = ['double', 'single', 'preserve'] as const;
+export type StrikeStyle = (typeof STRIKE_STYLES)[number];
 
 /**
  * Which delimiter each emphasis kind is written with (TYPO-12).
@@ -120,15 +133,22 @@ export interface TypographyOptions {
   readonly spacingSymbols: ReadonlySet<string>;
 }
 
-export type EndOfLine = 'lf' | 'crlf' | 'auto';
+export const END_OF_LINES = ['lf', 'crlf', 'auto'] as const;
+export type EndOfLine = (typeof END_OF_LINES)[number];
 /** How far a nested ORDERED item's marker sits past its parent's content. */
-export type OrderedIndent = 'aligned' | 4;
+export const ORDERED_INDENTS = ['aligned', 4] as const;
+export type OrderedIndent = (typeof ORDERED_INDENTS)[number];
 /** The same for an unordered item. */
-export type UnorderedIndent = 'aligned' | 3 | 4;
-export type UnorderedMarker = 'dashes' | 'asterisks' | 'preserve';
-export type FenceChar = 'backticks' | 'tildes' | 'preserve';
-export type OrderedStyle = 'renumber' | 'keep-all-ones' | 'preserve';
-export type OrderedDelimiter = 'preserve' | '.' | ')';
+export const UNORDERED_INDENTS = ['aligned', 3, 4] as const;
+export type UnorderedIndent = (typeof UNORDERED_INDENTS)[number];
+export const UNORDERED_MARKERS = ['dashes', 'asterisks', 'preserve'] as const;
+export type UnorderedMarker = (typeof UNORDERED_MARKERS)[number];
+export const FENCE_CHARS = ['backticks', 'tildes', 'preserve'] as const;
+export type FenceChar = (typeof FENCE_CHARS)[number];
+export const ORDERED_STYLES = ['renumber', 'keep-all-ones', 'preserve'] as const;
+export type OrderedStyle = (typeof ORDERED_STYLES)[number];
+export const ORDERED_DELIMITERS = ['preserve', '.', ')'] as const;
+export type OrderedDelimiter = (typeof ORDERED_DELIMITERS)[number];
 
 export interface ListOptions {
   /**
@@ -374,3 +394,86 @@ export function resolveOptions(input?: FormatOptionsInput): FormatOptions {
     },
   };
 }
+
+/** How one leaf of the option surface is read, and what it accepts (CFG-01). */
+export interface LeafSpec {
+  readonly kind:
+    | 'oneOf'
+    | 'oneOfList'
+    | 'bool'
+    | 'int'
+    | 'nullableInt'
+    | 'stringList'
+    | 'nonEmptyString';
+  /** For the closed vocabularies: every accepted member. */
+  readonly values?: readonly (string | number)[];
+  /** For 'int' and 'nullableInt': the smallest accepted value. */
+  readonly min?: number;
+  /** For 'int': the parenthetical the complaint ends with. */
+  readonly hint?: string;
+}
+
+/**
+ * The option surface, leaf by leaf.
+ *
+ * This is the one place a leaf is named, and the config reader walks it rather
+ * than re-listing what it accepts. An option added here is parsed from a file by
+ * construction, which is the property that was missing when four options existed
+ * in the defaults and were never read.
+ *
+ * The resolved types and the defaults are still written out in this module, where
+ * the compiler checks their shapes.
+ */
+export const OPTION_VOCABULARY = {
+  blankLines: {
+    aroundBlocks: { kind: 'oneOf', values: AROUND_BLOCKS },
+    maxConsecutive: { kind: 'nullableInt', min: 1 },
+    insideLists: { kind: 'oneOf', values: LIST_BLANK_LINES },
+    insideBlockquotes: { kind: 'oneOf', values: BLOCKQUOTE_BLANK_LINES },
+  },
+  typography: {
+    cjkSpacing: { kind: 'bool' },
+    punctuationStyle: { kind: 'oneOf', values: PUNCTUATION_STYLES },
+    punctuationChangeList: { kind: 'stringList' },
+    halfwidthAlphanumerics: { kind: 'bool' },
+    ideographicSpace: { kind: 'bool' },
+    hashtag: { kind: 'bool' },
+    parenStyle: { kind: 'oneOf', values: PAREN_STYLES },
+    context: { kind: 'oneOf', values: CONTEXT_MODES },
+    quotes: { kind: 'oneOf', values: QUOTE_STYLES },
+    emphasis: {
+      strong: { kind: 'oneOf', values: STRONG_STYLES },
+      em: { kind: 'oneOf', values: EM_STYLES },
+      strikethrough: { kind: 'oneOf', values: STRIKE_STYLES },
+    },
+    cjkClasses: { kind: 'oneOfList', values: CJK_CLASSES },
+    spacingSymbols: { kind: 'stringList' },
+  },
+  list: {
+    orderedStyle: { kind: 'oneOf', values: ORDERED_STYLES },
+    orderedDelimiter: { kind: 'oneOf', values: ORDERED_DELIMITERS },
+    orderedIndent: { kind: 'oneOf', values: ORDERED_INDENTS },
+    unorderedIndent: { kind: 'oneOf', values: UNORDERED_INDENTS },
+    tabWidth: { kind: 'int', min: 0, hint: '0 leaves tabs alone' },
+    unorderedMarker: { kind: 'oneOf', values: UNORDERED_MARKERS },
+  },
+  codeBlock: {
+    fenceChar: { kind: 'oneOf', values: FENCE_CHARS },
+    fenceLength: { kind: 'bool' },
+    trimBlankLines: { kind: 'bool' },
+  },
+  thematicBreak: { kind: 'oneOf', values: THEMATIC_BREAKS },
+  table: {
+    mode: { kind: 'oneOf', values: TABLE_MODES },
+    maxWidth: { kind: 'nullableInt', min: 1 },
+    cjkWidth: { kind: 'oneOf', values: CJK_WIDTHS },
+  },
+  endOfLine: { kind: 'oneOf', values: END_OF_LINES },
+  ignore: {
+    file: { kind: 'nonEmptyString' },
+    start: { kind: 'nonEmptyString' },
+    end: { kind: 'nonEmptyString' },
+    line: { kind: 'nonEmptyString' },
+  },
+} as const;
+

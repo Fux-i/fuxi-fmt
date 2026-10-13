@@ -16,10 +16,10 @@
  */
 
 import { applyAliases, type ConfigNotice } from './aliases.ts';
-import type { CjkClass } from './chars.ts';
 import { presetOptions } from './presets.ts';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { OPTION_VOCABULARY } from './options.ts';
 import type {
   IgnoreInput,
   BlankLinesInput,
@@ -28,13 +28,8 @@ import type {
   FormatOptionsInput,
   ListInput,
   ThematicBreak,
-  EmStyle,
   EmphasisInput,
-  StrikeStyle,
-  StrongStyle,
   TableInput,
-  TableMode,
-  CjkWidth,
   TypographyInput,
 } from './options.ts';
 
@@ -55,16 +50,6 @@ interface Sections {
 
 function isRecord(value: unknown): value is Raw {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function oneOf<T extends string>(value: unknown, key: string, allowed: readonly T[]): T {
-  if (typeof value === 'string' && (allowed as readonly string[]).includes(value)) return value as T;
-  throw new Error('config: ' + key + ' must be one of ' + allowed.join(' | '));
-}
-
-function bool(value: unknown, key: string): boolean {
-  if (typeof value === 'boolean') return value;
-  throw new Error('config: ' + key + ' must be true or false');
 }
 
 function strings(value: unknown, key: string): readonly string[] {
@@ -202,270 +187,72 @@ export function parseConfig(text: string): FormatOptionsInput {
   return parseConfigDetailed(text).options;
 }
 
-function readSections(raw: Raw): FormatOptionsInput {
-  const out: Sections = {};
-
-  if (raw.thematicBreak !== undefined) {
-    out.thematicBreak = oneOf(raw.thematicBreak, 'thematicBreak', [
-      'dashes',
-      'asterisks',
-      'underscores',
-      'preserve',
-    ]);
+/**
+ * Read one leaf, or throw the sentence that says how to fix it.
+ *
+ * The wording is the reader's, not the caller's: every complaint names the
+ * dotted path, so the author can find the line in their file.
+ */
+function readLeaf(spec: Record<string, unknown>, value: unknown, key: string): unknown {
+  const kind = spec['kind'];
+  if (kind === 'bool') {
+    if (typeof value === 'boolean') return value;
+    throw new Error('config: ' + key + ' must be true or false');
   }
-
-  if (raw.table !== undefined) {
-    const from = section(raw.table, 'table');
-    const to: { mode?: TableMode; maxWidth?: number | null; cjkWidth?: CjkWidth } = {};
-    if (from.mode !== undefined) {
-      to.mode = oneOf<TableMode>(from.mode, 'table.mode', ['preserve', 'normalize']);
+  if (kind === 'oneOf') {
+    const allowed = spec['values'] as readonly (string | number)[];
+    if ((typeof value === 'string' || typeof value === 'number') && allowed.includes(value)) {
+      return value;
     }
-    if (from.maxWidth !== undefined) {
-      const cap = from.maxWidth;
-      if (cap !== null && (typeof cap !== 'number' || !Number.isInteger(cap) || cap < 1)) {
-        throw new Error('config: table.maxWidth must be a positive integer or null');
-      }
-      to.maxWidth = cap as number | null;
-    }
-    if (from.cjkWidth !== undefined) {
-      const width = from.cjkWidth;
-      if (width !== 1 && width !== 2) {
-        throw new Error('config: table.cjkWidth must be 1 or 2');
-      }
-      to.cjkWidth = width;
-    }
-    out.table = to;
+    throw new Error('config: ' + key + ' must be one of ' + allowed.join(' | '));
   }
-
-  if (raw.endOfLine !== undefined) {
-    out.endOfLine = oneOf(raw.endOfLine, 'endOfLine', ['lf', 'crlf', 'auto']);
+  if (kind === 'oneOfList') {
+    const allowed = spec['values'] as readonly (string | number)[];
+    const names = strings(value, key);
+    for (const name of names) {
+      if (!allowed.includes(name)) {
+        throw new Error('config: ' + key + ' has an unknown member ' + name);
+      }
+    }
+    return names;
   }
-
-  if (raw.blankLines !== undefined) {
-    const from = section(raw.blankLines, 'blankLines');
-    const to: {
-      aroundBlocks?: 'exact' | 'atLeast';
-      maxConsecutive?: number | null;
-      insideLists?: 'remove' | 'one' | 'preserve';
-      insideBlockquotes?: 'trim' | 'preserve';
-    } = {};
-    if (from.aroundBlocks !== undefined) {
-      to.aroundBlocks = oneOf(from.aroundBlocks, 'blankLines.aroundBlocks', ['exact', 'atLeast']);
-    }
-    if (from.maxConsecutive !== undefined) {
-      const cap = from.maxConsecutive;
-      if (cap !== null && (typeof cap !== 'number' || !Number.isInteger(cap) || cap < 1)) {
-        throw new Error('config: blankLines.maxConsecutive must be a positive integer or null');
-      }
-      to.maxConsecutive = cap as number | null;
-    }
-    if (from.insideLists !== undefined) {
-      to.insideLists = oneOf(from.insideLists, 'blankLines.insideLists', [
-        'remove',
-        'one',
-        'preserve',
-      ]);
-    }
-    if (from.insideBlockquotes !== undefined) {
-      to.insideBlockquotes = oneOf(from.insideBlockquotes, 'blankLines.insideBlockquotes', [
-        'trim',
-        'preserve',
-      ]);
-    }
-    out.blankLines = to;
+  if (kind === 'stringList') return strings(value, key);
+  if (kind === 'nonEmptyString') {
+    if (typeof value === 'string' && value.length > 0) return value;
+    throw new Error('config: ' + key + ' must be a non-empty string');
   }
-
-  if (raw.list !== undefined) {
-    const from = section(raw.list, 'list');
-    const to: {
-      orderedStyle?: 'renumber' | 'keep-all-ones' | 'preserve';
-      orderedDelimiter?: 'preserve' | '.' | ')';
-      orderedIndent?: 'aligned' | 4;
-      unorderedIndent?: 'aligned' | 3 | 4;
-      tabWidth?: number;
-      unorderedMarker?: 'dashes' | 'asterisks' | 'preserve';
-    } = {};
-    if (from.orderedStyle !== undefined) {
-      to.orderedStyle = oneOf(from.orderedStyle, 'list.orderedStyle', [
-        'renumber',
-        'keep-all-ones',
-        'preserve',
-      ]);
-    }
-    if (from.orderedDelimiter !== undefined) {
-      to.orderedDelimiter = oneOf(from.orderedDelimiter, 'list.orderedDelimiter', ['preserve', '.', ')']);
-    }
-    if (from.orderedIndent !== undefined) {
-      if (from.orderedIndent === 'aligned' || from.orderedIndent === 4) {
-        to.orderedIndent = from.orderedIndent;
-      } else {
-        throw new Error("config: list.orderedIndent must be 'aligned' or 4");
-      }
-    }
-    if (from.unorderedIndent !== undefined) {
-      const value = from.unorderedIndent;
-      if (value === 'aligned' || value === 3 || value === 4) {
-        to.unorderedIndent = value;
-      } else {
-        throw new Error("config: list.unorderedIndent must be 'aligned', 3 or 4");
-      }
-    }
-    if (from.tabWidth !== undefined) {
-      const width = from.tabWidth;
-      if (typeof width !== 'number' || !Number.isInteger(width) || width < 0) {
-        throw new Error(
-          'config: list.tabWidth must be a non-negative integer (0 leaves tabs alone)',
-        );
-      }
-      to.tabWidth = width;
-    }
-    if (from.unorderedMarker !== undefined) {
-      to.unorderedMarker = oneOf(from.unorderedMarker, 'list.unorderedMarker', [
-        'dashes',
-        'asterisks',
-        'preserve',
-      ]);
-    }
-    out.list = to;
+  const min = spec['min'] as number;
+  const hint = spec['hint'] as string | undefined;
+  const wording = min === 0 ? 'a non-negative integer' : 'a positive integer';
+  const suffix = hint === undefined ? '' : ' (' + hint + ')';
+  if (kind === 'nullableInt') {
+    if (value === null) return null;
+    if (typeof value === 'number' && Number.isInteger(value) && value >= min) return value;
+    throw new Error('config: ' + key + ' must be ' + wording + ' or null' + suffix);
   }
+  if (typeof value === 'number' && Number.isInteger(value) && value >= min) return value;
+  throw new Error('config: ' + key + ' must be ' + wording + suffix);
+}
 
-  if (raw.codeBlock !== undefined) {
-    const from = section(raw.codeBlock, 'codeBlock');
-    const to: {
-      fenceChar?: 'backticks' | 'tildes' | 'preserve';
-      fenceLength?: boolean;
-      trimBlankLines?: boolean;
-    } = {};
-    if (from.fenceChar !== undefined) {
-      to.fenceChar = oneOf(from.fenceChar, 'codeBlock.fenceChar', ['backticks', 'tildes', 'preserve']);
-    }
-    if (from.fenceLength !== undefined) {
-      to.fenceLength = bool(from.fenceLength, 'codeBlock.fenceLength');
-    }
-    if (from.trimBlankLines !== undefined) {
-      to.trimBlankLines = bool(from.trimBlankLines, 'codeBlock.trimBlankLines');
-    }
-    out.codeBlock = to;
+/** Read one node of the vocabulary against a section of the file. */
+function readNode(spec: Record<string, unknown>, raw: Raw, prefix: string): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(spec)) {
+    const value = raw[key];
+    if (value === undefined) continue;
+    const path = prefix === '' ? key : prefix + '.' + key;
+    const leaf = child as Record<string, unknown>;
+    if (typeof leaf['kind'] === 'string') out[key] = readLeaf(leaf, value, path);
+    else out[key] = readNode(leaf, section(value, path), path);
   }
-
-  if (raw.typography !== undefined) {
-    const from = section(raw.typography, 'typography');
-    const to: {
-      cjkSpacing?: boolean;
-      punctuationStyle?: 'fullwidth' | 'halfwidth' | 'mixed' | 'off';
-      punctuationChangeList?: readonly string[];
-      halfwidthAlphanumerics?: boolean;
-      ideographicSpace?: boolean;
-      hashtag?: boolean;
-      parenStyle?: 'mixed' | 'fullwidth' | 'halfwidth' | 'preserve';
-      context?: 'line' | 'adjacent';
-      quotes?: 'preserve' | 'paired';
-      emphasis?: EmphasisInput;
-      cjkClasses?: readonly CjkClass[];
-      spacingSymbols?: readonly string[];
-    } = {};
-    if (from.cjkSpacing !== undefined) to.cjkSpacing = bool(from.cjkSpacing, 'typography.cjkSpacing');
-    if (from.punctuationStyle !== undefined) {
-      to.punctuationStyle = oneOf(from.punctuationStyle, 'typography.punctuationStyle', [
-        'fullwidth',
-        'halfwidth',
-        'mixed',
-        'off',
-      ]);
-    }
-    if (from.emphasis !== undefined) {
-      const bag = section(from.emphasis, 'typography.emphasis');
-      const values: {
-        strong?: StrongStyle;
-        em?: EmStyle;
-        strikethrough?: StrikeStyle;
-      } = {};
-      if (bag.strong !== undefined) {
-        values.strong = oneOf<StrongStyle>(bag.strong, 'typography.emphasis.strong', [
-          'asterisks',
-          'underscores',
-          'preserve',
-        ]);
-      }
-      if (bag.em !== undefined) {
-        values.em = oneOf<EmStyle>(bag.em, 'typography.emphasis.em', [
-          'asterisk',
-          'underscore',
-          'preserve',
-        ]);
-      }
-      if (bag.strikethrough !== undefined) {
-        values.strikethrough = oneOf<StrikeStyle>(
-          bag.strikethrough,
-          'typography.emphasis.strikethrough',
-          ['double', 'single', 'preserve'],
-        );
-      }
-      to.emphasis = values;
-    }
-    if (from.punctuationChangeList !== undefined) {
-      to.punctuationChangeList = strings(
-        from.punctuationChangeList,
-        'typography.punctuationChangeList',
-      );
-    }
-    if (from.halfwidthAlphanumerics !== undefined) {
-      to.halfwidthAlphanumerics = bool(from.halfwidthAlphanumerics, 'typography.halfwidthAlphanumerics');
-    }
-    if (from.ideographicSpace !== undefined) {
-      to.ideographicSpace = bool(from.ideographicSpace, 'typography.ideographicSpace');
-    }
-    if (from.hashtag !== undefined) {
-      to.hashtag = bool(from.hashtag, 'typography.hashtag');
-    }
-    if (from.parenStyle !== undefined) {
-      to.parenStyle = oneOf(from.parenStyle, 'typography.parenStyle', [
-        'mixed',
-        'fullwidth',
-        'halfwidth',
-        'preserve',
-      ]);
-    }
-    if (from.context !== undefined) {
-      to.context = oneOf(from.context, 'typography.context', ['line', 'adjacent']);
-    }
-    if (from.quotes !== undefined) {
-      to.quotes = oneOf(from.quotes, 'typography.quotes', ['paired', 'preserve']);
-    }
-    if (from.cjkClasses !== undefined) {
-      const names = strings(from.cjkClasses, 'typography.cjkClasses');
-      const allowed: readonly CjkClass[] = ['han', 'kana', 'hangul', 'bopomofo', 'enclosed'];
-      for (const name of names) {
-        if (!(allowed as readonly string[]).includes(name)) {
-          throw new Error('config: typography.cjkClasses has an unknown class ' + name);
-        }
-      }
-      to.cjkClasses = names as readonly CjkClass[];
-    }
-    if (from.spacingSymbols !== undefined) {
-      to.spacingSymbols = strings(from.spacingSymbols, 'typography.spacingSymbols');
-    }
-    out.typography = to;
-  }
-
-  // CFG-03: the ignore directive names are configuration like any other. They
-  // were absent from this reader and from mergeOptions, so a fuxi-fmt.json could
-  // not name them and the editor lost them on the way through.
-  if (raw.ignore !== undefined) {
-    const from = section(raw.ignore, 'ignore');
-    const to: { file?: string; start?: string; end?: string; line?: string } = {};
-    for (const key of ['file', 'start', 'end', 'line'] as const) {
-      const value = from[key];
-      if (value === undefined) continue;
-      if (typeof value !== 'string' || value.length === 0) {
-        throw new Error('config: ignore.' + key + ' must be a non-empty string');
-      }
-      to[key] = value;
-    }
-    out.ignore = to;
-  }
-
   return out;
+}
+
+function readSections(raw: Raw): FormatOptionsInput {
+  // The vocabulary is the surface; the cast is the one place the reader's runtime
+  // walk meets the compiler's view of it, and option-vocabulary.test.ts holds the
+  // two together by comparing every leaf against defaultOptions.
+  return readNode(OPTION_VOCABULARY as unknown as Record<string, unknown>, raw, '') as FormatOptionsInput;
 }
 
 function mergeSection<T extends object>(base: T | undefined, override: T | undefined): T | undefined {
