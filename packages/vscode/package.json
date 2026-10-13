@@ -54,77 +54,110 @@
       "title": "fuxi-fmt",
       "properties": {
         "fuxiFmt.enable": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "description": "%fuxiFmt.enable.description%"
         },
         "fuxiFmt.config": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "object",
           "default": {},
           "scope": "resource",
           "description": "%fuxiFmt.config.description%"
         },
         "fuxiFmt.diagnostics.unmatchedBacktick": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.diagnostics.unmatchedBacktick.description%"
         },
         "fuxiFmt.diagnostics.unmatchedDollarSign": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.diagnostics.unmatchedDollarSign.description%"
         },
         "fuxiFmt.diagnostics.unclosedWikilink": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.diagnostics.unclosedWikilink.description%"
         },
         "fuxiFmt.diagnostics.unclosedLinkDestination": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.diagnostics.unclosedLinkDestination.description%"
         },
         "fuxiFmt.diagnostics.raggedTableRow": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.diagnostics.raggedTableRow.description%"
         },
         "fuxiFmt.diagnostics.listIndentJump": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.diagnostics.listIndentJump.description%"
         },
         "fuxiFmt.diagnostics.excludedList": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.diagnostics.excludedList.description%"
         },
         "fuxiFmt.diagnostics.tableMaxWidth": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.diagnostics.tableMaxWidth.description%"
         },
         "fuxiFmt.blankLines.aroundBlocks": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "string",
           "default": "exact",
           "scope": "resource",
@@ -139,7 +172,10 @@
           "markdownDescription": "%fuxiFmt.blankLines.aroundBlocks.description%"
         },
         "fuxiFmt.blankLines.maxConsecutive": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": [
             "integer",
             "null"
@@ -150,14 +186,18 @@
           "markdownDescription": "%fuxiFmt.blankLines.maxConsecutive.description%"
         },
         "fuxiFmt.blankLines.insideLists": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
+          "type": "string",
+          "default": "remove",
+          "scope": "resource",
           "enum": [
             "remove",
             "one",
             "preserve"
           ],
-          "default": "remove",
-          "scope": "resource",
           "enumDescriptions": [
             "%fuxiFmt.blankLines.insideLists.enum.0%",
             "%fuxiFmt.blankLines.insideLists.enum.1%",
@@ -166,47 +206,38 @@
           "markdownDescription": "%fuxiFmt.blankLines.insideLists.description%"
         },
         "fuxiFmt.blankLines.insideBlockquotes": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
+          "type": "string",
+          "default": "trim",
+          "scope": "resource",
           "enum": [
             "trim",
             "preserve"
           ],
-          "default": "trim",
-          "scope": "resource",
           "enumDescriptions": [
             "%fuxiFmt.blankLines.insideBlockquotes.enum.0%",
             "%fuxiFmt.blankLines.insideBlockquotes.enum.1%"
           ],
           "markdownDescription": "%fuxiFmt.blankLines.insideBlockquotes.description%"
         },
-        "fuxiFmt.thematicBreak": {
-          "keywords": ["fuxi", "fuxi-fmt"],
-          "type": "string",
-          "default": "dashes",
-          "scope": "resource",
-          "enum": [
-            "dashes",
-            "asterisks",
-            "underscores",
-            "preserve"
-          ],
-          "enumDescriptions": [
-            "%fuxiFmt.thematicBreak.enum.0%",
-            "%fuxiFmt.thematicBreak.enum.1%",
-            "%fuxiFmt.thematicBreak.enum.2%",
-            "%fuxiFmt.thematicBreak.enum.3%"
-          ],
-          "markdownDescription": "%fuxiFmt.thematicBreak.description%"
-        },
         "fuxiFmt.typography.cjkSpacing": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.typography.cjkSpacing.description%"
         },
         "fuxiFmt.typography.punctuationStyle": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "string",
           "default": "fullwidth",
           "scope": "resource",
@@ -225,11 +256,11 @@
           "markdownDescription": "%fuxiFmt.typography.punctuationStyle.description%"
         },
         "fuxiFmt.typography.punctuationChangeList": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "array",
-          "items": {
-            "type": "string"
-          },
           "default": [
             ",",
             ".",
@@ -239,31 +270,46 @@
             ";"
           ],
           "scope": "resource",
+          "items": {
+            "type": "string"
+          },
           "markdownDescription": "%fuxiFmt.typography.punctuationChangeList.description%"
         },
         "fuxiFmt.typography.halfwidthAlphanumerics": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.typography.halfwidthAlphanumerics.description%"
         },
         "fuxiFmt.typography.ideographicSpace": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.typography.ideographicSpace.description%"
         },
         "fuxiFmt.typography.hashtag": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "boolean",
           "default": false,
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.typography.hashtag.description%"
         },
         "fuxiFmt.typography.parenStyle": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "string",
           "default": "mixed",
           "scope": "resource",
@@ -281,8 +327,107 @@
           ],
           "markdownDescription": "%fuxiFmt.typography.parenStyle.description%"
         },
+        "fuxiFmt.typography.context": {
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
+          "type": "string",
+          "default": "line",
+          "scope": "resource",
+          "enum": [
+            "line",
+            "adjacent"
+          ],
+          "enumDescriptions": [
+            "%fuxiFmt.typography.context.enum.0%",
+            "%fuxiFmt.typography.context.enum.1%"
+          ],
+          "markdownDescription": "%fuxiFmt.typography.context.description%"
+        },
+        "fuxiFmt.typography.quotes": {
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
+          "type": "string",
+          "default": "paired",
+          "scope": "resource",
+          "enum": [
+            "preserve",
+            "paired"
+          ],
+          "enumDescriptions": [
+            "%fuxiFmt.typography.quotes.enum.0%",
+            "%fuxiFmt.typography.quotes.enum.1%"
+          ],
+          "markdownDescription": "%fuxiFmt.typography.quotes.description%"
+        },
+        "fuxiFmt.typography.emphasis.strong": {
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
+          "type": "string",
+          "default": "preserve",
+          "scope": "resource",
+          "enum": [
+            "asterisks",
+            "underscores",
+            "preserve"
+          ],
+          "enumDescriptions": [
+            "%fuxiFmt.typography.emphasis.strong.enum.0%",
+            "%fuxiFmt.typography.emphasis.strong.enum.1%",
+            "%fuxiFmt.typography.emphasis.strong.enum.2%"
+          ],
+          "markdownDescription": "%fuxiFmt.typography.emphasis.strong.description%"
+        },
+        "fuxiFmt.typography.emphasis.em": {
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
+          "type": "string",
+          "default": "preserve",
+          "scope": "resource",
+          "enum": [
+            "asterisk",
+            "underscore",
+            "preserve"
+          ],
+          "enumDescriptions": [
+            "%fuxiFmt.typography.emphasis.em.enum.0%",
+            "%fuxiFmt.typography.emphasis.em.enum.1%",
+            "%fuxiFmt.typography.emphasis.em.enum.2%"
+          ],
+          "markdownDescription": "%fuxiFmt.typography.emphasis.em.description%"
+        },
+        "fuxiFmt.typography.emphasis.strikethrough": {
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
+          "type": "string",
+          "default": "preserve",
+          "scope": "resource",
+          "enum": [
+            "double",
+            "single",
+            "preserve"
+          ],
+          "enumDescriptions": [
+            "%fuxiFmt.typography.emphasis.strikethrough.enum.0%",
+            "%fuxiFmt.typography.emphasis.strikethrough.enum.1%",
+            "%fuxiFmt.typography.emphasis.strikethrough.enum.2%"
+          ],
+          "markdownDescription": "%fuxiFmt.typography.emphasis.strikethrough.description%"
+        },
         "fuxiFmt.typography.cjkClasses": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "array",
           "default": [
             "han"
@@ -307,7 +452,10 @@
           "markdownDescription": "%fuxiFmt.typography.cjkClasses.description%"
         },
         "fuxiFmt.typography.spacingSymbols": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "array",
           "default": [
             "+",
@@ -326,129 +474,11 @@
           },
           "markdownDescription": "%fuxiFmt.typography.spacingSymbols.description%"
         },
-        "fuxiFmt.typography.context": {
-          "keywords": ["fuxi", "fuxi-fmt"],
-          "type": "string",
-          "default": "line",
-          "scope": "resource",
-          "enum": [
-            "line",
-            "adjacent"
-          ],
-          "enumDescriptions": [
-            "%fuxiFmt.typography.context.enum.0%",
-            "%fuxiFmt.typography.context.enum.1%"
-          ],
-          "markdownDescription": "%fuxiFmt.typography.context.description%"
-        },
-        "fuxiFmt.typography.quotes": {
-          "keywords": ["fuxi", "fuxi-fmt"],
-          "type": "string",
-          "default": "paired",
-          "scope": "resource",
-          "enum": [
-            "paired",
-            "preserve"
-          ],
-          "enumDescriptions": [
-            "%fuxiFmt.typography.quotes.enum.0%",
-            "%fuxiFmt.typography.quotes.enum.1%"
-          ],
-          "markdownDescription": "%fuxiFmt.typography.quotes.description%"
-        },
-        "fuxiFmt.typography.emphasis.strong": {
-          "keywords": ["fuxi", "fuxi-fmt"],
-          "type": "string",
-          "default": "preserve",
-          "scope": "resource",
-          "enum": [
-            "asterisks",
-            "underscores",
-            "preserve"
-          ],
-          "enumDescriptions": [
-            "%fuxiFmt.typography.emphasis.strong.enum.0%",
-            "%fuxiFmt.typography.emphasis.strong.enum.1%",
-            "%fuxiFmt.typography.emphasis.strong.enum.2%"
-          ],
-          "markdownDescription": "%fuxiFmt.typography.emphasis.strong.description%"
-        },
-        "fuxiFmt.typography.emphasis.em": {
-          "keywords": ["fuxi", "fuxi-fmt"],
-          "type": "string",
-          "default": "preserve",
-          "scope": "resource",
-          "enum": [
-            "asterisk",
-            "underscore",
-            "preserve"
-          ],
-          "enumDescriptions": [
-            "%fuxiFmt.typography.emphasis.em.enum.0%",
-            "%fuxiFmt.typography.emphasis.em.enum.1%",
-            "%fuxiFmt.typography.emphasis.em.enum.2%"
-          ],
-          "markdownDescription": "%fuxiFmt.typography.emphasis.em.description%"
-        },
-        "fuxiFmt.typography.emphasis.strikethrough": {
-          "keywords": ["fuxi", "fuxi-fmt"],
-          "type": "string",
-          "default": "preserve",
-          "scope": "resource",
-          "enum": [
-            "double",
-            "single",
-            "preserve"
-          ],
-          "enumDescriptions": [
-            "%fuxiFmt.typography.emphasis.strikethrough.enum.0%",
-            "%fuxiFmt.typography.emphasis.strikethrough.enum.1%",
-            "%fuxiFmt.typography.emphasis.strikethrough.enum.2%"
-          ],
-          "markdownDescription": "%fuxiFmt.typography.emphasis.strikethrough.description%"
-        },
-        "fuxiFmt.table.mode": {
-          "keywords": ["fuxi", "fuxi-fmt"],
-          "type": "string",
-          "default": "normalize",
-          "scope": "resource",
-          "enum": [
-            "preserve",
-            "normalize"
-          ],
-          "enumDescriptions": [
-            "%fuxiFmt.table.mode.enum.0%",
-            "%fuxiFmt.table.mode.enum.1%"
-          ],
-          "markdownDescription": "%fuxiFmt.table.mode.description%"
-        },
-        "fuxiFmt.table.maxWidth": {
-          "keywords": ["fuxi", "fuxi-fmt"],
-          "type": [
-            "integer",
-            "null"
-          ],
-          "default": 80,
-          "scope": "resource",
-          "minimum": 1,
-          "markdownDescription": "%fuxiFmt.table.maxWidth.description%"
-        },
-        "fuxiFmt.table.cjkWidth": {
-          "keywords": ["fuxi", "fuxi-fmt"],
-          "enum": [
-            2,
-            1
-          ],
-          "default": 2,
-          "scope": "resource",
-          "enumDescriptions": [
-            "%fuxiFmt.table.cjkWidth.enum.0%",
-            "%fuxiFmt.table.cjkWidth.enum.1%"
-          ],
-          "markdownDescription": "%fuxiFmt.table.cjkWidth.description%"
-        },
         "fuxiFmt.list.orderedStyle": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "string",
           "default": "keep-all-ones",
           "scope": "resource",
@@ -465,7 +495,10 @@
           "markdownDescription": "%fuxiFmt.list.orderedStyle.description%"
         },
         "fuxiFmt.list.orderedDelimiter": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "string",
           "default": "preserve",
           "scope": "resource",
@@ -482,13 +515,16 @@
           "markdownDescription": "%fuxiFmt.list.orderedDelimiter.description%"
         },
         "fuxiFmt.list.orderedIndent": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
+          "default": "aligned",
+          "scope": "resource",
           "enum": [
             "aligned",
             4
           ],
-          "default": "aligned",
-          "scope": "resource",
           "enumDescriptions": [
             "%fuxiFmt.list.orderedIndent.enum.0%",
             "%fuxiFmt.list.orderedIndent.enum.1%"
@@ -496,14 +532,17 @@
           "markdownDescription": "%fuxiFmt.list.orderedIndent.description%"
         },
         "fuxiFmt.list.unorderedIndent": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
+          "default": "aligned",
+          "scope": "resource",
           "enum": [
             "aligned",
             3,
             4
           ],
-          "default": "aligned",
-          "scope": "resource",
           "enumDescriptions": [
             "%fuxiFmt.list.unorderedIndent.enum.0%",
             "%fuxiFmt.list.unorderedIndent.enum.1%",
@@ -512,7 +551,10 @@
           "markdownDescription": "%fuxiFmt.list.unorderedIndent.description%"
         },
         "fuxiFmt.list.unorderedMarker": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "string",
           "default": "dashes",
           "scope": "resource",
@@ -529,7 +571,10 @@
           "markdownDescription": "%fuxiFmt.list.unorderedMarker.description%"
         },
         "fuxiFmt.codeBlock.fenceChar": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "string",
           "default": "backticks",
           "scope": "resource",
@@ -546,21 +591,101 @@
           "markdownDescription": "%fuxiFmt.codeBlock.fenceChar.description%"
         },
         "fuxiFmt.codeBlock.fenceLength": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.codeBlock.fenceLength.description%"
         },
         "fuxiFmt.codeBlock.trimBlankLines": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "boolean",
           "default": true,
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.codeBlock.trimBlankLines.description%"
         },
+        "fuxiFmt.thematicBreak": {
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
+          "type": "string",
+          "default": "dashes",
+          "scope": "resource",
+          "enum": [
+            "dashes",
+            "asterisks",
+            "underscores",
+            "preserve"
+          ],
+          "enumDescriptions": [
+            "%fuxiFmt.thematicBreak.enum.0%",
+            "%fuxiFmt.thematicBreak.enum.1%",
+            "%fuxiFmt.thematicBreak.enum.2%",
+            "%fuxiFmt.thematicBreak.enum.3%"
+          ],
+          "markdownDescription": "%fuxiFmt.thematicBreak.description%"
+        },
+        "fuxiFmt.table.mode": {
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
+          "type": "string",
+          "default": "normalize",
+          "scope": "resource",
+          "enum": [
+            "preserve",
+            "normalize"
+          ],
+          "enumDescriptions": [
+            "%fuxiFmt.table.mode.enum.0%",
+            "%fuxiFmt.table.mode.enum.1%"
+          ],
+          "markdownDescription": "%fuxiFmt.table.mode.description%"
+        },
+        "fuxiFmt.table.maxWidth": {
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 80,
+          "scope": "resource",
+          "minimum": 1,
+          "markdownDescription": "%fuxiFmt.table.maxWidth.description%"
+        },
+        "fuxiFmt.table.cjkWidth": {
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
+          "default": 2,
+          "scope": "resource",
+          "enum": [
+            1,
+            2
+          ],
+          "enumDescriptions": [
+            "%fuxiFmt.table.cjkWidth.enum.0%",
+            "%fuxiFmt.table.cjkWidth.enum.1%"
+          ],
+          "markdownDescription": "%fuxiFmt.table.cjkWidth.description%"
+        },
         "fuxiFmt.endOfLine": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "string",
           "default": "lf",
           "scope": "resource",
@@ -577,28 +702,40 @@
           "markdownDescription": "%fuxiFmt.endOfLine.description%"
         },
         "fuxiFmt.ignore.file": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "string",
           "default": "fuxi-fmt-ignore-file",
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.ignore.file.description%"
         },
         "fuxiFmt.ignore.start": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "string",
           "default": "fuxi-fmt-ignore-start",
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.ignore.start.description%"
         },
         "fuxiFmt.ignore.end": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "string",
           "default": "fuxi-fmt-ignore-end",
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.ignore.end.description%"
         },
         "fuxiFmt.ignore.line": {
-          "keywords": ["fuxi", "fuxi-fmt"],
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
           "type": "string",
           "default": "fuxi-fmt-ignore",
           "scope": "resource",

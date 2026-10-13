@@ -17,6 +17,7 @@ npm run ci           # typecheck + 测试，CI 跑的就是这个
 npm run build        # 打包 VS Code 扩展
 npm run vsix         # 构建并打出 output/fuxi-fmt-<version>.vsix
 npm run l10n         # 从消息目录重新生成 packages/vscode/l10n
+npm run manifest     # 从选项词汇表重新生成 packages/vscode/package.json
 ```
 
 ## 仓库结构
@@ -51,7 +52,7 @@ npm run ci > /tmp/ci.log 2>&1 || { tail -20 /tmp/ci.log; exit 1; }
 然后是按「文档随代码一起走」：一个提交如果让某份文档说出了它刚刚弄错的话，那它就不算完成，即使测试全绿。同一次提交里要更新的东西：
 
 - 规范里受影响的规则文字，以及第 6 节的状态注记；
-- 如果新增、改名或删除选项，`packages/vscode/package.json` **以及** `package.nls.json` 与 `package.nls.zh-cn.json`；
+- 如果新增、改名或删除选项，`packages/vscode/package.json`（它由选项词汇表生成，跑 `npm run manifest`，不要手改）**以及** `package.nls.json` 与 `package.nls.zh-cn.json` 里对应的那几条字符串；
 - 用户看得见的改动要更新 `CHANGELOG.md`。
 
 测试已经强制了其中大部分，这也是可信的理由：`docs.test.ts` 会在规范里被标为未实现的选项其实已实现、在某份非规范的文档里出现「未实现清单」、文档写了一个并不存在的选项、核心的某个选项既不是设置也没被声明为有意不暴露、某个语言包缺少清单引用的字符串、或者特性提交未发布而变更日志只字不提时失败。`settings.test.ts` 会在清单与核心的选项面不一致时失败。

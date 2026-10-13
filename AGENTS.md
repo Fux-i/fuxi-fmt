@@ -103,8 +103,9 @@ mixed punctuation, CRLF, CJK adjacent to every ASCII punctuation mark, deeply ne
 Every commit that changes behaviour updates, **in the same commit**:
 
 - the specification's rule text and its section 6 status note, if either is affected;
-- `packages/vscode/package.json` **and both** `package.nls.json` and `package.nls.zh-cn.json`, if an
-  option was added, renamed or removed;
+- `packages/vscode/package.json` — generated from the option vocabulary, so run `npm run manifest`
+  rather than editing it — **and both** `package.nls.json` and `package.nls.zh-cn.json`, if an option was
+  added, renamed or removed;
 - `CHANGELOG.md`, if the change is visible to a user.
 
 Tests already enforce most of this, and they are the reason to trust it: `docs.test.ts` fails when
