@@ -174,6 +174,37 @@ export function lineProvenance(lines: readonly SourceLine[], from: readonly numb
   };
 }
 
+/**
+ * The character-level rewrites, in the only order that settles.
+ *
+ * TYPO-12 runs first so the width passes see the final delimiters. Width runs
+ * before punctuation so that spacing sees ordinary digits, and punctuation before
+ * spacing so that TYPO-07 can remove the gaps a conversion leaves behind. Every
+ * step but the last is a character-for-character rewrite, which is what lets one
+ * protected mask serve the whole chain: offsets never move. widths.length.test.ts
+ * pins the property that makes that sound rather than hopeful.
+ *
+ * The chain is a module of its own so it can be run over a text and a mask
+ * directly - the passes were each tested, and the order they run in could only be
+ * exercised through a whole document.
+ */
+export function rewriteInline(
+  text: string,
+  options: FormatOptions,
+  mask: Uint8Array,
+) {
+  const typography = options.typography;
+  const emphasised = normalizeEmphasis(text, typography.emphasis, mask);
+  const widths = normalizeFullwidthAlphanumerics(emphasised, typography, mask);
+  const punctuation = normalizePunctuation(widths, typography, mask);
+  const parens = normalizeParens(punctuation, typography, mask);
+  const quoted = normalizeQuotes(parens, typography, mask);
+  return {
+    text: applyTypography(quoted.text, typography, ignoreRanges(quoted.text, options.ignore)),
+    unpaired: quoted.unpaired,
+  };
+}
+
 export function format(source: string, input?: FormatOptionsInput): FormatResult {
   const options = resolveOptions(input);
 
@@ -363,15 +394,8 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   // region scans per format, measured at about 6%. widths.length.test.ts pins
   // the property that makes this sound rather than hopeful.
   const widthMask = protectedMask(structural, ignoreRanges(structural, options.ignore));
-  // TYPO-12 runs before the width passes so that they see the final delimiters;
-  // it is a character-for-character rewrite of runs the parser pairs, so nothing
-  // downstream can be surprised by it.
-  const emphasised = normalizeEmphasis(structural, options.typography.emphasis, widthMask);
-  const widths = normalizeFullwidthAlphanumerics(emphasised, options.typography, widthMask);
-  const punctuation = normalizePunctuation(widths, options.typography, widthMask);
-  const parens = normalizeParens(punctuation, options.typography, widthMask);
-  const quoted = normalizeQuotes(parens, options.typography, widthMask);
-  const spaced = applyTypography(quoted.text, options.typography, ignoreRanges(quoted.text, options.ignore));
+  const inline = rewriteInline(structural, options, widthMask);
+  const spaced = inline.text;
   // BLK-12 runs last of the content rules and before the guard, and it is the only
   // one that removes lines - which is why it is here rather than among the passes
   // that index by line. It is also the only rule the guard has an exception for,
@@ -423,7 +447,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   const output = applyEndOfLine(candidate, eol);
   // TYPO-11: an unpaired quote is a warning, never a failure. The line keeps what
   // the author wrote, and the author is told which line to look at.
-  const diagnostics: Diagnostic[] = quoted.unpaired.map((offset) =>
+  const diagnostics: Diagnostic[] = inline.unpaired.map((offset) =>
     diagnostic('TYPO-11', 'typo.unpairedQuote', [], provenance.offsetAt(offset), 'warning'),
   );
   return {
