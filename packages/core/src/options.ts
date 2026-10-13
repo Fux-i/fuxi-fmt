@@ -376,6 +376,12 @@ export interface LeafSpec {
   readonly min?: number;
   /** For 'int': the parenthetical the complaint ends with. */
   readonly hint?: string;
+  /**
+   * The reason this leaf is deliberately not contributed as an editor setting.
+   * Absent means it is one: the editor exposes the whole option surface, and the
+   * only exceptions are the ones that say why they are exceptions.
+   */
+  readonly unexposed?: string;
 }
 
 /**
@@ -419,7 +425,12 @@ export const OPTION_VOCABULARY = {
     orderedDelimiter: { kind: 'oneOf', values: ORDERED_DELIMITERS },
     orderedIndent: { kind: 'oneOf', values: ORDERED_INDENTS },
     unorderedIndent: { kind: 'oneOf', values: UNORDERED_INDENTS },
-    tabWidth: { kind: 'int', min: 0, hint: '0 leaves tabs alone' },
+    tabWidth: {
+      kind: 'int',
+      min: 0,
+      hint: '0 leaves tabs alone',
+      unexposed: 'VS Code already has editor.tabSize; a second one would be a second truth',
+    },
     unorderedMarker: { kind: 'oneOf', values: UNORDERED_MARKERS },
   },
   codeBlock: {
@@ -441,4 +452,30 @@ export const OPTION_VOCABULARY = {
     line: { kind: 'nonEmptyString' },
   },
 } as const;
+
+/**
+ * The options deliberately not contributed as editor settings, and why.
+ *
+ * Derived from the vocabulary rather than kept as a list beside it: the decision
+ * belongs where the option is declared, so adding an option forces the choice
+ * there instead of in the test that used to hold the list. settings.test.ts reads
+ * this to tell a deliberate exclusion from a forgotten setting.
+ */
+export const UNEXPOSED_OPTIONS: Readonly<Record<string, string>> = (() => {
+  const out: Record<string, string> = {};
+  const walk = (node: Record<string, unknown>, prefix: string): void => {
+    for (const [key, value] of Object.entries(node)) {
+      const child = value as Record<string, unknown>;
+      const path = prefix === '' ? key : prefix + '.' + key;
+      if (typeof child['kind'] === 'string') {
+        const why = child['unexposed'];
+        if (typeof why === 'string') out[path] = why;
+        continue;
+      }
+      walk(child, path);
+    }
+  };
+  walk(OPTION_VOCABULARY as unknown as Record<string, unknown>, '');
+  return out;
+})();
 

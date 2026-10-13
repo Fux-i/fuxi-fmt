@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { defaultOptions } from './options.ts';
+import { OPTION_VOCABULARY, UNEXPOSED_OPTIONS, defaultOptions } from './options.ts';
 
 /**
  * The extension's settings live in a static JSON manifest while the real option
@@ -32,17 +32,6 @@ const NOT_OPTIONS = new Set([
   'diagnostics.excludedList',
   'diagnostics.tableMaxWidth',
 ]);
-
-/**
- * Options deliberately not contributed as settings, with the reason.
- *
- * Each is asserted to still exist in the core, so a stale entry cannot hide an
- * option that was removed, and a new option still has to be decided about: make
- * it a setting or name it here.
- */
-const NOT_SETTINGS: Record<string, string> = {
-  'list.tabWidth': "VS Code already has editor.tabSize; a second one would be a second truth",
-};
 
 interface Schema {
   readonly default?: unknown;
@@ -80,7 +69,7 @@ function settingPaths(): string[] {
   return Object.keys(properties)
     .filter((id) => id.startsWith(PREFIX))
     .map((id) => id.slice(PREFIX.length))
-    .filter((path) => !NOT_OPTIONS.has(path) && !(path in NOT_SETTINGS))
+    .filter((path) => !NOT_OPTIONS.has(path) && !(path in UNEXPOSED_OPTIONS))
     .sort();
 }
 
@@ -91,6 +80,16 @@ function defaultOf(path: string): unknown {
     node = (node as Record<string, unknown>)[part];
   }
   return node;
+}
+
+/** The vocabulary entry at a dotted path, for its accepted members. */
+function leafOf(path: string): Record<string, unknown> | undefined {
+  let node: unknown = OPTION_VOCABULARY;
+  for (const part of path.split('.')) {
+    if (node === null || typeof node !== 'object') return undefined;
+    node = (node as Record<string, unknown>)[part];
+  }
+  return node as Record<string, unknown>;
 }
 
 function placeholders(node: unknown, out: Set<string> = new Set()): Set<string> {
@@ -167,18 +166,18 @@ describe('the settings are localised, and stay localised', () => {
 describe('every option is a setting, and every setting is an option', () => {
   test('every deliberately unexposed option still exists', () => {
     const core = new Set(corePaths());
-    for (const path of Object.keys(NOT_SETTINGS)) {
+    for (const path of Object.keys(UNEXPOSED_OPTIONS)) {
       assert.ok(core.has(path), path + ' is excluded from the settings but is not a core option');
     }
   });
 
   test('the two lists are identical, once deliberate exclusions are removed', () => {
-    const expected = corePaths().filter((path) => !(path in NOT_SETTINGS));
+    const expected = corePaths().filter((path) => !(path in UNEXPOSED_OPTIONS));
     assert.deepEqual(settingPaths(), expected);
   });
 
   test('each setting carries the core default', () => {
-    for (const path of corePaths().filter((path) => !(path in NOT_SETTINGS))) {
+    for (const path of corePaths().filter((path) => !(path in UNEXPOSED_OPTIONS))) {
       const schema = properties[PREFIX + path] as Schema | undefined;
       assert.ok(schema !== undefined, 'no setting for ' + path);
       const expected = defaultOf(path);
@@ -186,6 +185,28 @@ describe('every option is a setting, and every setting is an option', () => {
         schema.default,
         expected instanceof Set ? [...expected] : expected,
         'default mismatch for ' + path,
+      );
+    }
+  });
+
+  test('each setting offers exactly the members the option accepts', () => {
+    // The manifest re-lists every closed vocabulary by hand, so a member added to
+    // the option and not to the setting is a value the editor refuses to offer -
+    // while the audit above stays quiet, because the paths and the default still
+    // match. Only membership is compared: the order is presentation.
+    const sorted = (items: readonly unknown[]): unknown[] =>
+      [...items].sort((a, b) => String(a).localeCompare(String(b)));
+    for (const path of corePaths().filter((p) => !(p in UNEXPOSED_OPTIONS))) {
+      const schema = properties[PREFIX + path] as
+        | { enum?: readonly unknown[]; items?: { enum?: readonly unknown[] } }
+        | undefined;
+      const values = leafOf(path)?.['values'] as readonly unknown[] | undefined;
+      if (values === undefined) continue;
+      const declared = schema?.enum ?? schema?.items?.enum ?? [];
+      assert.deepEqual(
+        sorted(declared),
+        sorted(values),
+        path + ': the setting offers different members from the option',
       );
     }
   });
