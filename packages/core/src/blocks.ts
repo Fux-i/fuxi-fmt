@@ -107,6 +107,68 @@ export function quoteContentOf(line: string): string {
   return line.slice(start);
 }
 
+function leadingIndent(text: string): number {
+  let n = 0;
+  while (n < text.length) {
+    const c = text.charCodeAt(n);
+    if (c !== 32 && c !== 9) break;
+    n++;
+  }
+  return n;
+}
+
+/** Column width of the leading whitespace, expanding tabs to four-column stops. */
+function indentColumns(text: string, chars: number): number {
+  let column = 0;
+  for (let i = 0; i < chars; i++) {
+    column = text.charCodeAt(i) === 9 ? column + (4 - (column % 4)) : column + 1;
+  }
+  return column;
+}
+
+/** Whether a line is blank: whitespace only, or nothing at all. */
+export function isBlank(text: string): boolean {
+  return text.trim().length === 0;
+}
+
+/**
+ * A line's content, seen past the block quote markers it is wrapped in.
+ *
+ * A protected region inside a block quote is still a protected region: the fence
+ * in a quoted line is a fence and its body is code (SAFE-01), and the same holds
+ * for front matter's siblings - display math and an HTML block. The markers are
+ * part of the region and not one byte of them moves; knowing where the content
+ * begins only decides which block the line starts.
+ *
+ * This is the one reading of a line head. The region scanner decides indented code
+ * by `columns`, the list scanner measures an item from `body`, and the table
+ * scanner finds its cells past `at`; none of them peels the chain again.
+ */
+export interface LineContent {
+  /** Offset of the content, past the marker chain and the one space after it. */
+  readonly at: number;
+  /** Offset of the content's first non-whitespace character. */
+  readonly body: number;
+  /** Column width of the whitespace before it, tabs to four-column stops. */
+  readonly columns: number;
+  /** How many block quote markers the line carries. */
+  readonly depth: number;
+}
+
+export function lineContentOf(text: string): LineContent {
+  const quote = quotePrefix(text);
+  // BLK-09 owns one space after the last marker; the whitespace after that is the
+  // content's own indentation, which is what makes an indented code block inside a
+  // quote code rather than a paragraph. With no marker there is no separator, and
+  // the leading whitespace is the line's own indentation.
+  const after = text.charCodeAt(quote.end);
+  const separator = quote.depth > 0 && (after === 32 || after === 9) ? 1 : 0;
+  const at = quote.end + separator;
+  const inner = text.slice(at);
+  const width = leadingIndent(inner);
+  return { at, body: at + width, columns: indentColumns(inner, width), depth: quote.depth };
+}
+
 const LIST_MARKER = /^[ \t]*(?:[-*+]|\d{1,9}[.)])(?=[ \t]|$)/;
 const HEADING_MARKER = /^[ \t]*#{1,6}(?=[ \t]|$)/;
 

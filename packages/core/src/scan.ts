@@ -10,7 +10,7 @@
  * SAFE-06 (URLs and destinations), FM-01 (front matter).
  */
 
-import { quotePrefix, type AtomicRange, type BlockKind } from './blocks.ts';
+import { isBlank, lineContentOf, type AtomicRange, type BlockKind, type LineContent } from './blocks.ts';
 import type { CharRange } from './ignores.ts';
 
 export type RegionKind =
@@ -90,54 +90,6 @@ function splitLines(source: string): Line[] {
   return lines;
 }
 
-function leadingIndent(text: string): number {
-  let n = 0;
-  while (n < text.length) {
-    const c = text.charCodeAt(n);
-    if (c !== SPACE && c !== TAB) break;
-    n++;
-  }
-  return n;
-}
-
-function isBlank(text: string): boolean {
-  return text.trim().length === 0;
-}
-
-/**
- * A line's content, seen past the block quote markers it is wrapped in.
- *
- * A protected region inside a block quote is still a protected region: the fence
- * in `> ```` is a fence and its body is code (SAFE-01), and the same holds for
- * front matter's siblings - display math and an HTML block. The markers are part
- * of the region and not one byte of them moves; knowing where the content begins
- * only decides which block the line starts.
- */
-interface LineContent {
-  /** Offset of the content, past the marker chain and the one space after it. */
-  readonly at: number;
-  /** Offset of the content's first non-whitespace character. */
-  readonly body: number;
-  /** Column width of the whitespace before it, tabs to four-column stops. */
-  readonly columns: number;
-  /** How many block quote markers the line carries. */
-  readonly depth: number;
-}
-
-function contentOf(text: string): LineContent {
-  const quote = quotePrefix(text);
-  // BLK-09 owns one space after the last marker; the whitespace after that is the
-  // content's own indentation, which is what makes an indented code block inside a
-  // quote code rather than a paragraph. With no marker there is no separator, and
-  // the leading whitespace is the line's own indentation.
-  const after = text.charCodeAt(quote.end);
-  const separator = quote.depth > 0 && (after === SPACE || after === TAB) ? 1 : 0;
-  const at = quote.end + separator;
-  const inner = text.slice(at);
-  const width = leadingIndent(inner);
-  return { at, body: at + width, columns: indentColumns(inner, width), depth: quote.depth };
-}
-
 /** What a block scan found: its last line, where to resume, and whether it closed. */
 interface BlockEnd {
   /** Exclusive end offset of the region. */
@@ -167,7 +119,7 @@ function closerIn(
   for (let j = from; j < lines.length; j++) {
     const cand = lines[j];
     if (cand === undefined) continue;
-    const content = contentOf(cand.text);
+    const content = lineContentOf(cand.text);
     if (content.depth < opener.depth) return { end, next: j, closed: false };
     end = cand.end;
     if (isCloser(cand.text.slice(content.body), content)) {
@@ -175,15 +127,6 @@ function closerIn(
     }
   }
   return { end, next: lines.length, closed: false };
-}
-
-/** Column width of the leading whitespace, expanding tabs to four-column stops. */
-function indentColumns(text: string, chars: number): number {
-  let column = 0;
-  for (let i = 0; i < chars; i++) {
-    column = text.charCodeAt(i) === TAB ? column + (4 - (column % 4)) : column + 1;
-  }
-  return column;
 }
 
 /**
@@ -316,7 +259,7 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
   for (; i < lines.length; i++) {
     const line = lines[i];
     if (line === undefined) continue;
-    const content = contentOf(line.text);
+    const content = lineContentOf(line.text);
     const rest = line.text.slice(content.body);
 
     if (content.columns <= 3 && rest.length > 0) {
@@ -375,7 +318,7 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
         for (let j = i + 1; j < lines.length; j++) {
           const cand = lines[j];
           if (cand === undefined) continue;
-          const candContent = contentOf(cand.text);
+          const candContent = lineContentOf(cand.text);
           // A bare '>' is a blank line inside the quote, and that is where the
           // block ends; a line without the marker ends the quote itself.
           if (candContent.depth < content.depth || isBlank(cand.text.slice(candContent.body))) {
@@ -395,7 +338,7 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
 
     if (content.columns >= 4) {
       const before = i === 0 ? undefined : lines[i - 1];
-      const beforeContent = before === undefined ? undefined : contentOf(before.text);
+      const beforeContent = before === undefined ? undefined : lineContentOf(before.text);
       const prevBlank =
         before === undefined ||
         beforeContent === undefined ||
@@ -406,7 +349,7 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
         for (let j = i + 1; j < lines.length; j++) {
           const cand = lines[j];
           if (cand === undefined) continue;
-          const candContent = contentOf(cand.text);
+          const candContent = lineContentOf(cand.text);
           if (
             candContent.depth < content.depth ||
             candContent.columns < 4 ||
@@ -431,7 +374,7 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
 function isWithinList(lines: Line[], index: number): boolean {
   for (let j = index - 1; j >= 0; j--) {
     const text = lines[j]?.text ?? '';
-    const content = contentOf(text);
+    const content = lineContentOf(text);
     if (isBlank(text.slice(content.body))) continue;
     if (content.columns >= 4) return true;
     return LIST_ITEM.test(text.slice(content.body));
