@@ -84,11 +84,36 @@ function group(content: string): { cells: string[]; leading: boolean; trailing: 
   return { cells: parts, leading, trailing };
 }
 
+/** The row's content past its indentation and quote markers, or null when it holds no pipe. */
+function rowContent(line: string): string | null {
+  const content = line.slice(contentStartOf(line));
+  return content.includes('|') ? content : null;
+}
+
+/**
+ * The cells of a table row, or null when the line is not a row at all.
+ *
+ * Outer pipes are stripped, `\|` is content rather than a separator, and a row
+ * without a leading pipe still counts: GFM's pipes are optional on the outside,
+ * and a formatter that only sees `| a | b |` cannot report anything about
+ * `a | b`. A pipe inside a code span *is* a separator here, which is what GFM
+ * does with it. A bare pipe has no cells and is an empty list rather than
+ * `null`: "not a row" and "a row with nothing in it" are different answers, and
+ * DET-10 reports the second.
+ *
+ * This is the one reading of a row's cells: TBL-01 pads them, and DET-10 and
+ * DET-13 count them, so a change here cannot leave one of them behind.
+ */
+export function tableCells(line: string): string[] | null {
+  const content = rowContent(line);
+  return content === null ? null : group(content).cells;
+}
+
 /** A row of a table, or null when the line is not one (no pipe at all). */
 export function tableRow(line: string): TableRow | null {
   const at = contentStartOf(line);
-  const content = line.slice(at);
-  if (!content.includes('|')) return null;
+  const content = rowContent(line);
+  if (content === null) return null;
   const grouped = group(content);
   if (grouped.cells.length === 0) return null;
   return {

@@ -14,18 +14,14 @@
  * Spec references: DET-01, DET-03, GRT-04.
  */
 
-import { contentStartOf } from './blocks.ts';
-
-const BACKSLASH = 92;
 import type { CharRange } from './ignores.ts';
 import { assignParents, scanListItems } from './list-scan.ts';
-import { isDelimiterRow as isTableDelimiterRow, scanTables, tableRow } from './tables.ts';
+import { isDelimiterRow, scanTables, tableCells, tableRow } from './tables.ts';
 import type { MessageArgs, MessageId } from './messages.ts';
 import { isEscaped, type Region, type SourceLine } from './scan.ts';
 
 const BACKTICK = 96;
 const DOLLAR = 36;
-const PIPE = 124;
 
 export interface Detection {
   readonly ruleId: string;
@@ -207,47 +203,6 @@ function unclosedInline(
   return out;
 }
 
-/**
- * The cells of a table row, or null when the line is not a row at all.
- *
- * Outer pipes are stripped, `\|` is content rather than a separator, and a row
- * without a leading pipe still counts: GFM's pipes are optional on the outside,
- * and a formatter that only sees `| a | b |` cannot report anything about
- * `a | b`. A pipe inside a code span *is* a separator here, which is what GFM does
- * with it.
- */
-function tableCells(text: string): string[] | null {
-  const body = text.slice(contentStartOf(text));
-  if (!body.includes('|')) return null;
-  const cells: string[] = [];
-  let cell = '';
-  for (let i = 0; i < body.length; i++) {
-    const code = body.charCodeAt(i);
-    if (code === BACKSLASH && body.charCodeAt(i + 1) === PIPE) {
-      cell += '\\|';
-      i++;
-      continue;
-    }
-    if (code === PIPE) {
-      cells.push(cell);
-      cell = '';
-      continue;
-    }
-    cell += body.charAt(i);
-  }
-  cells.push(cell);
-  if ((cells[0] ?? '').trim().length === 0) cells.shift();
-  if (cells.length > 0 && (cells[cells.length - 1] ?? '').trim().length === 0) cells.pop();
-  return cells;
-}
-
-const TABLE_DELIMITER_CELL = /^\s*:?-+:?\s*$/;
-
-function isDelimiterRow(text: string): boolean {
-  const cells = tableCells(text);
-  return cells !== null && cells.length > 0 && cells.every((cell) => TABLE_DELIMITER_CELL.test(cell));
-}
-
 /** DET-10: a row, or the delimiter row, with a different cell count from the header. */
 function raggedTables(lines: readonly SourceLine[], mask: Uint8Array): Detection[] {
   const out: Detection[] = [];
@@ -328,7 +283,7 @@ function incompleteTables(lines: readonly SourceLine[], mask: Uint8Array): Detec
   for (let i = 0; i < texts.length; i++) {
     if (claimed.has(i) || isProtected(i)) continue;
     const text = texts[i] ?? '';
-    if (isTableDelimiterRow(text)) {
+    if (isDelimiterRow(text)) {
       out.push({
         ruleId: 'DET-13',
         messageId: 'det.tableIncomplete',
@@ -379,4 +334,3 @@ function listJumps(lines: readonly SourceLine[], mask: Uint8Array): Detection[] 
   }
   return out;
 }
-
