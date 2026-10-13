@@ -23,6 +23,7 @@ const FILES = [
   'FUXI-FMT-SPEC.md',
   'CHANGELOG.md',
   'MAINSTREAM_MD_FORMATTERS_REPORT.md',
+  'GLOSSARY.md',
 ];
 
 describe('dogfood: the repository formatter as its own input', () => {
