@@ -1,7 +1,8 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { format } from '../../core/src/index.ts';
-import { applyEdits, computeEdits, documentEdits, editsInRange } from './edits.ts';
+import { computeEdits, documentEdits, editsInRange } from './edits.ts';
+import { applyEdits } from '../../core/src/index.ts';
 
 const CORPUS = [
   '#介绍\n\n\n本项目 使用Vue3开发,性能提升50%。\n\n1. 安装\n5. 启动\n',

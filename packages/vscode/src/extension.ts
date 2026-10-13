@@ -113,7 +113,7 @@ function toTextEdits(document: vscode.TextDocument, edits: readonly Edit[]): vsc
         new vscode.Position(from.line, from.character),
         new vscode.Position(to.line, to.character),
       ),
-      edit.newText,
+      edit.text,
     );
   });
 }

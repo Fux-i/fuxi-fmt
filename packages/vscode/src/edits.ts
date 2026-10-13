@@ -21,14 +21,10 @@
  */
 
 import { diffEdits, format, lineIndexOf, splitSourceLines } from '../../core/src/index.ts';
-import type { Diagnostic, FormatOptionsInput } from '../../core/src/index.ts';
+import type { Diagnostic, FormatOptionsInput, TextEdit } from '../../core/src/index.ts';
 
-export interface Edit {
-  /** Inclusive character offset in the original document. */
-  readonly start: number;
-  /** Exclusive character offset in the original document. */
-  readonly end: number;
-  readonly newText: string;
+/** A core text edit, plus the lines it spans so a selection can be filtered by line. */
+export interface Edit extends TextEdit {
   /** Inclusive line index, for range formatting. */
   readonly startLine: number;
   /** Inclusive line index, for range formatting. */
@@ -64,18 +60,8 @@ export function computeEdits(before: string, after: string): Edit[] {
 
     const startLine = lineIndexOf(lines, start);
     const endLine = end <= start ? startLine : lineIndexOf(lines, Math.max(start, end - 1));
-    return { start, end, newText: text, startLine, endLine };
+    return { start, end, text, startLine, endLine };
   });
-}
-
-export function applyEdits(text: string, edits: readonly Edit[]): string {
-  let out = '';
-  let cursor = 0;
-  for (const edit of [...edits].sort((a, b) => a.start - b.start)) {
-    out += text.slice(cursor, edit.start) + edit.newText;
-    cursor = edit.end;
-  }
-  return out + text.slice(cursor);
 }
 
 export interface FormatOutcome {
