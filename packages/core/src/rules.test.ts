@@ -12,7 +12,8 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
-import { RULE_IDS, RULE_SEVERITY, severityOf } from './rules.ts';
+import { RULES, RULE_IDS, severityOf } from './rules.ts';
+import { MESSAGES } from './messages.ts';
 import { format } from './format.ts';
 
 const DIR = new URL('./', import.meta.url);
@@ -28,8 +29,36 @@ describe('CFG-02 the severity of a rule', () => {
     for (const id of RULE_IDS) {
       const declared = severityOf(id);
       assert.ok(levels.includes(declared), id + ' declares ' + String(declared));
-      assert.equal(RULE_SEVERITY[id], declared);
+      assert.equal(RULES[id].severity, declared);
     }
+  });
+
+  test('every rule declares the messages it can report', () => {
+    for (const id of RULE_IDS) {
+      assert.ok(RULES[id].messages.length > 0, id + ' declares no message');
+    }
+  });
+
+  test('a rule message belongs to exactly one rule', () => {
+    // The catalogue says what a message is; only the rule table says which rule
+    // owns it. Before this the link was convention, so a message could be
+    // reported under a rule that does not own it and nothing noticed.
+    const owners = new Map<string, string[]>();
+    for (const id of RULE_IDS) {
+      for (const message of RULES[id].messages) {
+        assert.ok(message in MESSAGES, id + ' declares an unknown message ' + message);
+        owners.set(message, [...(owners.get(message) ?? []), id]);
+      }
+    }
+    const isNotice = (message: string): boolean => message.startsWith('cfg.');
+    const missing = Object.keys(MESSAGES)
+      .filter((message) => !isNotice(message) && !owners.has(message))
+      .sort();
+    assert.deepEqual(missing, [], 'a rule message that no rule declares');
+    const doubled = [...owners.entries()]
+      .filter(([, ids]) => ids.length > 1)
+      .map(([message]) => message);
+    assert.deepEqual(doubled, [], 'a message declared by more than one rule');
   });
 
   test('a refusal is an error, a look-at-this is a warning, and a note is a note', () => {

@@ -1,50 +1,63 @@
 /**
- * CFG-02: every rule has a stable id and its own severity.
+ * CFG-02: every rule has a stable id, its own severity, and the messages it can
+ * report.
  *
- * The severity is a property of the rule, not a setting, so it is declared here
- * once rather than typed at each of the places a rule reports something. Two
- * call sites of one rule can no longer disagree about whether the document is
- * refused, and a diagnostic cannot name a rule that does not exist.
+ * All three live here rather than at the places a rule reports something. The
+ * severity is a property of the rule and not a setting, so two call sites of one
+ * rule can no longer disagree about whether the document is refused; and the
+ * messages a rule owns are a fact about the rule that was previously only a
+ * naming convention, which nothing checked.
  *
- * Spec references: CFG-02.
+ * Spec references: CFG-02, CFG-08.
  */
+
+import type { MessageId } from './messages.ts';
 
 /** The three levels a rule can be reported at. */
 export const SEVERITIES = ['error', 'warning', 'info'] as const;
 
 export type Severity = (typeof SEVERITIES)[number];
 
+export interface Rule {
+  readonly severity: Severity;
+  /** Every message this rule can put in a diagnostic. */
+  readonly messages: readonly MessageId[];
+}
+
 /**
- * Every rule the formatter can report, and the level it is reported at.
+ * Every rule the formatter can report.
  *
  * An error refuses the document and returns the input unchanged; a warning
  * formats it and says what wants a look; a note reports what the formatter did
  * rather than anything wrong with the document.
  */
-export const RULE_SEVERITY = {
-  'DET-01': 'error',
-  'DET-02': 'error',
-  'DET-03': 'error',
-  'DET-04': 'error',
-  'DET-06': 'warning',
-  'DET-07': 'warning',
-  'DET-08': 'warning',
-  'DET-09': 'warning',
-  'DET-10': 'warning',
-  'DET-11': 'warning',
-  'DET-12': 'warning',
-  'DET-13': 'error',
-  'GRT-01': 'error',
-  'SAFE-01': 'error',
-  'TBL-01': 'info',
-  'TYPO-11': 'warning',
-} as const satisfies Readonly<Record<string, Severity>>;
+export const RULES = {
+  'DET-01': { severity: 'error', messages: ['det.fenceUnterminated'] },
+  'DET-02': { severity: 'error', messages: ['det.frontMatterUnterminated'] },
+  'DET-03': { severity: 'error', messages: ['det.commentUnterminated'] },
+  'DET-04': { severity: 'error', messages: ['det.mathUnterminated'] },
+  'DET-06': { severity: 'warning', messages: ['det.backtickUnmatched'] },
+  'DET-07': { severity: 'warning', messages: ['det.dollarUnmatched'] },
+  'DET-08': { severity: 'warning', messages: ['det.wikilinkUnclosed'] },
+  'DET-09': { severity: 'warning', messages: ['det.linkDestinationUnclosed'] },
+  'DET-10': { severity: 'warning', messages: ['det.tableRowRagged', 'det.tableHeaderRagged'] },
+  'DET-11': { severity: 'warning', messages: ['det.listItemOrphan'] },
+  'DET-12': { severity: 'warning', messages: ['det.listExcluded'] },
+  'DET-13': { severity: 'error', messages: ['det.tableIncomplete', 'det.tableRowOrphan'] },
+  'GRT-01': {
+    severity: 'error',
+    messages: ['grt.regionCount', 'grt.nonBlankCount', 'grt.blockKindChanged'],
+  },
+  'SAFE-01': { severity: 'error', messages: ['safe.regionChanged'] },
+  'TBL-01': { severity: 'info', messages: ['tbl.rowsOverCap'] },
+  'TYPO-11': { severity: 'warning', messages: ['typo.unpairedQuote'] },
+} as const satisfies Readonly<Record<string, Rule>>;
 
-export type RuleId = keyof typeof RULE_SEVERITY;
+export type RuleId = keyof typeof RULES;
 
 /** Every rule the formatter can report, in declaration order. */
-export const RULE_IDS = Object.keys(RULE_SEVERITY) as readonly RuleId[];
+export const RULE_IDS = Object.keys(RULES) as readonly RuleId[];
 
 export function severityOf(ruleId: RuleId): Severity {
-  return RULE_SEVERITY[ruleId];
+  return RULES[ruleId].severity;
 }
