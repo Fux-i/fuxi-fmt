@@ -18,7 +18,7 @@ import type { CharRange } from './ignores.ts';
 import { assignParents, scanListItems } from './list-scan.ts';
 import { isDelimiterRow, scanTables, tableCells, tableRow } from './tables.ts';
 import type { MessageArgs, MessageId } from './messages.ts';
-import { isEscaped, lineIndexOf, type Region, type SourceLine } from './scan.ts';
+import { isEscaped, lineIndexOf, protectedMask, type Region, type SourceLine } from './scan.ts';
 
 const BACKTICK = 96;
 const DOLLAR = 36;
@@ -31,26 +31,6 @@ export interface Detection {
   readonly line: number | undefined;
   /** 'info' reports what the formatter did, not a complaint about the document. */
   readonly severity: 'error' | 'warning' | 'info';
-}
-
-/**
- * Every protected character, plus anything the author told us to ignore.
- *
- * Built from the regions the scanner already found rather than by scanning again:
- * two scans can disagree, and then a rule fires inside a code block.
- */
-function claimedMask(
-  source: string,
-  regions: readonly Region[],
-  extra: readonly CharRange[],
-): Uint8Array {
-  const mask = new Uint8Array(source.length);
-  for (const range of [...regions, ...extra]) {
-    const from = Math.max(0, range.start);
-    const to = Math.min(mask.length, range.end);
-    for (let i = from; i < to; i++) mask[i] = 1;
-  }
-  return mask;
 }
 
 /** A block region that reached end of file without its terminator. */
@@ -75,7 +55,7 @@ export function detect(
   regions: readonly Region[],
   ignore: readonly CharRange[] = [],
 ): Detection[] {
-  const mask = claimedMask(source, regions, ignore);
+  const mask = protectedMask(source, ignore, regions);
   const detections: Detection[] = [];
   for (const region of regions) {
     if (region.closed !== false) continue;

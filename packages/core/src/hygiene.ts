@@ -7,7 +7,7 @@
  */
 
 import type { CharRange } from './ignores.ts';
-import { isBlockRegionKind, scanRegions, splitSourceLines } from './scan.ts';
+import { isBlockRegionKind, regionMask, splitSourceLines } from './scan.ts';
 
 export type Eol = 'lf' | 'crlf';
 
@@ -33,19 +33,6 @@ export function applyEndOfLine(text: string, eol: Eol): string {
   return eol === 'crlf' ? text.split('\n').join('\r\n') : text;
 }
 
-/** Mask of characters inside a whole-line protected region. */
-function blockMask(text: string, extra: readonly CharRange[] = []): Uint8Array {
-  const mask = new Uint8Array(text.length);
-  for (const range of extra) {
-    for (let i = range.start; i < range.end; i++) mask[i] = 1;
-  }
-  for (const region of scanRegions(text)) {
-    if (!isBlockRegionKind(region.kind)) continue;
-    for (let i = region.start; i < region.end; i++) mask[i] = 1;
-  }
-  return mask;
-}
-
 /**
  * Trim trailing whitespace on every unprotected line.
  *
@@ -53,7 +40,7 @@ function blockMask(text: string, extra: readonly CharRange[] = []): Uint8Array {
  * Markdown hard break, so it is left exactly as written.
  */
 export function trimTrailingWhitespace(text: string, extra: readonly CharRange[] = []): string {
-  const mask = blockMask(text, extra);
+  const mask = regionMask(text, isBlockRegionKind, extra);
   const lines = splitSourceLines(text);
   let out = '';
   for (let i = 0; i < lines.length; i++) {

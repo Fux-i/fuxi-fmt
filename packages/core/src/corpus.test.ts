@@ -19,7 +19,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { format, scanRegions } from './index.ts';
-import { isBlockRegionKind, lineIndexOf, splitSourceLines } from './scan.ts';
+import { protectedLines, splitSourceLines } from './scan.ts';
 import type { RegionKind } from './scan.ts';
 
 const DIR = new URL('../test/fixtures/corpus/', import.meta.url);
@@ -29,25 +29,6 @@ const files = readdirSync(DIR)
   .sort();
 
 const read = (name: string) => readFileSync(new URL(name, DIR), 'utf8');
-
-/**
- * The lines a rule must not touch: a block region occupies whole lines, and any
- * region that contains a line ending covers the lines it spans (SAFE-01 is a
- * promise about bytes, not about block kinds).
- */
-function protectedLines(text: string): boolean[] {
-  const lines = splitSourceLines(text);
-  const out = new Array<boolean>(lines.length).fill(false);
-  for (const region of scanRegions(text)) {
-    const newline = text.indexOf('\n', region.start);
-    const spansLines = newline !== -1 && newline < region.end;
-    if (!isBlockRegionKind(region.kind) && !spansLines) continue;
-    const from = lineIndexOf(lines, region.start);
-    const to = lineIndexOf(lines, Math.max(region.start, region.end - 1));
-    for (let i = from; i <= to; i++) out[i] = true;
-  }
-  return out;
-}
 
 /**
  * Every kind of protected region the scanner can report.
@@ -120,8 +101,9 @@ describe('the fixture corpus', () => {
     // assertion that catches that class, and it is why every region kind needs a
     // fixture with a body that looks like a list.
     for (const name of files) {
-      const protectedLine = protectedLines(read(name));
-      for (const diagnostic of format(read(name)).diagnostics) {
+      const text = read(name);
+      const protectedLine = protectedLines(text, splitSourceLines(text), scanRegions(text));
+      for (const diagnostic of format(text).diagnostics) {
         if (diagnostic.line === undefined) continue;
         assert.equal(
           protectedLine[diagnostic.line],

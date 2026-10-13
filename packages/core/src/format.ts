@@ -10,14 +10,13 @@ import { normalizeMarkers, normalizeThematicBreak, normalizeUnorderedMarker } fr
 import { resolveOptions, type FormatOptions, type FormatOptionsInput } from './options.ts';
 import { assignParents, findExcludedLists, planListIndent, scanListItems } from './list-scan.ts';
 import {
-  isBlockRegionKind,
+  atomicRanges,
   lineIndexOf,
   looksLikeYamlKey,
+  protectedLines,
   protectedMask,
   scanRegions,
   splitSourceLines,
-  type Region,
-  type SourceLine,
 } from './scan.ts';
 import { normalizeQuotes } from './quotes.ts';
 import { applyTypography } from './typography.ts';
@@ -65,14 +64,6 @@ export interface FormatResult {
   readonly changed: boolean;
   readonly diagnostics: readonly Diagnostic[];
 }
-
-const ATOMIC_KINDS: Readonly<Record<string, BlockKind>> = {
-  frontMatter: 'frontMatter',
-  fencedCode: 'code',
-  indentedCode: 'code',
-  htmlBlock: 'html',
-  mathBlock: 'code',
-};
 
 function blankCount(existing: number, options: FormatOptions): number {
   const { aroundBlocks, maxConsecutive } = options.blankLines;
@@ -122,47 +113,6 @@ function orderedDiagnostics(diagnostics: readonly Diagnostic[]): Diagnostic[] {
     if (left !== right) return left - right;
     return a.ruleId.localeCompare(b.ruleId);
   });
-}
-
-/**
- * The lines a protected region covers.
- *
- * A block region (SAFE-01 – SAFE-04, FM-01) occupies whole lines. A region that
- * is not a block kind can still contain a line ending - an HTML comment, a code
- * span the author wrapped across lines - and every structural pass decides by
- * line, so those lines are protected too. SAFE-01 is a promise about bytes; this
- * is its line-level reading, and the only one, so no two passes can disagree
- * about which lines the formatter must not touch.
- */
-function protectedLines(
-  text: string,
-  lines: readonly SourceLine[],
-  regions: readonly Region[],
-): boolean[] {
-  const out = new Array<boolean>(lines.length).fill(false);
-  for (const region of regions) {
-    const start = lineIndexOf(lines, region.start);
-    const last = lineIndexOf(lines, Math.max(region.start, region.end - 1));
-    if (start < 0 || last < 0 || last < start) continue;
-    const newline = text.indexOf('\n', region.start);
-    const spansLines = newline !== -1 && newline < region.end;
-    if (!isBlockRegionKind(region.kind) && !spansLines) continue;
-    for (let i = start; i <= last; i++) out[i] = true;
-  }
-  return out;
-}
-
-function atomicRanges(lines: readonly SourceLine[], regions: readonly Region[]): AtomicRange[] {
-  const ranges: AtomicRange[] = [];
-  for (const region of regions) {
-    const kind = ATOMIC_KINDS[region.kind];
-    if (kind === undefined) continue;
-    const start = lineIndexOf(lines, region.start);
-    const last = lineIndexOf(lines, Math.max(region.start, region.end - 1));
-    if (start < 0 || last < 0 || last < start) continue;
-    ranges.push({ start, end: last + 1, kind });
-  }
-  return ranges;
 }
 
 /**

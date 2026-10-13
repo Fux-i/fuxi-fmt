@@ -19,7 +19,14 @@ import { contentStartOf } from './blocks.ts';
 import { isCjk, isFullPunct, isSpacingChar, type CjkClass } from './chars.ts';
 import type { CharRange } from './ignores.ts';
 import type { TypographyOptions } from './options.ts';
-import { isBlockRegionKind, scanRegions, splitSourceLines } from './scan.ts';
+import {
+  isBlockRegionKind,
+  protectedMask,
+  regionMask,
+  scanRegions,
+  splitSourceLines,
+  type RegionKind,
+} from './scan.ts';
 
 type CharClass = 'cjk' | 'latin' | 'fullpunct' | 'other' | 'space';
 
@@ -157,6 +164,16 @@ function formatLine(
   return out;
 }
 
+/**
+ * Protected characters that are punctuation rather than a word: the delimiters of
+ * a link or an image, and an inline HTML tag. They are protected either way; the
+ * distinction is only about spacing, and it is needed because SAFE-03's model - a
+ * protected span is one opaque Latin word - is right for an inline code span and
+ * wrong for a bracket or a tag.
+ */
+const isInlineSyntax = (kind: RegionKind): boolean =>
+  kind === 'linkSyntax' || kind === 'inlineHtml';
+
 export function applyTypography(
   text: string,
   options: TypographyOptions,
@@ -165,32 +182,9 @@ export function applyTypography(
   if (!options.cjkSpacing) return text;
 
   const regions = scanRegions(text);
-  const mask = new Uint8Array(text.length);
-  const blockMask = new Uint8Array(text.length);
-  /**
-   * Protected characters that are punctuation rather than a word: the
-   * delimiters of a link or an image, and an inline HTML tag. They are protected
-   * either way; the distinction is only about spacing, and it is needed because
-   * SAFE-03's model - a protected span is one opaque Latin word - is right for
-   * an inline code span and wrong for a bracket or a tag.
-   */
-  const syntaxMask = new Uint8Array(text.length);
-  for (const range of extra) {
-    for (let i = range.start; i < range.end; i++) {
-      mask[i] = 1;
-      blockMask[i] = 1;
-    }
-  }
-  for (const region of regions) {
-    const block = isBlockRegionKind(region.kind);
-    const syntax = region.kind === 'linkSyntax' || region.kind === 'inlineHtml';
-    for (let i = region.start; i < region.end; i++) {
-      mask[i] = 1;
-      if (syntax) syntaxMask[i] = 1;
-      if (block) blockMask[i] = 1;
-    }
-  }
-
+  const mask = protectedMask(text, extra, regions);
+  const blockMask = regionMask(text, isBlockRegionKind, extra, regions);
+  const syntaxMask = regionMask(text, isInlineSyntax, [], regions);
   const lines = splitSourceLines(text);
   let out = '';
   for (let li = 0; li < lines.length; li++) {

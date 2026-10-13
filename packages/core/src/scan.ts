@@ -10,7 +10,7 @@
  * SAFE-06 (URLs and destinations), FM-01 (front matter).
  */
 
-import { quotePrefix } from './blocks.ts';
+import { quotePrefix, type AtomicRange, type BlockKind } from './blocks.ts';
 import type { CharRange } from './ignores.ts';
 
 export type RegionKind =
@@ -186,16 +186,45 @@ function indentColumns(text: string, chars: number): number {
   return column;
 }
 
-/** Mask of every protected character, block-level and inline (SAFE-01 – SAFE-06). */
-export function protectedMask(text: string, extra: readonly CharRange[] = []): Uint8Array {
+/**
+ * The mask of every character a region of an accepted kind claims, with the
+ * caller's ignore ranges folded in.
+ *
+ * This is the one mask builder: the width passes want every protected character,
+ * the spacing pass wants the block kinds and the link and tag syntax separately,
+ * and whitespace hygiene wants the block kinds. Passing a predicate rather than
+ * walking the regions again means a new region kind is audited here, once.
+ */
+export function regionMask(
+  text: string,
+  accept: (kind: RegionKind) => boolean,
+  extra: readonly CharRange[] = [],
+  regions: readonly Region[] = scanRegions(text),
+): Uint8Array {
   const mask = new Uint8Array(text.length);
   for (const range of extra) {
     for (let i = range.start; i < range.end; i++) mask[i] = 1;
   }
-  for (const region of scanRegions(text)) {
+  for (const region of regions) {
+    if (!accept(region.kind)) continue;
     for (let i = region.start; i < region.end; i++) mask[i] = 1;
   }
   return mask;
+}
+
+/**
+ * Mask of every protected character, block-level and inline (SAFE-01 - SAFE-06).
+ *
+ * A caller that already holds the regions passes them in. That is not an
+ * optimisation: two scans of the same text can disagree, and a rule that fires
+ * inside a code block is what disagreement looks like.
+ */
+export function protectedMask(
+  text: string,
+  extra: readonly CharRange[] = [],
+  regions: readonly Region[] = scanRegions(text),
+): Uint8Array {
+  return regionMask(text, () => true, extra, regions);
 }
 
 /** Region kinds that occupy whole lines and are never touched (SAFE-01, SAFE-04, FM-01). */
@@ -561,4 +590,58 @@ export function lineIndexOf(lines: readonly SourceLine[], offset: number): numbe
     }
   }
   return found;
+}
+
+/** What a region is when the segmenter reads it: a range that occupies whole lines. */
+const ATOMIC_KINDS: Readonly<Record<string, BlockKind>> = {
+  frontMatter: 'frontMatter',
+  fencedCode: 'code',
+  indentedCode: 'code',
+  htmlBlock: 'html',
+  mathBlock: 'code',
+};
+
+/**
+ * The lines a protected region covers.
+ *
+ * A block region (SAFE-01 - SAFE-04, FM-01) occupies whole lines. A region that
+ * is not a block kind can still contain a line ending - an HTML comment, a code
+ * span the author wrapped across lines - and every structural pass decides by
+ * line, so those lines are protected too. SAFE-01 is a promise about bytes; this
+ * is its line-level reading, and the only one, so no two passes can disagree
+ * about which lines the formatter must not touch.
+ */
+export function protectedLines(
+  text: string,
+  lines: readonly SourceLine[],
+  regions: readonly Region[],
+): boolean[] {
+  const out = new Array<boolean>(lines.length).fill(false);
+  for (const region of regions) {
+    const start = lineIndexOf(lines, region.start);
+    const last = lineIndexOf(lines, Math.max(region.start, region.end - 1));
+    if (start < 0 || last < 0 || last < start) continue;
+    const newline = text.indexOf('\n', region.start);
+    const spansLines = newline !== -1 && newline < region.end;
+    if (!isBlockRegionKind(region.kind) && !spansLines) continue;
+    for (let i = start; i <= last; i++) out[i] = true;
+  }
+  return out;
+}
+
+/** The regions that occupy whole lines, as the ranges the segmenter reads. */
+export function atomicRanges(
+  lines: readonly SourceLine[],
+  regions: readonly Region[],
+): AtomicRange[] {
+  const ranges: AtomicRange[] = [];
+  for (const region of regions) {
+    const kind = ATOMIC_KINDS[region.kind];
+    if (kind === undefined) continue;
+    const start = lineIndexOf(lines, region.start);
+    const last = lineIndexOf(lines, Math.max(region.start, region.end - 1));
+    if (start < 0 || last < 0 || last < start) continue;
+    ranges.push({ start, end: last + 1, kind });
+  }
+  return ranges;
 }
