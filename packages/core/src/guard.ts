@@ -20,7 +20,7 @@
 
 import { classifyContent, quoteContentOf } from './blocks.ts';
 import type { MessageArgs, MessageId } from './messages.ts';
-import { scanRegions, type Region } from './scan.ts';
+import { lineIndexOf, scanRegions, splitSourceLines, type Region } from './scan.ts';
 
 export interface Violation {
   readonly ruleId: string;
@@ -66,14 +66,6 @@ function regionSignature(text: string, region: Region, trimBlankLines: boolean):
   return region.kind + ':' + body + '\u0000' + (region.info ?? '');
 }
 
-/** 0-based line of a character offset. */
-function lineOfOffset(text: string, offset: number): number {
-  let line = 0;
-  const limit = Math.max(0, Math.min(offset, text.length));
-  for (let i = 0; i < limit; i++) if (text.charCodeAt(i) === 10) line++;
-  return line;
-}
-
 interface Anchor {
   readonly text: string;
   /** 0-based line in the document this line came from. */
@@ -107,6 +99,7 @@ export function checkSemantics(
 
   const beforeRegions = scanRegions(before);
   const afterRegions = scanRegions(after);
+  const beforeSource = splitSourceLines(before);
 
   if (beforeRegions.length !== afterRegions.length) {
     // The count is global, but the divergence is local: walk the regions in
@@ -125,7 +118,7 @@ export function checkSemantics(
       ruleId: 'GRT-01',
       messageId: 'grt.regionCount',
       args: [beforeRegions.length, afterRegions.length],
-      line: anchor === undefined ? undefined : lineOfOffset(before, anchor.start),
+      line: anchor === undefined ? undefined : lineIndexOf(beforeSource, anchor.start),
     });
   } else {
     for (let i = 0; i < beforeRegions.length; i++) {
@@ -139,7 +132,7 @@ export function checkSemantics(
           ruleId: 'SAFE-01',
           messageId: 'safe.regionChanged',
           args: [a.kind, JSON.stringify(signatureA), JSON.stringify(signatureB)],
-          line: lineOfOffset(before, a.start),
+          line: lineIndexOf(beforeSource, a.start),
         });
       }
     }

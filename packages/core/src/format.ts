@@ -11,6 +11,7 @@ import { resolveOptions, type FormatOptions, type FormatOptionsInput } from './o
 import { assignParents, findExcludedLists, planListIndent, scanListItems } from './list-scan.ts';
 import {
   isBlockRegionKind,
+  lineIndexOf,
   looksLikeYamlKey,
   protectedMask,
   scanRegions,
@@ -28,15 +29,6 @@ import { normalizeFullwidthAlphanumerics, normalizeParens, normalizePunctuation 
 /** The two characters a block marker may be separated by (BLK-09). */
 const SPACE = 32;
 const TAB = 9;
-
-/** 0-based line number containing `offset`. */
-function lineOf(text: string, offset: number): number {
-  let line = 0;
-  for (let i = 0; i < offset && i < text.length; i++) {
-    if (text.charAt(i) === '\n') line++;
-  }
-  return line;
-}
 
 export interface Diagnostic {
   readonly ruleId: string;
@@ -87,25 +79,6 @@ function blankCount(existing: number, options: FormatOptions): number {
   const cap = maxConsecutive === null ? Number.POSITIVE_INFINITY : Math.max(1, maxConsecutive);
   if (aroundBlocks === 'exact') return Math.min(1, cap);
   return Math.min(Math.max(1, existing), cap);
-}
-
-/** Index of the line containing `offset`, or -1. */
-function lineAt(lines: readonly SourceLine[], offset: number): number {
-  let lo = 0;
-  let hi = lines.length - 1;
-  let found = -1;
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1;
-    const line = lines[mid];
-    if (line === undefined) break;
-    if (line.start <= offset) {
-      found = mid;
-      lo = mid + 1;
-    } else {
-      hi = mid - 1;
-    }
-  }
-  return found;
 }
 
 /**
@@ -168,8 +141,8 @@ function protectedLines(
 ): boolean[] {
   const out = new Array<boolean>(lines.length).fill(false);
   for (const region of regions) {
-    const start = lineAt(lines, region.start);
-    const last = lineAt(lines, Math.max(region.start, region.end - 1));
+    const start = lineIndexOf(lines, region.start);
+    const last = lineIndexOf(lines, Math.max(region.start, region.end - 1));
     if (start < 0 || last < 0 || last < start) continue;
     const newline = text.indexOf('\n', region.start);
     const spansLines = newline !== -1 && newline < region.end;
@@ -184,8 +157,8 @@ function atomicRanges(lines: readonly SourceLine[], regions: readonly Region[]):
   for (const region of regions) {
     const kind = ATOMIC_KINDS[region.kind];
     if (kind === undefined) continue;
-    const start = lineAt(lines, region.start);
-    const last = lineAt(lines, Math.max(region.start, region.end - 1));
+    const start = lineIndexOf(lines, region.start);
+    const last = lineIndexOf(lines, Math.max(region.start, region.end - 1));
     if (start < 0 || last < 0 || last < start) continue;
     ranges.push({ start, end: last + 1, kind });
   }
@@ -396,7 +369,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
    * (undefined) rather than guess when the offset lands on an invented blank.
    */
   const inputLineOf = (offset: number): number | undefined => {
-    const index = lineAt(structuralLines, offset);
+    const index = lineIndexOf(structuralLines, offset);
     if (index < 0) return undefined;
     const mapped = partLines[index];
     return mapped === undefined || mapped < 0 ? undefined : mapped;

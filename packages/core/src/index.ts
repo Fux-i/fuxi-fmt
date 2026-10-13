@@ -46,7 +46,7 @@ export type { MessageArgs, MessageEntry, MessageId } from './messages.ts';
 export type { ConfigNotice } from './aliases.ts';
 export type { Violation } from './guard.ts';
 export { applyTypography } from './typography.ts';
-export { isBlockRegionKind, protectedMask, scanRegions, splitSourceLines } from './scan.ts';
+export { isBlockRegionKind, lineIndexOf, protectedMask, scanRegions, splitSourceLines } from './scan.ts';
 export type { SourceLine } from './scan.ts';
 export { DEFAULT_CJK_CLASSES, isAlphanumeric, isCjk, isFullPunct, isSpacingChar } from './chars.ts';
 export type { CjkClass } from './chars.ts';

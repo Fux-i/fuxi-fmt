@@ -18,7 +18,7 @@ import type { CharRange } from './ignores.ts';
 import { assignParents, scanListItems } from './list-scan.ts';
 import { isDelimiterRow, scanTables, tableCells, tableRow } from './tables.ts';
 import type { MessageArgs, MessageId } from './messages.ts';
-import { isEscaped, type Region, type SourceLine } from './scan.ts';
+import { isEscaped, lineIndexOf, type Region, type SourceLine } from './scan.ts';
 
 const BACKTICK = 96;
 const DOLLAR = 36;
@@ -31,25 +31,6 @@ export interface Detection {
   readonly line: number | undefined;
   /** 'info' reports what the formatter did, not a complaint about the document. */
   readonly severity: 'error' | 'warning' | 'info';
-}
-
-/** 0-based line containing an offset, by binary search over the line starts. */
-function lineOfOffset(lines: readonly SourceLine[], offset: number): number {
-  let lo = 0;
-  let hi = lines.length - 1;
-  let found = 0;
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1;
-    const line = lines[mid];
-    if (line === undefined) break;
-    if (line.start <= offset) {
-      found = mid;
-      lo = mid + 1;
-    } else {
-      hi = mid - 1;
-    }
-  }
-  return found;
 }
 
 /**
@@ -100,7 +81,7 @@ export function detect(
     if (region.closed !== false) continue;
     const rule = UNTERMINATED[region.kind];
     if (rule === undefined) continue;
-    detections.push({ ...rule, args: [], line: lineOfOffset(lines, region.start), severity: 'error' });
+    detections.push({ ...rule, args: [], line: lineIndexOf(lines, region.start), severity: 'error' });
   }
   detections.push(...unterminatedComments(source, lines, mask));
   detections.push(...unmatchedDelimiters(source, lines, mask));
@@ -130,7 +111,7 @@ function unterminatedComments(
         ruleId: 'DET-03',
         messageId: 'det.commentUnterminated',
         args: [],
-        line: lineOfOffset(lines, at),
+        line: lineIndexOf(lines, at),
         severity: 'error',
       },
     ];
@@ -156,7 +137,7 @@ function unmatchedDelimiters(
     const code = source.charCodeAt(i);
     if (code !== BACKTICK && code !== DOLLAR) continue;
     if (mask[i] === 1 || isEscaped(source, i)) continue;
-    const line = lineOfOffset(lines, i);
+    const line = lineIndexOf(lines, i);
     if (code === BACKTICK) backtickLines.add(line);
     else dollarLines.add(line);
   }
@@ -195,7 +176,7 @@ function unclosedInline(
       const newline = source.indexOf('\n', at);
       const close = source.indexOf(closeMark, at + needle.length);
       if (close !== -1 && (newline === -1 || close < newline)) continue;
-      out.push({ ruleId, messageId, args: [], line: lineOfOffset(lines, at), severity: 'warning' });
+      out.push({ ruleId, messageId, args: [], line: lineIndexOf(lines, at), severity: 'warning' });
     }
   };
   scan('[[', ']]', 'DET-08', 'det.wikilinkUnclosed');

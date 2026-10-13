@@ -20,8 +20,8 @@
  * Nothing in this module imports 'vscode', so it is testable in plain Node.
  */
 
-import { diffEdits, format, splitSourceLines } from '../../core/src/index.ts';
-import type { Diagnostic, FormatOptionsInput, SourceLine } from '../../core/src/index.ts';
+import { diffEdits, format, lineIndexOf, splitSourceLines } from '../../core/src/index.ts';
+import type { Diagnostic, FormatOptionsInput } from '../../core/src/index.ts';
 
 export interface Edit {
   /** Inclusive character offset in the original document. */
@@ -33,24 +33,6 @@ export interface Edit {
   readonly startLine: number;
   /** Inclusive line index, for range formatting. */
   readonly endLine: number;
-}
-
-function lineOf(lines: readonly SourceLine[], offset: number): number {
-  let low = 0;
-  let high = lines.length - 1;
-  let found = 0;
-  while (low <= high) {
-    const mid = (low + high) >> 1;
-    const line = lines[mid];
-    if (line === undefined) break;
-    if (line.start <= offset) {
-      found = mid;
-      low = mid + 1;
-    } else {
-      high = mid - 1;
-    }
-  }
-  return found;
 }
 
 export function computeEdits(before: string, after: string): Edit[] {
@@ -80,8 +62,8 @@ export function computeEdits(before: string, after: string): Edit[] {
     end -= tail;
     text = text.slice(0, text.length - tail);
 
-    const startLine = lineOf(lines, start);
-    const endLine = end <= start ? startLine : lineOf(lines, Math.max(start, end - 1));
+    const startLine = lineIndexOf(lines, start);
+    const endLine = end <= start ? startLine : lineIndexOf(lines, Math.max(start, end - 1));
     return { start, end, newText: text, startLine, endLine };
   });
 }

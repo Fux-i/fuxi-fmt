@@ -532,3 +532,33 @@ export interface SourceLine {
 export function splitSourceLines(source: string): SourceLine[] {
   return splitLines(source);
 }
+
+/**
+ * The index of the line containing `offset`, or -1 when there is none.
+ *
+ * One answer to "which line did the author write this on". The offset is
+ * inclusive at a line's start, so an offset on a line break belongs to the line
+ * that break ends, and an offset past the last line's start belongs to that last
+ * line - which is where a trailing newline's empty line lives. A negative offset
+ * is before the document, and -1 says so rather than guessing line 0.
+ *
+ * This is the only such lookup. A diagnostic that names a line, the guard that
+ * checks one, and an adapter that turns one into a position all cross this seam.
+ */
+export function lineIndexOf(lines: readonly SourceLine[], offset: number): number {
+  let lo = 0;
+  let hi = lines.length - 1;
+  let found = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const line = lines[mid];
+    if (line === undefined) break;
+    if (line.start <= offset) {
+      found = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return found;
+}

@@ -19,7 +19,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { format, scanRegions } from './index.ts';
-import { isBlockRegionKind } from './scan.ts';
+import { isBlockRegionKind, lineIndexOf, splitSourceLines } from './scan.ts';
 import type { RegionKind } from './scan.ts';
 
 const DIR = new URL('../test/fixtures/corpus/', import.meta.url);
@@ -30,37 +30,20 @@ const files = readdirSync(DIR)
 
 const read = (name: string) => readFileSync(new URL(name, DIR), 'utf8');
 
-/** The offset each line starts at. */
-function lineStarts(text: string): number[] {
-  const starts = [0];
-  for (let i = 0; i < text.length; i++) if (text.charCodeAt(i) === 10) starts.push(i + 1);
-  return starts;
-}
-
-/** The 0-based line containing an offset, by walking the starts. */
-function lineOfOffset(starts: readonly number[], offset: number): number {
-  let line = 0;
-  for (let i = 0; i < starts.length; i++) {
-    if ((starts[i] ?? 0) > offset) break;
-    line = i;
-  }
-  return line;
-}
-
 /**
  * The lines a rule must not touch: a block region occupies whole lines, and any
  * region that contains a line ending covers the lines it spans (SAFE-01 is a
  * promise about bytes, not about block kinds).
  */
 function protectedLines(text: string): boolean[] {
-  const starts = lineStarts(text);
-  const out = new Array<boolean>(starts.length).fill(false);
+  const lines = splitSourceLines(text);
+  const out = new Array<boolean>(lines.length).fill(false);
   for (const region of scanRegions(text)) {
     const newline = text.indexOf('\n', region.start);
     const spansLines = newline !== -1 && newline < region.end;
     if (!isBlockRegionKind(region.kind) && !spansLines) continue;
-    const from = lineOfOffset(starts, region.start);
-    const to = lineOfOffset(starts, Math.max(region.start, region.end - 1));
+    const from = lineIndexOf(lines, region.start);
+    const to = lineIndexOf(lines, Math.max(region.start, region.end - 1));
     for (let i = from; i <= to; i++) out[i] = true;
   }
   return out;
