@@ -152,8 +152,8 @@ export const MESSAGES = {
     zh: '{0} 不是 fuxi-fmt 的配置项；已忽略',
   },
   'tbl.rowsOverCap': {
-    en: 'this table has {0} of {1} rows wider than table.maxWidth ({2}): those rows are left out of the column widths',
-    zh: '这张表 {1} 行里有 {0} 行超过 table.maxWidth（{2}）：这些行不参与列宽计算',
+    en: 'this table has {0} of {1} rows wider than table.maxWidth ({2}): those rows are left out of the column widths and padded only as far as they still line up',
+    zh: '这张表 {1} 行里有 {0} 行超过 table.maxWidth（{2}）：这些行不参与列宽计算，只补到仍然对得齐的地方',
   },
 } satisfies Readonly<Record<string, MessageEntry>>;
 

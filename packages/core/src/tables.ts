@@ -22,11 +22,13 @@
  * - **`table.maxWidth` leaves a row out of the widths, not out of the table.** A
  *   row whose own width is past the cap does not decide the column widths, so one
  *   long row cannot make every other row long as well; the rows that fit decide
- *   them and every row is padded to the result. Wrapping a cell is not something
- *   GFM can do - a row is one line, and `<br>` would be adding content rather than
- *   laying it out. A table that is *mostly* past the cap has no narrow rows left to
- *   protect, so the cap stands down and the table is padded as written; either way
- *   the pass reports what it did, as an `info` diagnostic naming the line.
+ *   them, and a row is padded to those widths only as far as it stays on the grid -
+ *   once a cell is wider than its column, nothing after it can line up, so the rest
+ *   of that row keeps a single space per cell. Wrapping a cell is not something GFM
+ *   can do - a row is one line, and `<br>` would be adding content rather than
+ *   laying it out. A table with no row within the cap has no widths to normalise
+ *   with and keeps the layout the author wrote; either way the pass reports what it
+ *   did, as an `info` diagnostic naming the line.
  *
  * Spec references: TBL-01, SAFE-07, NG-02.
  */
@@ -195,9 +197,8 @@ function alignmentOf(cell: string): Align {
 /** A column is at least three wide so the delimiter row can carry its colons. */
 const MIN_COLUMN = 3;
 
-function renderCell(text: string, width: number, align: Align, cjkWidth: 1 | 2): string {
-  const content = text.trim();
-  const space = width - displayWidth(content, cjkWidth);
+/** Pad one cell to its column. `space` is the column width minus the content's. */
+function renderCell(content: string, space: number, align: Align): string {
   if (space <= 0) return content;
   if (align === 'right') return ' '.repeat(space) + content;
   if (align === 'center') {
@@ -258,16 +259,33 @@ function renderRow(
   contentColumn: number,
 ): string {
   const last = row.cells.length - 1;
+  /**
+   * Whether the row has left the grid: one of its cells is wider than its column.
+   *
+   * That cell overflows its column, so every pipe after it sits past the table's
+   * own columns - padding the cells that follow could not line anything up, it
+   * would only make a long row longer. Padding up to that cell is still
+   * alignment and stays. A cell exactly as wide as its column still fits, so it
+   * does not take the row off the grid.
+   */
+  let past = false;
   const cells = row.cells.map((cell, index) => {
+    const width = widths[index] ?? MIN_COLUMN;
+    const content = cell.trim();
+    const space = width - displayWidth(content, cjkWidth);
     // A pipe-less row has no outer pipes to hold the padding in. Trailing
     // whitespace at the end of the line would be trimmed away - and exactly two
     // trailing spaces are a Markdown hard break, so padding there could *invent*
     // one. Leading padding is worse still: four columns of it is an indented code
     // block. Both edges therefore stay where the author put them, and the colons
     // in the delimiter row still declare the alignment.
-    if (!outer && index === 0) return cell.trim() + ' '.repeat(Math.max(0, (widths[index] ?? MIN_COLUMN) - displayWidth(cell.trim(), cjkWidth)));
-    if (!outer && index === last) return cell.trim();
-    return renderCell(cell, widths[index] ?? MIN_COLUMN, aligns[index] ?? 'none', cjkWidth);
+    if (!outer && index === last) return content;
+    if (past || space < 0) {
+      past = true;
+      return content;
+    }
+    if (!outer && index === 0) return content + ' '.repeat(Math.max(0, space));
+    return renderCell(content, space, aligns[index] ?? 'none');
   });
   return normalizePrefix(row, contentColumn) + (outer ? '| ' + cells.join(' | ') + ' |' : cells.join(' | '));
 }

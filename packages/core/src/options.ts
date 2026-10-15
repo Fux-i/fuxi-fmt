@@ -77,9 +77,9 @@ export type FrontMatterFormat = (typeof FRONT_MATTER_FORMATS)[number];
  * `normalize` is the default: a table is the one block whose source layout *is*
  * its presentation, which is exactly why a ragged one is worth fixing - a column
  * only lines up if every row starts at the same column. `preserve` hands the
- * layout back to the author. `maxWidth` caps the padded width: a row that would
- * exceed it is left exactly as written, so a few long rows cannot make the rest
- * long with them.
+ * layout back to the author. `maxWidth` caps the padded width: a row wider than
+ * the cap on its own does not decide the column widths, and is padded only as far
+ * as it stays on the grid, so a few long rows cannot make the rest long with them.
  * `cjkWidth` is how many columns a wide character occupies in the font being
  * read - two in a fixed-pitch font, one in a proportional one.
  */

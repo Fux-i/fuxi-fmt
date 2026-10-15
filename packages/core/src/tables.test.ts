@@ -192,9 +192,12 @@ describe('TBL-01 maxWidth leaves a row out of the widths rather than out of the 
   const CAPPED: FormatOptionsInput = { table: { mode: 'normalize', maxWidth: 30 } };
 
   test('a row past the cap does not set the column widths', () => {
+    // Its first cell is wider than the column the rows within the cap gave column
+    // one, so the row is past the grid from its first cell: no padding at all,
+    // and the table's own width stays where the short rows put it.
     assert.equal(
       out(table, CAPPED),
-      '| a very long cell indeed | b   |\n| --- | --- |\n| 1   | 2   |\n| x   | y   |\n',
+      '| a very long cell indeed | b |\n| --- | --- |\n| 1   | 2   |\n| x   | y   |\n',
     );
   });
 
@@ -239,7 +242,7 @@ describe('TBL-01 maxWidth leaves a row out of the widths rather than out of the 
     const result = format(src, CAPPED);
     assert.equal(
       result.output,
-      '| short | v   |\n| ----- | --- |\n| ' + LONG + ' | a   |\n| ' + LONG + ' | b   |\n| ' + LONG + ' | c   |\n| d     | e   |\n',
+      '| short | v   |\n| ----- | --- |\n| ' + LONG + ' | a |\n| ' + LONG + ' | b |\n| ' + LONG + ' | c |\n| d     | e   |\n',
     );
     assert.deepEqual(
       result.diagnostics.map(({ severity, line, messageId, args }) => ({
@@ -284,5 +287,65 @@ describe('TBL-01 maxWidth leaves a row out of the widths rather than out of the 
       format(src, CAPPED).diagnostics.map((diagnostic) => diagnostic.line),
       [6],
     );
+  });
+});
+
+describe('TBL-01 padding stops where the row leaves the grid', () => {
+  const CAPPED: FormatOptionsInput = { table: { mode: 'normalize', maxWidth: 30 } };
+  const LONG = 'c'.repeat(26);
+  const HEAD = '| aaaaa | b | c | d |\n| --- | --- | --- | --- |\n| x | y | z | q |\n';
+  const FOOT = '| w | v | u | t |\n';
+
+  test('a cell exactly as wide as its column keeps the row on the grid', () => {
+    // 'aaaaa' is exactly the width the rows within the cap gave column one, so the
+    // pipes after it still line up with the table's: the next cell is padded as
+    // usual. Only a cell *wider* than its column takes the row off the grid.
+    const src = HEAD + '| aaaaa | b | ' + LONG + ' | d |\n' + FOOT;
+    assert.equal(
+      out(src, CAPPED),
+      '| aaaaa | b   | c   | d   |\n' +
+        '| ----- | --- | --- | --- |\n' +
+        '| x     | y   | z   | q   |\n' +
+        '| aaaaa | b   | ' +
+        LONG +
+        ' | d |\n' +
+        '| w     | v   | u   | t   |\n',
+    );
+  });
+
+  test('once a cell is wider than its column the rest of the row keeps one space', () => {
+    // The row is off the grid from its first cell, so nothing in it is padded -
+    // and the notice still counts it, because it is past the cap either way.
+    const src = HEAD + '| ' + LONG + ' | b | c | d |\n' + FOOT;
+    const result = format(src, CAPPED);
+    assert.equal(
+      result.output,
+      '| aaaaa | b   | c   | d   |\n' +
+        '| ----- | --- | --- | --- |\n' +
+        '| x     | y   | z   | q   |\n' +
+        '| ' +
+        LONG +
+        ' | b | c | d |\n' +
+        '| w     | v   | u   | t   |\n',
+    );
+    assert.deepEqual(
+      result.diagnostics.map(({ severity, messageId, args }) => ({ severity, messageId, args })),
+      [{ severity: 'info', messageId: 'tbl.rowsOverCap', args: [1, 4, 30] }],
+    );
+  });
+
+  test('the padding stops in a pipe-less table too', () => {
+    // Its outer pipes are the author's convention, and the last cell is never
+    // padded there: what the rule changes is the cell between the two.
+    const src = 'aaa | b | c\n--- | --- | ---\nx | y | z\n' + LONG + ' | b | c\n';
+    assert.equal(
+      out(src, CAPPED),
+      'aaa | b   | c\n--- | --- | ---\nx   | y   | z\n' + LONG + ' | b | c\n',
+    );
+  });
+
+  test('the layout settles in one pass', () => {
+    const once = out(HEAD + '| aaaaa | b | ' + LONG + ' | d |\n' + FOOT, CAPPED);
+    assert.equal(out(once, CAPPED), once);
   });
 });

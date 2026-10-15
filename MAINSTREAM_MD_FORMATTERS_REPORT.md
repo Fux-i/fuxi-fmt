@@ -54,10 +54,10 @@
 | `strongKind`                    | `asterisks`           | `asterisks` / `underscores`                    |
 | `hardBreakKind`                 | `backslash`           | `backslash` / `doubleSpace`                    |
 | `maxBlankLines`                 | 1（最小 1）           | 块之间保留的连续空行上限                       |
-| `heading.kind`（旧名 `headingKind`） | `atx`                 | `atx` / `setext`（setext 只用于 1–2 级）       |
+| `heading.kind`（旧名 `headingKind`） | `atx` | `atx` / `setext`（setext 只用于 1–2 级） |
 | `heading.blankLinesAbove`       | 未设置                | 标题上方的固定空行数（最小 1）；未设置时保留原文空行，上限为 `maxBlankLines` |
-| `list.unorderedMarker`（旧名 `unorderedListKind`） | `dashes`              | `dashes` / `asterisks`（另一个字符用作交替标记） |
-| `list.indentKind`（旧名 `listIndentKind`） | `commonMark`          | `commonMark`（对齐到标记宽度）/ `pythonMarkdown`（固定 ≥4 空格） |
+| `list.unorderedMarker`（旧名 `unorderedListKind`） | `dashes` | `dashes` / `asterisks`（另一个字符用作交替标记） |
+| `list.indentKind`（旧名 `listIndentKind`） | `commonMark` | `commonMark`（对齐到标记宽度）/ `pythonMarkdown`（固定 ≥4 空格） |
 | `codeBlock.skipFormat`          | false                 | 围栏代码内容保持原样                           |
 | `codeBlock.raiseSyntaxErrors`   | false                 | 代码块格式化器报错时让整个文件失败             |
 | `codeBlock.preserveIndentation` | false                 | 保留代码缩进，而不是取消缩进                   |
@@ -255,9 +255,9 @@ fuxi-fmt 取 `yaml`：FM-03 把四个打印选项钉死（`lineWidth: 0`、`inde
 | Prettier    | YAML `---`、TOML `+++` 会被格式化；JSON 不会 | 块之间一个空行；紧凑与宽松都保留 | 起始编号保留，之后顺序编号；全 1 保持全 1 | `-` / `*`；按 tabWidth | 有选项 | 解析器认识就格式化，否则不动 |
 | dprint      | 只有装了 yaml 插件才格式化 YAML，否则原样；TOML 原样 | `maxBlankLines` 1 | 从起始编号重编；全 1 保持全 1 | `-` / `*`；commonMark 或 4 空格 | `textWrap` | 由插件格式化 |
 | mdformat    | 只经插件支持 YAML | 块之间一个空行；紧凑列表用换行 | 除非 `--number`，全部 `1.` | `-` / `*`；2 空格 | `--wrap` | 代码格式化器插件 |
-| remark      | 保留（remark-frontmatter） | 一个空行（join 与紧凑相关选项控制） | 默认递增  | 默认 `*`；listItemIndent one | 不折行 | handlers/GMF |
-| markdownlint | 只通过参数读取，不格式化 | MD012/MD022/MD031/MD032/MD047 | MD029 样式 | MD004/MD007/MD030 | MD013 只检查 | 不碰         |
-| deno fmt    | 与 dprint 相同 | 与 dprint 相同 | 与 dprint 相同 | 与 dprint 相同  | `proseWrap` 默认 always | 由插件格式化 |
+| remark      | 保留（remark-frontmatter） | 一个空行（join 与紧凑相关选项控制） | 默认递增 | 默认 `*`；listItemIndent one | 不折行 | handlers/GMF |
+| markdownlint | 只通过参数读取，不格式化 | MD012/MD022/MD031/MD032/MD047 | MD029 样式 | MD004/MD007/MD030 | MD013 只检查 | 不碰 |
+| deno fmt    | 与 dprint 相同 | 与 dprint 相同 | 与 dprint 相同 | 与 dprint 相同 | `proseWrap` 默认 always | 由插件格式化 |
 | markdownfmt | 无           | 类似 gofmt | 从 1 重编 | `-`             | 无   | 基于重新渲染 |
 | mdsf/cbfmt  | 不动         | 不动       | 不动      | 不动            | 不动 | 交给外部工具 |
 
