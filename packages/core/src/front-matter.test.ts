@@ -132,6 +132,52 @@ describe('FM-03 the serializer differences the specification accepts', () => {
   });
 });
 
+describe('FM-04 typography inside front matter (opt-in)', () => {
+  const on = { frontMatter: { typography: true } } as const;
+
+  test('is off by default', () => {
+    const input = '---\n# 注释comment\ntitle: 中文abc\n---\n\nBody\n';
+    assert.equal(format(input).output, input);
+  });
+
+  test('spaces a plain scalar value but never its key', () => {
+    const input = '---\ntitle: 中文abc\n中文key: value\n---\n\nBody\n';
+    assert.equal(
+      format(input, on).output,
+      '---\ntitle: 中文 abc\n中文key: value\n---\n\nBody\n',
+    );
+  });
+
+  test('spaces a comment, above a key and inline', () => {
+    const input = '---\n# 注释comment\ntitle: x # 行内note\n---\n\nBody\n';
+    assert.equal(
+      format(input, on).output,
+      '---\n# 注释 comment\ntitle: x # 行内 note\n---\n\nBody\n',
+    );
+  });
+
+  test('only spaces change, never a character', () => {
+    const input = '---\ntitle: 中文abc，def,ghi\n---\n\nBody\n';
+    const output = format(input, on).output;
+    assert.equal(output.replace(/ /g, ''), input.replace(/ /g, ''));
+  });
+
+  test('a block scalar is left alone', () => {
+    const input = '---\ndesc: |\n  中文abc\n---\n\nBody\n';
+    assert.equal(format(input, on).output, input);
+  });
+
+  test('a value inside a flow collection is left alone', () => {
+    const input = '---\ntags: [中文abc]\n---\n\nBody\n';
+    assert.equal(format(input, on).output, input);
+  });
+
+  test('FM-04 is idempotent', () => {
+    const once = format('---\ntitle: 中文abc\n---\n\nBody\n', on).output;
+    assert.equal(format(once, on).output, once);
+  });
+});
+
 describe('FM-05 front matter that does not parse is kept and reported', () => {
   test('an unterminated flow sequence', () => {
     const input = '---\ntitle: [unclosed\n---\n\n#标题\n';

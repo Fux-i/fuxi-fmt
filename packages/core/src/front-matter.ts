@@ -15,7 +15,9 @@
  * Spec references: FM-01, FM-03, FM-05.
  */
 
-import { parseDocument, visit } from 'yaml';
+import { isMap, isScalar, isSeq, parseDocument, visit, type Document } from 'yaml';
+import type { TypographyOptions } from './options.ts';
+import { applyTypography } from './typography.ts';
 
 /**
  * The serializer's own choices, pinned so a formatting run changes what was
@@ -40,6 +42,52 @@ export interface FrontMatterBlock {
 
 const UNTOUCHED: FrontMatterBlock = { text: null, malformed: false };
 
+/**
+ * FM-04. Space every scalar *value* in the document, and nothing else.
+ *
+ * Keys are identifiers, a block scalar's indentation is its content, a scalar
+ * that spans lines is prose the author wrapped, and a flow collection in front
+ * matter is almost always a tag or slug list where one byte is one match. All
+ * four are skipped, and a scalar is only ever handed to `applyTypography`, which
+ * inserts and removes spaces - so no character in a value can change.
+ */
+function spaceValues(node: unknown, typography: TypographyOptions): void {
+  if (isMap(node)) {
+    if (node.flow === true) return;
+    for (const pair of node.items) spaceValues(pair.value, typography);
+    return;
+  }
+  if (isSeq(node)) {
+    if (node.flow === true) return;
+    for (const item of node.items) spaceValues(item, typography);
+    return;
+  }
+  if (!isScalar(node)) return;
+  const type = node.type;
+  if (type !== 'PLAIN' && type !== 'QUOTE_DOUBLE' && type !== 'QUOTE_SINGLE') return;
+  const value = node.value;
+  if (typeof value !== 'string' || value.includes('\n')) return;
+  node.value = applyTypography(value, typography);
+}
+
+/** FM-04 for comments: they are prose, so they get the same spacing as the body. */
+function spaceComments(doc: Document, typography: TypographyOptions): void {
+  const spaced = (comment: unknown): string | undefined =>
+    typeof comment === 'string' ? applyTypography(comment, typography) : undefined;
+  const before = spaced(doc.commentBefore);
+  if (before !== undefined) doc.commentBefore = before;
+  const after = spaced(doc.comment);
+  if (after !== undefined) doc.comment = after;
+  visit(doc, {
+    Node: (_key, node) => {
+      const above = spaced(node.commentBefore);
+      if (above !== undefined) node.commentBefore = above;
+      const inline = spaced(node.comment);
+      if (inline !== undefined) node.comment = inline;
+    },
+  });
+}
+
 /** The lines between the markers, or null when this is not a closed YAML block. */
 function innerOf(block: string): string | null {
   const lines = block.split('\n');
@@ -60,12 +108,19 @@ function innerOf(block: string): string | null {
  * empty (the serializer would append the `null` it makes of one), or the block is
  * already what the serializer would write.
  */
-export function normalizeFrontMatter(block: string): FrontMatterBlock {
+export function normalizeFrontMatter(
+  block: string,
+  typography: TypographyOptions | null = null,
+): FrontMatterBlock {
   const inner = innerOf(block);
   if (inner === null || inner.trim().length === 0) return UNTOUCHED;
   const doc = parseDocument(inner);
   if (doc.errors.length > 0) return { text: null, malformed: true };
   if (doc.contents === null) return UNTOUCHED;
+  if (typography !== null) {
+    spaceValues(doc.contents, typography);
+    spaceComments(doc, typography);
+  }
   const printed = doc.toString(PRINT);
   const body = printed.endsWith('\n') ? printed.slice(0, -1) : printed;
   if (body === inner) return UNTOUCHED;

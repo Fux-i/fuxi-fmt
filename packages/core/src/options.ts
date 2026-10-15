@@ -226,6 +226,15 @@ export interface IgnoreInput {
 export interface FrontMatterOptions {
   /** Whether the block is handed to the YAML serializer (FM-03). */
   readonly format: FrontMatterFormat;
+  /**
+   * Whether the typography spacing rules also apply inside the block (FM-04).
+   *
+   * A value in front matter is data: `title: 使用Vite构建` becomes
+   * `title: 使用 Vite 构建`, which is what a reader of the page sees. Off by
+   * default for that reason, and only spaces are ever inserted or removed -
+   * punctuation, quotes and widths are never converted in there.
+   */
+  readonly typography: boolean;
 }
 
 export interface FormatOptions {
@@ -288,6 +297,7 @@ export interface ListInput {
 
 export interface FrontMatterInput {
   readonly format?: FrontMatterFormat;
+  readonly typography?: boolean;
 }
 
 export interface FormatOptionsInput {
@@ -334,7 +344,7 @@ export const defaultOptions: FormatOptions = {
   codeBlock: { fenceChar: 'backticks', fenceLength: true, trimBlankLines: true },
   thematicBreak: 'dashes',
   table: { mode: 'normalize', maxWidth: 80, cjkWidth: 2 },
-  frontMatter: { format: 'normalize' },
+  frontMatter: { format: 'normalize', typography: false },
   endOfLine: 'lf',
   ignore: {
     file: 'fuxi-fmt-ignore-file',
@@ -469,6 +479,7 @@ export const OPTION_VOCABULARY = {
   },
   frontMatter: {
     format: { kind: 'oneOf', values: FRONT_MATTER_FORMATS },
+    typography: { kind: 'bool' },
   },
   endOfLine: { kind: 'oneOf', values: END_OF_LINES },
   ignore: {

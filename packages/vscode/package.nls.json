@@ -4,6 +4,7 @@
   "fuxiFmt.frontMatter.format.description": "Normalize the YAML front matter block at the top of the file, or leave the author's block alone (FM-03). Parse errors are never corrected: a block that is not valid YAML is kept as written and reported (FM-05).",
   "fuxiFmt.frontMatter.format.enum.0": "Hand the block to the YAML serializer: key spacing, indentation, flow spacing and blank lines are normalized; values are not rewritten.",
   "fuxiFmt.frontMatter.format.enum.1": "Keep the block exactly as written.",
+  "fuxiFmt.frontMatter.typography.description": "Apply the CJK spacing rules inside the block too, to scalar values and comments (FM-04). Only spaces are ever inserted or removed: punctuation, quotes and widths are data in there. Off by default, because a title a site displays changes when it is on.",
   "fuxiFmt.blankLines.aroundBlocks.description": "How blank lines separate blocks (BLK-01).",
   "fuxiFmt.blankLines.aroundBlocks.enum.0": "Separate blocks by exactly one blank line.",
   "fuxiFmt.blankLines.aroundBlocks.enum.1": "Separate blocks by at least one blank line.",

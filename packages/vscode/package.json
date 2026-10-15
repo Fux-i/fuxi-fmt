@@ -699,6 +699,16 @@
           ],
           "markdownDescription": "%fuxiFmt.frontMatter.format.description%"
         },
+        "fuxiFmt.frontMatter.typography": {
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
+          "type": "boolean",
+          "default": false,
+          "scope": "resource",
+          "markdownDescription": "%fuxiFmt.frontMatter.typography.description%"
+        },
         "fuxiFmt.endOfLine": {
           "keywords": [
             "fuxi",

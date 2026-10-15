@@ -387,7 +387,10 @@ function applyFrontMatter(
   if (region === undefined || region.closed !== true) return { text, diagnostics: [] };
   const block = text.slice(0, region.end);
   if (!block.startsWith('---')) return { text, diagnostics: [] };
-  const normalized = normalizeFrontMatter(block);
+  const normalized = normalizeFrontMatter(
+    block,
+    options.frontMatter.typography ? options.typography : null,
+  );
   if (normalized.malformed) {
     return {
       text,
@@ -535,7 +538,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   // trips we return the input untouched and say why (GRT-04).
   const violations = checkSemantics(base, candidate, options.codeBlock.trimBlankLines, {
     format: options.frontMatter.format,
-    typography: false,
+    typography: options.frontMatter.typography,
   });
   if (violations.length > 0) {
     return {

@@ -304,6 +304,14 @@ CJK 交界处已有的多个空格合并成一个。合并**只作用于交界�
 
 这不是「最小编辑」的例外：区块仍是逐行 diff 后只发出真正改变的行，未改变时一个编辑都不发。
 
+**FM-04 —— front matter 里的排版规则** · 默认关，`frontMatter.typography`
+
+开启后，**值标量**（plain、单引号、双引号）与**注释**走与正文同一套 `applyTypography`：`title: 使用Vite构建` → `title: 使用 Vite 构建`。**只有空格会被插入或删除**：标点宽度、引号、全角字母数字、强调标记一律不在 front matter 内运行 —— 那里的 `，` 或 `"` 是数据，不是排版。守卫也照这一点核对：开启时两个区块的字符串叶子只要求「去掉空格后相同」。
+
+不碰的位置：键（标识符）、块标量（缩进就是内容）、跨行的标量、流式集合里的值（front matter 里的 `[a, b]` 几乎总是标签或 slug 列表，一个字节就是一次匹配）。
+
+默认关，因为这一步改的是值本身：站点读到的标题会从 `使用Vite构建` 变成 `使用 Vite 构建`。与正文不同的是，这个字符串常常被直接显示、索引或比较，所以它必须是作者的选择，而不是默认行为。
+
 **FM-05 —— 无法解析的 front matter 原样保留并报告** · 警告
 
 `parseDocument` 报错时，区块逐字节原样输出，正文照常格式化，并在第 1 行报一次警告。它不被部分修复：猜出来的 YAML 修复比不修更糟。`frontMatter.format: preserve` 时不报 —— 那时保留是作者明确要求的，没有需要解释的东西。
@@ -526,6 +534,7 @@ table:
 
 frontMatter:
   format: normalize         # normalize | preserve
+  typography: false         # 打开后只在值与注释里加/删空格（FM-04）
 
 typography:
   cjkSpacing: true
