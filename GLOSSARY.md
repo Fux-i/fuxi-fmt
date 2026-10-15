@@ -15,10 +15,13 @@ indentation that content carries. There is one reading, `lineContentOf` in
 column count, so the tab-stop rule belongs to it too.
 
 **Protected region** — a span copied byte for byte: fenced and indented code,
-front matter, display math, an HTML block or comment, an inline span, a URL, a
-link destination, MDX, a wikilink. `scanRegions` finds them, and the three
-readings of that one list — `protectedLines`, `atomicRanges` and `regionMask` —
-live beside it, so no two passes can disagree about which lines are untouchable.
+display math, an HTML block or comment, an inline span, a URL, a link destination,
+MDX, a wikilink, and TOML front matter. The YAML front matter block is in the same
+list, because no Markdown rule may touch it either, but its own rule hands it to a
+YAML serializer and the guard checks it by meaning rather than by bytes
+(FM-01, FM-03). `scanRegions` finds them all, and the three readings of that one
+list — `protectedLines`, `atomicRanges` and `regionMask` — live beside it, so no
+two passes can disagree about which lines are untouchable.
 
 **Rule id** — the stable identifier a diagnostic carries, declared once in
 `packages/core/src/rules.ts`. Severity is deliberately not part of that

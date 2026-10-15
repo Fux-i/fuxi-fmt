@@ -235,6 +235,19 @@
 - 有序列表自动重编号与列表编辑在编辑时触发，不在保存时。
 - 可选的打印成 HTML 在保存时触发，默认关。
 
+## 8. YAML 库的往返保真（front matter 格式化的先例）
+
+格式化 front matter 不是 Markdown 格式化器的问题，而是「谁来打印这段 YAML」的问题。两个候选，实测（2026-10，本机运行）：
+
+- **`yaml`（eemeli/yaml）2.9.1** —— `parseDocument()` 保留注释、键序、锚点、合并键与字面块标量，`toString()` 打印。但它是**重新序列化**：`fold: >` 的两行被折平、`[1,2]` 写成 `[ 1, 2 ]`、`!!str 123` 写成 `!!str "123"`。31 KB gzip，零传递依赖。真正逐字节保留的是它的另一层 CST API（`CST.visit`/`CST.stringify`），那是给需要改写单个 token 的工具用的（[docs/07](https://raw.githubusercontent.com/eemeli/yaml/main/docs/07_parsing_yaml.md)、[docs/03](https://raw.githubusercontent.com/eemeli/yaml/main/docs/03_options.md)）。
+- **`js-yaml` 4.x** —— `load`/`dump` 之间流动的是普通 JS 值：注释全丢、锚点被展开、流式转块式、`>` 变 `|`、普通字符串 `n` 被加引号。用它格式化 front matter 就是丢数据，注释保留在它自己的 tracker 里仍是未实现的功能请求（[#624](https://github.com/nodeca/js-yaml/issues/624)）。
+
+编辑器一侧同样如此：VS Code 的 YAML 扩展至今不处理 Markdown front matter（[#207](https://github.com/redhat-developer/vscode-yaml/issues/207)，2019 年提出，仍开着），而 `gray-matter` 的 `stringify` 是从解析后的对象重新拼出来的，同样保不住注释（[README](https://raw.githubusercontent.com/jonschlinkert/gray-matter/master/README.md)）。
+
+fuxi-fmt 取 `yaml`：FM-03 把四个打印选项钉死（`lineWidth: 0`、`indent: 2`、`indentSeq: true`、`flowCollectionPadding: false`），写回前要求语义守卫（键与键序、类型、注释文本一致）通过。
+
+---
+
 ## 跨工具对照
 
 |              | front matter                                         | 空行策略                            | 有序列表                                  | 项目符号 / 缩进                 | 折行                    | 围栏内容                     |

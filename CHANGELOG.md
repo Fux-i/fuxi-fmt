@@ -4,7 +4,7 @@
 
 格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，本项目遵循[语义化版本](https://semver.org/spec/v2.0.0.html)。发布使用 Linux 内核的标签约定：`vMAJOR.MINOR[.PATCH]`，候选版本以 `-rcN` 结尾。
 
-## [Unreleased]
+## [0.31.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.30.0...v0.31.0) - 2026-10-15
 
 ### 新增
 
@@ -19,8 +19,8 @@
 
 ### 变更
 
-- **升级会改变已有文档的字节：任何带 YAML front matter 的文件会被规范化一次。** 不希望这样就把
-  `frontMatter.format` 设为 `preserve`。
+- **破坏性变更：升级会改变已有文档的字节 —— 任何带 YAML front matter 的文件会被规范化一次。** 不希望这样
+  就把 `frontMatter.format` 设为 `preserve`。
 - **`packages/core` 有了第一个运行期依赖 `yaml`**（31 KB gzip、零传递依赖），只用于 front matter；Markdown
   路径一行未动。加它的理由与它的代价写在规范第 7 节第 2 条。
 - **序列化器带来的四处必然差异**（流式集合逗号后的空格、显式标签重新加引号、折叠标量被折平、文末注释前多一个
