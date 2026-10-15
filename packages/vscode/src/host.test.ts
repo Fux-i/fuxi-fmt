@@ -233,9 +233,9 @@ describe('the extension bundle against a stubbed host', () => {
     assert.ok(documentProvider);
     clean(vscode);
     vscode.workspaceFolder = dist;
-    // This repository has its own fuxi-fmt.json, and a project file beats the
-    // individual settings for files inside it (CFG-01). The explicit object
-    // override sits above both, which is the layer a test can set.
+    // A project file beats the individual settings for files inside it
+    // (CFG-01), and `fuxiFmt.config` sits above both - which is the layer a test
+    // can set without writing a file.
     vscode.config = { table: { maxWidth: 30 } };
     const capped = {
       getText: () => '| a very long cell indeed | b |\n| --- | --- |\n| 1 | 2 |\n| x | y |\n',
