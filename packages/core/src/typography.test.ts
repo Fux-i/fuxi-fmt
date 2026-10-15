@@ -140,8 +140,11 @@ describe('protected blocks are skipped by the typography pass', () => {
     const src = '```\n中文abc\n```\n';
     assert.equal(out(src), src);
   });
-  test('FM-01 front matter keeps its spacing verbatim', () => {
-    const src = '---\ntitle: 中文abc\n---\n\ntext\n';
+  test('FM-01 a position the front matter rule does not claim stays verbatim', () => {
+    // The block is no longer skipped wholesale: FM-04 spaces a value and a comment
+    // on purpose. What this pass still never touches is everything else in there -
+    // here a block scalar, whose indentation is its content.
+    const src = '---\ndesc: |\n  中文abc\n---\n\ntext\n';
     assert.equal(out(src), src);
   });
 });

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { checkSemantics } from './guard.ts';
 import { english, MESSAGES } from './messages.ts';
 import { format } from './format.ts';
+import { defaultOptions } from './options.ts';
 
 describe('GRT-01 a violation says where it happened', () => {
   test('a modified fenced code block names its line', () => {
@@ -109,7 +110,9 @@ describe('GRT-01 the guard holds over a corpus of awkward documents', () => {
   for (const [index, src] of CORPUS.entries()) {
     test('corpus case ' + String(index + 1) + ' survives the guard', () => {
       const result = format(src);
-      assert.deepEqual(checkSemantics(src, result.output), []);
+      // The same front matter terms `format` used, taken from the defaults it
+      // resolved rather than restated, so the two cannot drift apart (FM-03).
+      assert.deepEqual(checkSemantics(src, result.output, false, defaultOptions.frontMatter), []);
       // No refusal. A warning is not a refusal, and this corpus contains a list
       // with a code block in it - which DET-12 reports, because such a list is
       // deliberately left alone rather than reindented around the block.

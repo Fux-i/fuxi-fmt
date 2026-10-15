@@ -705,7 +705,7 @@
             "fuxi-fmt"
           ],
           "type": "boolean",
-          "default": false,
+          "default": true,
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.frontMatter.typography.description%"
         },

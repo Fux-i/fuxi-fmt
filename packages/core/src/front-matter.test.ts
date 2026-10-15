@@ -132,12 +132,20 @@ describe('FM-03 the serializer differences the specification accepts', () => {
   });
 });
 
-describe('FM-04 typography inside front matter (opt-in)', () => {
+describe('FM-04 typography inside front matter', () => {
   const on = { frontMatter: { typography: true } } as const;
 
-  test('is off by default', () => {
+  test('is on by default', () => {
     const input = '---\n# 注释comment\ntitle: 中文abc\n---\n\nBody\n';
-    assert.equal(format(input).output, input);
+    assert.equal(
+      format(input).output,
+      '---\n# 注释 comment\ntitle: 中文 abc\n---\n\nBody\n',
+    );
+  });
+
+  test('can be turned off', () => {
+    const input = '---\n# 注释comment\ntitle: 中文abc\n---\n\nBody\n';
+    assert.equal(format(input, { frontMatter: { typography: false } }).output, input);
   });
 
   test('spaces a plain scalar value but never its key', () => {

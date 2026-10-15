@@ -52,7 +52,7 @@ Y = 覆盖，P = 部分或带条件，N = 不覆盖。
 | 行内代码与公式         | 当作一个拉丁词加空格，内容逐字节不动                                                      | 没有对应开关                                                                                           |
 | 表格                   | `table.mode`、`table.cjkWidth`、`table.maxWidth`                                          | Prettier 总是补空格；dprint 的 `table.cellPadding`；remark 的 `tableCellPadding` 等                    |
 | 折行                   | 不提供，有意为之                                                                          | Prettier 的 `proseWrap`；dprint 与 deno 的 `textWrap` / `proseWrap`；mdformat 的 `--wrap`              |
-| front matter           | `frontMatter.format`：`normalize` / `preserve`；`frontMatter.typography`（默认关，只加删空格）；TOML 只保护并报一次 FM-06 | Prettier 会格式化 YAML 与 TOML；dprint 交给 yaml 插件；mdformat 需要插件                               |
+| front matter           | `frontMatter.format`：`normalize` / `preserve`；`frontMatter.typography`（默认开，只加删空格）；TOML 只保护并报一次 FM-06 | Prettier 会格式化 YAML 与 TOML；dprint 交给 yaml 插件；mdformat 需要插件                               |
 | 围栏代码内容           | 逐字节不动，没有开关                                                                      | dprint 的 `codeBlock.skipFormat` 默认关；Prettier 的 `embeddedLanguageFormatting` 默认会格式化         |
 | 忽略指令               | `ignore.file` / `start` / `end` / `line`，四个名字都可配                                  | dprint 的四个同名指令可配；Prettier 的 `prettier-ignore`；deno 的 `deno-fmt-ignore*`                   |
 | 行尾与文件卫生         | `endOfLine`，末尾单一换行、去 BOM、裁行尾空白                                             | Prettier 的 `endOfLine`；dprint 的 `newLineKind`；mdformat 的 `--end-of-line`                          |

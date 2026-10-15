@@ -6,6 +6,13 @@
 
 ## [Unreleased]
 
+### 变更
+
+- **`frontMatter.typography` 的默认值改为开。** 与正文一致：一份文档里的中英间距不该因为几行写在 `---` 之上就
+  中断。它改的是值本身（`title: 使用Vite构建` → `title: 使用 Vite 构建`），关掉它是显式的：把这个设置设为
+  `false`，或把 `frontMatter.format` 设为 `preserve` 让整个区块逐字节保留。标点、引号与宽度仍然只在正文里
+  转换，front matter 里的值只加删空格。
+
 ### 修复
 
 - **`frontMatter.*` 的设置在任何用到分层合并的地方都无效（CFG-01）。** 合并函数把 section 名逐个写死，旁边那份

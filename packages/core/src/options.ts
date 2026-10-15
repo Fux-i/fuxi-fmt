@@ -229,10 +229,13 @@ export interface FrontMatterOptions {
   /**
    * Whether the typography spacing rules also apply inside the block (FM-04).
    *
-   * A value in front matter is data: `title: 使用Vite构建` becomes
-   * `title: 使用 Vite 构建`, which is what a reader of the page sees. Off by
-   * default for that reason, and only spaces are ever inserted or removed -
-   * punctuation, quotes and widths are never converted in there.
+   * On by default, like the body: CJK spacing should not stop at the second
+   * `---` of a document. Only spaces are ever inserted or removed - punctuation,
+   * quotes and widths are never converted in there, because those are data.
+   *
+   * It does change what a value says: `title: 使用Vite构建` becomes
+   * `title: 使用 Vite 构建`, which is what a reader of the page sees. Turning it
+   * off is explicit, and `format: preserve` keeps the whole block byte for byte.
    */
   readonly typography: boolean;
 }
@@ -344,7 +347,7 @@ export const defaultOptions: FormatOptions = {
   codeBlock: { fenceChar: 'backticks', fenceLength: true, trimBlankLines: true },
   thematicBreak: 'dashes',
   table: { mode: 'normalize', maxWidth: 80, cjkWidth: 2 },
-  frontMatter: { format: 'normalize', typography: false },
+  frontMatter: { format: 'normalize', typography: true },
   endOfLine: 'lf',
   ignore: {
     file: 'fuxi-fmt-ignore-file',

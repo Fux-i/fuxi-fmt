@@ -76,7 +76,7 @@ const SAMPLES: Record<string, unknown> = {
   'codeBlock.trimBlankLines': false,
   thematicBreak: 'asterisks',
   'frontMatter.format': 'preserve',
-  'frontMatter.typography': true,
+  'frontMatter.typography': false,
   'table.mode': 'preserve',
   'table.maxWidth': 100,
   'table.cjkWidth': 1,
