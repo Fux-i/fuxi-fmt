@@ -4,15 +4,45 @@
 
 **面向中文技术写作的 Markdown 格式化工具。**
 
-> 本项目正在积极开发中 <!-- fuxi-fmt:work-in-progress -->
+> 规范第 6 节末尾的「实现状态」记着尚未实现与只实现一部分的选项。<!-- fuxi-fmt:work-in-progress -->
 
 ## 亮点
 
-- **一个引擎同时管块级结构与中文排版。** 空行、标记空格、有序列表重编号、列表缩进、中英之间加空格、中文标点全角或半角、行内代码两侧的空格，全部由同一套配置决定，all in one。
-- **代码永远不会被改动。** 围栏代码正文与 info string、行内代码与公式、HTML 块与注释、MDX/JSX、shortcode、wikilink、URL 与链接目标全部逐字节保持原样；TOML front matter 同样原样保留。YAML front matter 不进 Markdown 管线，而是交给 YAML 序列化器规范化（`frontMatter.format` 可关，关掉就逐字节保留）。
-- **语义守卫。** 结果与原文的解析树不一致时拒绝写入，你拿回的是原封不动的文档；解析不得不猜的地方（未终止的围栏、front matter、HTML 注释、公式块）也会拒绝并点名那一行。
-- **幂等、最小编辑。** 再跑一次不改动任何东西；保存时格式化只产生很小的编辑范围，不打乱光标与撤销历史。
+- **一个工具同时管块级结构与中文排版。** 空行、标记空格、有序列表重编号、列表缩进、中英之间加空格、中文标点全角或半角、行内代码两侧的空格，全部由同一套配置决定，all in one。
+- **不该改的不动。** 代码块内容、行内代码与公式、HTML 块与注释、MDX/JSX、shortcode、wikilink、URL 与链接目标全部逐字节保持原样；TOML front matter 同样原样保留。
+- **拒绝改坏，而且再跑一次不动。** 结果与原文的解析树不一致时拒绝写入；解析不得不猜的地方（未终止的围栏、front matter、HTML 注释、公式块）也会拒绝并点名那一行。幂等保证第二次运行不改动任何东西，保存时只产生很小的编辑范围，不打乱光标与撤销历史。
 - **几乎所有东西都能在设置里改。** 每一个选项都是 VS Code 设置，带默认值、可选值以及它实现的是哪条规范规则，所以设置面板本身就是说明书。
+
+## 效果示例
+
+同一段文本，格式化前与格式化后：
+
+格式化前：
+
+```markdown
+#安装
+他说"试试这个",然后打开了vscode。
+- 第一项
+- 第二项
+| 需求 | fuxi-fmt |
+| --- | --- |
+| 中英文之间加空格 | 有 |
+```
+
+格式化后：
+
+```markdown
+# 安装
+
+他说“试试这个”，然后打开了 vscode。
+
+- 第一项
+- 第二项
+
+| 需求             | fuxi-fmt |
+| ---------------- | -------- |
+| 中英文之间加空格 | 有       |
+```
 
 ## 与主流工具对比
 
@@ -22,16 +52,15 @@
 
 Y = 覆盖，P = 部分或带条件，N = 不覆盖。
 
-| 需求                     | Prettier | dprint / Deno | markdownlint | Markdown All in One | AutoCorrect | CJK Text Formatter | **fuxi-fmt** |
-| ------------------------ | --- | --- | --- | ------------- | --- | --- | ----- |
-| 块与块之间的空行         | Y   | Y   | Y   | N             | N   | N   | **Y** |
-| `#` 与列表标记之后的空格 | Y   | Y   | Y   | P             | N   | N   | **Y** |
-| 有序列表重新编号         | Y   | Y   | Y   | P（仅输入时） | N   | N   | **Y** |
-| front matter             | Y（YAML + TOML） | P | N | N | N | N | **Y（YAML 默认开；TOML 只保护）** |
-| 行内代码两侧的空格       | N   | N   | N（MD038 恰好相反） | N | P | N | **Y** |
-| CJK 与拉丁文之间的空格   | N   | N   | N   | N             | Y   | Y   | **Y** |
-| 中文标点宽度             | N   | N   | N   | N             | Y   | Y   | **Y** |
-| 永不触碰围栏代码         | P（需手动关） | P（需手动关） | Y | Y | P（需手动关） | Y | **Y（默认）** |
+| 需求                   | Prettier | dprint / Deno | markdownlint | Markdown All in One | AutoCorrect | CJK Text Formatter | **fuxi-fmt** |
+| ---------------------- | --- | --- | --- | --- | --- | --- | ----- |
+| 块与块之间的空行       | Y   | Y   | Y   | N   | N   | N   | **Y** |
+| 有序列表重新编号       | Y   | Y   | Y   | P   | N   | N   | **Y** |
+| front matter           | Y   | P   | N   | N   | N   | N   | **Y** |
+| 行内代码两侧的空格     | N   | N   | N   | N   | P   | N   | **Y** |
+| CJK 与拉丁文之间的空格 | N   | N   | N   | N   | Y   | Y   | **Y** |
+| 中文标点宽度           | N   | N   | N   | N   | Y   | Y   | **Y** |
+| 不改代码块             | P   | P   | Y   | Y   | P   | Y   | **Y** |
 
 「全部选项可调」这一行留给下面的表回答——它需要逐项看，而不是一个字母。
 
@@ -53,7 +82,7 @@ Y = 覆盖，P = 部分或带条件，N = 不覆盖。
 | 表格           | `table.mode`、`table.cjkWidth`、`table.maxWidth` | Prettier 总是补空格；dprint 的 `table.cellPadding`；remark 的 `tableCellPadding` 等 |
 | 折行           | 不提供，有意为之                     | Prettier 的 `proseWrap`；dprint 与 deno 的 `textWrap` / `proseWrap`；mdformat 的 `--wrap` |
 | front matter   | `frontMatter.format`：`normalize` / `preserve`；`frontMatter.typography`（默认开，只加删空格）；TOML 只保护并报一次 FM-06 | Prettier 会格式化 YAML 与 TOML；dprint 交给 yaml 插件；mdformat 需要插件 |
-| 围栏代码内容   | 逐字节不动，没有开关                 | dprint 的 `codeBlock.skipFormat` 默认关；Prettier 的 `embeddedLanguageFormatting` 默认会格式化 |
+| 代码块内容     | 逐字节不动，没有开关                 | dprint 的 `codeBlock.skipFormat` 默认关；Prettier 的 `embeddedLanguageFormatting` 默认会格式化 |
 | 忽略指令       | `ignore.file` / `start` / `end` / `line`，四个名字都可配 | dprint 的四个同名指令可配；Prettier 的 `prettier-ignore`；deno 的 `deno-fmt-ignore*` |
 | 行尾与文件卫生 | `endOfLine`，末尾单一换行、去 BOM、裁行尾空白 | Prettier 的 `endOfLine`；dprint 的 `newLineKind`；mdformat 的 `--end-of-line` |
 
@@ -65,7 +94,7 @@ Y = 覆盖，P = 部分或带条件，N = 不覆盖。
 code --install-extension Fux-i.fuxi-fmt-vscode
 ```
 
-从源码打包本地 vsix：
+从源码打包本地 vsix（需要 Node.js >= 22.18，推荐 24 LTS）：
 
 ```sh
 npm ci
@@ -86,7 +115,7 @@ code --install-extension output/fuxi-fmt-<version>.vsix
 | 3   | `fuxi-fmt.json`  | 提交进版本库的仓库根目录文件 |
 | 4   | `fuxiFmt.config` | 你的编辑器，作为显式覆盖     |
 
-**第 3 层故意压过第 2 层。** 命令行与 CI 永远看不到编辑器设置；如果它们优先，编辑器与 `fuxi-fmt --check` 会对同一份文档给出不同结论 —— 保存时通过，流水线里失败。确实想覆盖项目配置时，用第 4 层的 `fuxiFmt.config`。
+**第 3 层故意压过第 2 层。** 命令行与 CI 永远看不到编辑器设置；如果它们优先，编辑器与命令行（`--check`，用法见[贡献指南](CONTRIBUTING.md)）会对同一份文档给出不同结论 —— 保存时通过，流水线里失败。确实想覆盖项目配置时，用第 4 层的 `fuxiFmt.config`。
 
 ```json
 {
@@ -97,10 +126,6 @@ code --install-extension output/fuxi-fmt-<version>.vsix
 ```
 
 把 `fuxiFmt.enable` 设为 `false`，可以关闭使用其格式化。
-
-## 环境要求
-
-Node.js >= 22.18（推荐 24 LTS）。
 
 ## 文档
 

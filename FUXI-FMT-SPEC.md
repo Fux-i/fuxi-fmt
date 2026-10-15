@@ -499,10 +499,10 @@ Y = 覆盖，P = 部分或带条件，N = 不覆盖。
 
 ---
 
-## 6. 可调面（草稿）
+## 6. 可调面
 
 ```yaml
-# fuxi-fmt.toml / .fuxi-fmtrc —— 示意，不是最终形态
+# fuxi-fmt.json 的键（示意；该文件接受注释与尾随逗号）
 preset: default          # default | strict-commonmark
 
 blankLines:
@@ -538,7 +538,6 @@ frontMatter:
 
 typography:
   cjkSpacing: true
-  collapseBoundarySpaces: true
   punctuationStyle: fullwidth     # fullwidth | halfwidth | mixed | off
   punctuationChangeList: [",", ".", ":", "!", "?", ";"]
   parenStyle: mixed               # mixed | fullwidth | halfwidth | preserve

@@ -90,7 +90,7 @@
   "fuxiFmt.ignore.start.description": "注释文本，开启一段不参与格式化的区域（CFG-03）。",
   "fuxiFmt.ignore.end.description": "注释文本，结束这样的区域（CFG-03）。",
   "fuxiFmt.ignore.line.description": "注释文本，让格式化器跳过下一个块（CFG-03）。",
-  "extension.description": "面向中文技术写作的 Markdown 格式化工具：空行、标记空格、列表重编号、中英文之间加空格、中文标点全角半角 —— 代码与行内片段从不改动；YAML front matter 交给 YAML 序列化器规范化（`frontMatter.format: preserve` 可逐字节保留）。",
+  "extension.description": "面向中文技术写作的 Markdown 格式化工具。",
   "fuxiFmt.list.unorderedMarker.enum.0": "短横线：-",
   "fuxiFmt.list.unorderedMarker.enum.1": "星号：*",
   "fuxiFmt.list.unorderedMarker.enum.2": "保持原样。",
