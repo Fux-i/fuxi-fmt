@@ -141,6 +141,29 @@ describe('the extension bundle against a stubbed host', () => {
     vscode.settings = {};
   });
 
+  test('the front matter settings reach the core', () => {
+    // The reported bug: with `frontMatter.format` set to preserve the block was
+    // still normalized, because the merge between the settings and the project
+    // file dropped the whole section before the formatter saw it (CFG-01).
+    assert.ok(documentProvider);
+    const doc = {
+      getText: () => '---\ntitle:   中文abc\ntags:  [a,b]\n---\n\nBody\n',
+      uri: { fsPath: join(dist, 'front-matter.md') },
+    };
+
+    vscode.settings = {};
+    const normalized = documentProvider.provider.provideDocumentFormattingEdits(doc);
+    assert.ok(normalized.length > 0, 'the default mode should normalize the block');
+
+    vscode.settings = {
+      'fuxiFmt.frontMatter.format': 'preserve',
+      'fuxiFmt.frontMatter.typography': false,
+    };
+    const preserved = documentProvider.provider.provideDocumentFormattingEdits(doc);
+    assert.deepEqual(preserved, [], 'preserve did not reach the formatter');
+    vscode.settings = {};
+  });
+
   test('editor.tabSize reaches the core, since it is not a fuxi-fmt setting', () => {
     assert.ok(documentProvider);
     const list = { getText: () => '- a\tb\n', uri: { fsPath: join(dist, 'tabs.md') } };

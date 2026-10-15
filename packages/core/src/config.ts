@@ -28,7 +28,6 @@ import type {
   FormatOptionsInput,
   ListInput,
   ThematicBreak,
-  EmphasisInput,
   TableInput,
   TypographyInput,
 } from './options.ts';
@@ -37,15 +36,20 @@ export const CONFIG_FILENAME = 'fuxi-fmt.json';
 
 type Raw = Record<string, unknown>;
 
-interface Sections {
-  blankLines?: BlankLinesInput;
-  typography?: TypographyInput;
-  list?: ListInput;
-  codeBlock?: CodeBlockInput;
-  thematicBreak?: ThematicBreak;
-  table?: TableInput;
-  endOfLine?: EndOfLine;
-  ignore?: IgnoreInput;
+/** A layer of options as the merge sees it: sections of leaves and bags. */
+type Layer = Record<string, unknown>;
+
+/**
+ * Whether a value is an options bag rather than a leaf.
+ *
+ * An array is a leaf (`punctuationChangeList`, `cjkClasses`), a Set is a leaf
+ * (`spacingSymbols` once resolved), and `null` is a value (`maxConsecutive` is
+ * unbounded when it is null), so none of them may be merged key by key.
+ */
+function isBag(value: unknown): value is Layer {
+  return (
+    value !== null && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Set)
+  );
 }
 
 function isRecord(value: unknown): value is Raw {
@@ -255,43 +259,30 @@ function readSections(raw: Raw): FormatOptionsInput {
   return readNode(OPTION_VOCABULARY as unknown as Record<string, unknown>, raw, '') as FormatOptionsInput;
 }
 
-function mergeSection<T extends object>(base: T | undefined, override: T | undefined): T | undefined {
-  if (base === undefined) return override;
-  if (override === undefined) return base;
-  return Object.assign({}, base, override) as T;
+/**
+ * Layer one options object over another (CFG-01).
+ *
+ * Driven by the two objects rather than by a list of sections. That list - and the
+ * `Sections` interface beside it - was a second copy of the option surface, and
+ * when `frontMatter` joined the surface the copy did not: every
+ * `fuxiFmt.frontMatter.*` setting and every `fuxiFmt.config` front matter key was
+ * discarded on the way in, so the two new settings silently did nothing in the
+ * editor. A key whose value is a bag is merged a level deeper, which is what
+ * `typography.emphasis` needs; a leaf replaces the layer below it.
+ */
+export function mergeOptions(base: FormatOptionsInput, override: FormatOptionsInput): FormatOptionsInput {
+  return mergeLayers(base as Layer, override as Layer) as FormatOptionsInput;
 }
 
-export function mergeOptions(base: FormatOptionsInput, override: FormatOptionsInput): FormatOptionsInput {
-  const out: Sections = {};
-  const blankLines = mergeSection(base.blankLines, override.blankLines);
-  if (blankLines !== undefined) out.blankLines = blankLines;
-  const typography = mergeSection(base.typography, override.typography);
-  if (typography !== undefined) {
-    // `emphasis` is the one bag inside the typography options. Merging it whole
-    // would let a layer that sets one kind silently drop the other two set below
-    // it, which is the opposite of what layering is for.
-    const emphasis: EmphasisInput = {
-      ...base.typography?.emphasis,
-      ...override.typography?.emphasis,
-    };
-    out.typography =
-      Object.keys(emphasis).length === 0 ? typography : { ...typography, emphasis };
+function mergeLayers(base: Layer, override: Layer): Layer {
+  const out: Layer = {};
+  for (const key of new Set([...Object.keys(base), ...Object.keys(override)])) {
+    const from = base[key];
+    const onto = override[key];
+    if (isBag(from) && isBag(onto)) out[key] = mergeLayers(from, onto);
+    else if (onto !== undefined) out[key] = onto;
+    else if (from !== undefined) out[key] = from;
   }
-  const list = mergeSection(base.list, override.list);
-  if (list !== undefined) out.list = list;
-  const codeBlock = mergeSection(base.codeBlock, override.codeBlock);
-  if (codeBlock !== undefined) out.codeBlock = codeBlock;
-  const ignore = mergeSection(base.ignore, override.ignore);
-  if (ignore !== undefined) out.ignore = ignore;
-  const thematicBreak = override.thematicBreak ?? base.thematicBreak;
-  if (thematicBreak !== undefined) out.thematicBreak = thematicBreak;
-  const table = {
-    ...base.table,
-    ...override.table,
-  };
-  if (Object.keys(table).length > 0) out.table = table;
-  const endOfLine = override.endOfLine ?? base.endOfLine;
-  if (endOfLine !== undefined) out.endOfLine = endOfLine;
   return out;
 }
 

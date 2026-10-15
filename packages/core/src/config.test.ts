@@ -4,6 +4,8 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { findConfigFile, loadOptionsFor, mergeOptions, parseConfig } from './config.ts';
+import { defaultOptions } from './options.ts';
+import type { FormatOptionsInput } from './options.ts';
 import { format } from './format.ts';
 import { resolveOptions } from './options.ts';
 
@@ -65,6 +67,11 @@ describe('CFG-01 presets', () => {
   test('the default preset is the shipped defaults', () => {
     assert.deepEqual(parseConfig('{ "preset": "default" }'), {});
   });
+  test('a stated key survives the preset it is layered over', () => {
+    // The preset is merged under the file, and the merge is what dropped it.
+    const options = parseConfig('{ "preset": "default", "frontMatter": { "format": "preserve" } }');
+    assert.equal(options.frontMatter?.format, 'preserve');
+  });
 });
 
 describe('CFG-01 merging layers', () => {
@@ -83,6 +90,35 @@ describe('CFG-01 merging layers', () => {
   test('sections are merged, not replaced', () => {
     const merged = mergeOptions({ typography: { cjkSpacing: false } }, { typography: {} });
     assert.deepEqual(merged, { typography: { cjkSpacing: false } });
+  });
+
+  test('every section of the option surface survives a merge', () => {
+    // The merge named its sections by hand, and when `frontMatter` joined the
+    // surface the list did not: every editor setting and every `fuxiFmt.config`
+    // under that section was discarded before the formatter saw it. A section is
+    // now a key of the options rather than a line in a second copy of the surface,
+    // and this walks the surface so the next one cannot repeat it (CFG-01).
+    for (const [section, value] of Object.entries(defaultOptions)) {
+      const stated = { [section]: value } as FormatOptionsInput;
+      assert.deepEqual(
+        mergeOptions(stated, {}),
+        stated,
+        section + ' was dropped by the merge',
+      );
+    }
+  });
+
+  test('a layer may set one front matter key without dropping the other', () => {
+    assert.deepEqual(mergeOptions({ frontMatter: { format: 'preserve' } }, {}), {
+      frontMatter: { format: 'preserve' },
+    });
+    assert.deepEqual(
+      mergeOptions(
+        { frontMatter: { format: 'normalize', typography: true } },
+        { frontMatter: { format: 'preserve' } },
+      ),
+      { frontMatter: { format: 'preserve', typography: true } },
+    );
   });
 });
 

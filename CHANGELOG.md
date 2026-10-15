@@ -4,6 +4,17 @@
 
 格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，本项目遵循[语义化版本](https://semver.org/spec/v2.0.0.html)。发布使用 Linux 内核的标签约定：`vMAJOR.MINOR[.PATCH]`，候选版本以 `-rcN` 结尾。
 
+## [Unreleased]
+
+### 修复
+
+- **`frontMatter.*` 的设置在任何用到分层合并的地方都无效（CFG-01）。** 合并函数把 section 名逐个写死，旁边那份
+  `Sections` 接口是同一张清单的第二份；front matter 加入选项面时两张都没有跟上，于是这个 section 在合并时被整个
+  丢掉：在编辑器里把 `fuxiFmt.frontMatter.format` 设为 `preserve` 依然会被规范化，`fuxiFmt.config` 里的同名键
+  同样无效，配置文件里同时写了 `preset` 时也会丢掉这些键。现在合并由选项对象本身驱动（对象值的键往下一层合并，
+  这正是 `typography.emphasis` 需要的；其余按叶子覆盖），新增一个 section 不再需要记得改第二处，并且有一条遍历
+  `defaultOptions` 的测试守着这件事。
+
 ## [0.31.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.30.0...v0.31.0) - 2026-10-15
 
 ### 新增
