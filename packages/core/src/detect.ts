@@ -58,9 +58,15 @@ export function detect(
   ignore: readonly CharRange[] = [],
 ): Detection[] {
   const mask = protectedMask(source, ignore, regions);
-  const detections: Detection[] = [];
+  const detections: Detection[] = tomlFrontMatter(lines);
+  const toml = tomlFrontMatter(lines).length > 0;
   for (const region of regions) {
     if (region.closed !== false) continue;
+    // DET-02 is a YAML rule: an unclosed YAML block would have been formatted and
+    // a misreading would have corrupted it. The TOML block is never formatted, so
+    // an unclosed one costs the body its formatting and nothing else - FM-06 says
+    // so rather than refusing the document.
+    if (toml && region.kind === 'frontMatter') continue;
     const rule = UNTERMINATED[region.kind];
     if (rule === undefined) continue;
     detections.push({ ...rule, args: [], line: lineIndexOf(lines, region.start) });
@@ -72,6 +78,20 @@ export function detect(
   detections.push(...incompleteTables(lines, mask));
   detections.push(...listJumps(lines, mask));
   return detections;
+}
+
+/**
+ * FM-06: a TOML front matter block, which is preserved rather than formatted.
+ *
+ * The scanner has already protected it; this is the formatter saying so, because
+ * a block that is silently left alone is indistinguishable from one it forgot.
+ * TOML is a different document format with its own comments, strings and escapes,
+ * and nothing here reads or rewrites it.
+ */
+function tomlFrontMatter(lines: readonly SourceLine[]): Detection[] {
+  const first = lines[0];
+  if (first === undefined || first.text.trimEnd() !== '+++') return [];
+  return [{ ruleId: 'FM-06', messageId: 'fm.tomlPreserved', args: [], line: 0 }];
 }
 
 /**

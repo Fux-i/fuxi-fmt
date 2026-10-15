@@ -103,6 +103,10 @@ export const MESSAGES = {
     en: 'this list is not reindented: it contains a protected block, and moving code the author placed at a fixed indentation is what SAFE-02 exists to prevent',
     zh: '这个列表不做缩进调整：其中含有受保护的块，而移动作者固定在某个缩进位置的代码正是 SAFE-02 要防止的',
   },
+  'fm.tomlPreserved': {
+    en: 'front matter in the TOML form is preserved as written: it is configuration for another tool, and fuxi-fmt does not format it',
+    zh: 'TOML 写法的 front matter 原样保留：它是给其它工具读的配置，而 fuxi-fmt 不格式化它',
+  },
   'grt.regionCount': {
     en: 'protected region count changed: {0} -> {1}',
     zh: '受保护区域的数量发生了变化：{0} -> {1}',

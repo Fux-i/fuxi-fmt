@@ -224,17 +224,23 @@ export function scanRegions(source: string): Region[] {
 function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Region[]): void {
   let i = 0;
   const first = lines[0];
-  if (first !== undefined && first.text.trimEnd() === '---') {
+  const opener = first === undefined ? '' : first.text.trimEnd();
+  if (opener === '---' || opener === '+++') {
+    // YAML closes with `---` or the document-end marker `...`; the TOML form has
+    // one marker, because TOML has no document-end or multi-document syntax.
+    const closes =
+      opener === '+++'
+        ? (text: string): boolean => text === '+++'
+        : (text: string): boolean => text === '---' || text === '...';
     let closed = false;
     for (let j = 1; j < lines.length; j++) {
       const t = lines[j]?.text.trimEnd() ?? '';
-      if (t === '---' || t === '...') {
-        const end = lines[j]?.end ?? source.length;
-        if (claim(mask, 0, end)) regions.push({ kind: 'frontMatter', start: 0, end, closed: true });
-        i = j + 1;
-        closed = true;
-        break;
-      }
+      if (!closes(t)) continue;
+      const end = lines[j]?.end ?? source.length;
+      if (claim(mask, 0, end)) regions.push({ kind: 'frontMatter', start: 0, end, closed: true });
+      i = j + 1;
+      closed = true;
+      break;
     }
     // FM-02. An opener that never closes is still front matter when what follows
     // reads as YAML, and the whole document is then protected rather than having
@@ -245,7 +251,7 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
     // The heuristic is the first non-blank line being a key, so a horizontal rule
     // at the top of a document stays a horizontal rule: refusing that document
     // would be a false alarm on correct input.
-    if (!closed) {
+    if (!closed && opener === '---') {
       const body = lines.slice(1).find((line) => (line?.text ?? '').trim().length > 0);
       if (body !== undefined && YAML_KEY.test(body.text)) {
         if (claim(mask, 0, source.length)) {
@@ -253,6 +259,15 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
         }
         i = lines.length;
       }
+    }
+    // FM-06. An opener that never closes is still TOML front matter, and no
+    // heuristic is needed to say so: the block is never parsed, so there is no
+    // reading to get wrong. Treating it as prose is the one outcome ruled out.
+    if (!closed && opener === '+++') {
+      if (claim(mask, 0, source.length)) {
+        regions.push({ kind: 'frontMatter', start: 0, end: source.length, closed: false });
+      }
+      i = lines.length;
     }
   }
 

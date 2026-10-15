@@ -4,6 +4,15 @@
 
 格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，本项目遵循[语义化版本](https://semver.org/spec/v2.0.0.html)。发布使用 Linux 内核的标签约定：`vMAJOR.MINOR[.PATCH]`，候选版本以 `-rcN` 结尾。
 
+## [Unreleased]
+
+### 修复
+
+- **TOML front matter（`+++`）不再被当作散文格式化。** 过去只识别 `---`，`+++` 区块里的内容会挨上散文规则：
+  `# a note` 被读成 ATX 标题并插入空行，`title = "我的,笔记"` 里的半角逗号被 TYPO-05 换成全角，直引号换成中文引号
+  —— 一份静态站点生成器要读的配置文件被改写。现在它与 YAML front matter 一样逐字节原样保留，并报一次 FM-06
+  警告：YAML 区块将来会被格式化，TOML 不会，所以需要说明这一块是被保留而不是被忽略。
+
 ## [0.30.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.29.0...v0.30.0) - 2026-10-13
 
 ### 变更
