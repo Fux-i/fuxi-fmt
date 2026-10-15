@@ -681,6 +681,24 @@
           ],
           "markdownDescription": "%fuxiFmt.table.cjkWidth.description%"
         },
+        "fuxiFmt.frontMatter.format": {
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
+          "type": "string",
+          "default": "normalize",
+          "scope": "resource",
+          "enum": [
+            "normalize",
+            "preserve"
+          ],
+          "enumDescriptions": [
+            "%fuxiFmt.frontMatter.format.enum.0%",
+            "%fuxiFmt.frontMatter.format.enum.1%"
+          ],
+          "markdownDescription": "%fuxiFmt.frontMatter.format.description%"
+        },
         "fuxiFmt.endOfLine": {
           "keywords": [
             "fuxi",

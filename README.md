@@ -9,10 +9,10 @@
 ## 亮点
 
 - **一个引擎同时管块级结构与中文排版。** 空行、标记空格、有序列表重编号、列表缩进、中英之间加空格、中文标点全角或半角、行内代码两侧的空格，全部由同一套配置决定，all in one。
-- **代码永远不会被改动。** 围栏代码正文与 info string、front matter、行内代码与公式、HTML 块与注释、MDX/JSX、shortcode、wikilink、URL 与链接目标全部逐字节保持原样。
+- **代码永远不会被改动。** 围栏代码正文与 info string、行内代码与公式、HTML 块与注释、MDX/JSX、shortcode、wikilink、URL 与链接目标全部逐字节保持原样；TOML front matter 同样原样保留。YAML front matter 不进 Markdown 管线，而是交给 YAML 序列化器规范化（`frontMatter.format` 可关，关掉就逐字节保留）。
 - **语义守卫。** 结果与原文的解析树不一致时拒绝写入，你拿回的是原封不动的文档；解析不得不猜的地方（未终止的围栏、front matter、HTML 注释、公式块）也会拒绝并点名那一行。
 - **幂等、最小编辑。** 再跑一次不改动任何东西；保存时格式化只产生很小的编辑范围，不打乱光标与撤销历史。
-- **几乎所有东西都能在设置里改。** 33 个选项，每一个都是 VS Code 设置，带默认值、可选值以及它实现的是哪条规范规则，所以设置面板本身就是说明书。
+- **几乎所有东西都能在设置里改。** 每一个选项都是 VS Code 设置，带默认值、可选值以及它实现的是哪条规范规则，所以设置面板本身就是说明书。
 
 ## 与主流工具对比
 
@@ -27,7 +27,7 @@ Y = 覆盖，P = 部分或带条件，N = 不覆盖。
 | 块与块之间的空行         | Y                | Y             | Y                   | N                   | N             | N                  | **Y**             |
 | `#` 与列表标记之后的空格 | Y                | Y             | Y                   | P                   | N             | N                  | **Y**             |
 | 有序列表重新编号         | Y                | Y             | Y                   | P（仅输入时）       | N             | N                  | **Y**             |
-| front matter             | Y（YAML + TOML） | P             | N                   | N                   | N             | N                  | **N**（有意为之） |
+| front matter             | Y（YAML + TOML） | P             | N                   | N                   | N             | N                  | **Y（YAML 默认开；TOML 只保护）** |
 | 行内代码两侧的空格       | N                | N             | N（MD038 恰好相反） | N                   | P             | N                  | **Y**             |
 | CJK 与拉丁文之间的空格   | N                | N             | N                   | N                   | Y             | Y                  | **Y**             |
 | 中文标点宽度             | N                | N             | N                   | N                   | Y             | Y                  | **Y**             |
@@ -52,7 +52,7 @@ Y = 覆盖，P = 部分或带条件，N = 不覆盖。
 | 行内代码与公式         | 当作一个拉丁词加空格，内容逐字节不动                                                      | 没有对应开关                                                                                           |
 | 表格                   | `table.mode`、`table.cjkWidth`、`table.maxWidth`                                          | Prettier 总是补空格；dprint 的 `table.cellPadding`；remark 的 `tableCellPadding` 等                    |
 | 折行                   | 不提供，有意为之                                                                          | Prettier 的 `proseWrap`；dprint 与 deno 的 `textWrap` / `proseWrap`；mdformat 的 `--wrap`              |
-| front matter           | 完整保护，不做任何修改                                                                    | Prettier 会格式化 YAML 与 TOML；dprint 交给 yaml 插件；mdformat 需要插件                               |
+| front matter           | `frontMatter.format`：`normalize` / `preserve`；TOML 只保护并报一次 FM-06            | Prettier 会格式化 YAML 与 TOML；dprint 交给 yaml 插件；mdformat 需要插件                               |
 | 围栏代码内容           | 逐字节不动，没有开关                                                                      | dprint 的 `codeBlock.skipFormat` 默认关；Prettier 的 `embeddedLanguageFormatting` 默认会格式化         |
 | 忽略指令               | `ignore.file` / `start` / `end` / `line`，四个名字都可配                                  | dprint 的四个同名指令可配；Prettier 的 `prettier-ignore`；deno 的 `deno-fmt-ignore*`                   |
 | 行尾与文件卫生         | `endOfLine`，末尾单一换行、去 BOM、裁行尾空白                                             | Prettier 的 `endOfLine`；dprint 的 `newLineKind`；mdformat 的 `--end-of-line`                          |

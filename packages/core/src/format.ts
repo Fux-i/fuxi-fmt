@@ -1,5 +1,6 @@
 import { classifyContent, quotePrefix, segment, type AtomicRange, type BlockKind } from './blocks.ts';
 import { detect, type Detection } from './detect.ts';
+import { normalizeFrontMatter } from './front-matter.ts';
 import { checkSemantics } from './guard.ts';
 import { english, type MessageArgs, type MessageId } from './messages.ts';
 import { severityOf, type RuleId, type Severity } from './rules.ts';
@@ -365,6 +366,38 @@ export function closeContent(
   return { text: trimTrailingWhitespace(edged, ignoreRanges(edged, options.ignore)), diagnostics };
 }
 
+/**
+ * FM-03. Hand a closed YAML front matter block to the serializer.
+ *
+ * The substitution is a prefix replacement rather than an edit inside the text
+ * the pipeline is holding, which is safe for the reason no rule needed to touch
+ * the block: it starts at offset 0 and every pass treats its lines as protected.
+ *
+ * A block that does not parse is kept exactly as written and reported (FM-05).
+ * The TOML form is not parsed here at all; FM-06 owns it and reports separately.
+ */
+function applyFrontMatter(
+  text: string,
+  options: FormatOptions,
+): { readonly text: string; readonly diagnostics: Detection[] } {
+  if (options.frontMatter.format === 'preserve') return { text, diagnostics: [] };
+  const region = scanRegions(text).find(
+    (candidate) => candidate.kind === 'frontMatter' && candidate.start === 0,
+  );
+  if (region === undefined || region.closed !== true) return { text, diagnostics: [] };
+  const block = text.slice(0, region.end);
+  if (!block.startsWith('---')) return { text, diagnostics: [] };
+  const normalized = normalizeFrontMatter(block);
+  if (normalized.malformed) {
+    return {
+      text,
+      diagnostics: [{ ruleId: 'FM-05', messageId: 'fm.unparseable', args: [], line: 0 }],
+    };
+  }
+  if (normalized.text === null) return { text, diagnostics: [] };
+  return { text: normalized.text + text.slice(region.end), diagnostics: [] };
+}
+
 export function format(source: string, input?: FormatOptionsInput): FormatResult {
   const options = resolveOptions(input);
 
@@ -494,12 +527,16 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   const inline = rewriteInline(structural, options, widthMask);
   const spaced = inline.text;
   const closed = closeContent(spaced, options, provenance);
-  const candidate = closed.text;
+  const frontMatter = applyFrontMatter(closed.text, options);
+  const candidate = frontMatter.text;
   const tableDiagnostics = closed.diagnostics;
 
   // GRT-01: never hand back a document that parses differently. If the guard
   // trips we return the input untouched and say why (GRT-04).
-  const violations = checkSemantics(base, candidate, options.codeBlock.trimBlankLines);
+  const violations = checkSemantics(base, candidate, options.codeBlock.trimBlankLines, {
+    format: options.frontMatter.format,
+    typography: false,
+  });
   if (violations.length > 0) {
     return {
       output: source,
@@ -523,6 +560,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
     diagnostics: orderedDiagnostics([
       ...detections.map(asDiagnostic),
       ...tableDiagnostics,
+      ...frontMatter.diagnostics.map(asDiagnostic),
       ...diagnostics,
     ]),
   };

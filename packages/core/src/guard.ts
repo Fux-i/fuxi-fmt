@@ -19,7 +19,9 @@
  */
 
 import { classifyContent, quoteContentOf } from './blocks.ts';
+import { sameFrontMatter } from './front-matter.ts';
 import type { MessageArgs, MessageId } from './messages.ts';
+import type { FrontMatterFormat } from './options.ts';
 import type { RuleId } from './rules.ts';
 import { lineIndexOf, scanRegions, splitSourceLines, type Region } from './scan.ts';
 
@@ -67,6 +69,14 @@ function regionSignature(text: string, region: Region, trimBlankLines: boolean):
   return region.kind + ':' + body + '\u0000' + (region.info ?? '');
 }
 
+/** Whether an offset falls inside a front matter block, which the region check owns. */
+function insideFrontMatter(regions: readonly Region[], offset: number | undefined): boolean {
+  if (offset === undefined) return false;
+  return regions.some(
+    (region) => region.kind === 'frontMatter' && offset >= region.start && offset < region.end,
+  );
+}
+
 interface Anchor {
   readonly text: string;
   /** 0-based line in the document this line came from. */
@@ -91,10 +101,17 @@ function nonBlankLines(text: string): Anchor[] {
   return out;
 }
 
+/** What the front matter rules did, so the guard can check the right thing (FM-03). */
+export interface FrontMatterGuard {
+  readonly format: FrontMatterFormat;
+  readonly typography: boolean;
+}
+
 export function checkSemantics(
   before: string,
   after: string,
   trimBlankLines = false,
+  frontMatter: FrontMatterGuard = { format: 'preserve', typography: false },
 ): Violation[] {
   const violations: Violation[] = [];
 
@@ -128,6 +145,19 @@ export function checkSemantics(
       if (a === undefined || b === undefined) continue;
       const signatureA = regionSignature(before, a, trimBlankLines);
       const signatureB = regionSignature(after, b, trimBlankLines);
+      // FM-03. A normalized YAML block is compared as a document, not as bytes.
+      // Only the YAML form is ever normalized, so the exemption is granted per
+      // block by its opening marker: a TOML block still has to come back byte for
+      // byte, and so does a malformed one the formatter left alone.
+      const rawBefore = before.slice(a.start, a.end);
+      if (
+        a.kind === 'frontMatter' &&
+        frontMatter.format === 'normalize' &&
+        rawBefore.startsWith('---') &&
+        sameFrontMatter(rawBefore, after.slice(b.start, b.end), frontMatter.typography)
+      ) {
+        continue;
+      }
       if (signatureA !== signatureB) {
         violations.push({
           ruleId: 'SAFE-01',
@@ -139,8 +169,17 @@ export function checkSemantics(
     }
   }
 
-  const beforeLines = nonBlankLines(before);
-  const afterLines = nonBlankLines(after);
+  // Lines inside a front matter block are compared by the region check above,
+  // not by the document's line structure: normalizing a folded scalar or a run of
+  // blank lines legitimately changes how many lines the block has, and counting
+  // them here refused the very documents FM-03 exists to format.
+  const afterSource = splitSourceLines(after);
+  const beforeLines = nonBlankLines(before).filter(
+    (anchor) => !insideFrontMatter(beforeRegions, beforeSource[anchor.line]?.start),
+  );
+  const afterLines = nonBlankLines(after).filter(
+    (anchor) => !insideFrontMatter(afterRegions, afterSource[anchor.line]?.start),
+  );
 
   if (beforeLines.length !== afterLines.length) {
     // Same reasoning as the regions: report where the two documents stop

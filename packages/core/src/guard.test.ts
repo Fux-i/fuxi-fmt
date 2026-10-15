@@ -169,3 +169,53 @@ describe('SAFE-04 / SAFE-06 the guard refuses rewritten Markdown and HTML syntax
     assert.deepEqual(checkSemantics('中文abc\n', '中文 abc\n'), []);
   });
 });
+
+describe('GRT-01 the guard reads formatted front matter by meaning', () => {
+  /** What `frontMatter.format: 'normalize'` hands the guard. */
+  const normalize = { format: 'normalize', typography: false } as const;
+
+  test('whitespace inside the block is not a change', () => {
+    assert.deepEqual(
+      checkSemantics('---\na: 1\n---\nx\n', '---\na:    1\n---\nx\n', false, normalize),
+      [],
+    );
+  });
+
+  test('a changed value is refused', () => {
+    const violations = checkSemantics('---\na: 1\n---\nx\n', '---\na: 2\n---\nx\n', false, normalize);
+    assert.equal(violations.length, 1);
+    assert.equal(violations[0]?.ruleId, 'SAFE-01');
+    assert.equal(violations[0]?.line, 0);
+  });
+
+  test('a reordered key is refused', () => {
+    const violations = checkSemantics(
+      '---\na: 1\nb: 2\n---\nx\n',
+      '---\nb: 2\na: 1\n---\nx\n',
+      false,
+      normalize,
+    );
+    assert.equal(violations.length, 1);
+  });
+
+  test('a lost comment is refused', () => {
+    const violations = checkSemantics('---\na: 1 # note\n---\nx\n', '---\na: 1\n---\nx\n', false, normalize);
+    assert.equal(violations.length, 1);
+  });
+
+  test('typography may insert a space and nothing else', () => {
+    const typography = { format: 'normalize', typography: true } as const;
+    assert.deepEqual(
+      checkSemantics('---\ntitle: 中文x\n---\nx\n', '---\ntitle: 中文 x\n---\nx\n', false, typography),
+      [],
+    );
+    assert.equal(
+      checkSemantics('---\ntitle: 中文x\n---\nx\n', '---\ntitle: 中文y\n---\nx\n', false, typography).length,
+      1,
+    );
+  });
+
+  test('without the option the block is still compared byte for byte', () => {
+    assert.equal(checkSemantics('---\na: 1\n---\nx\n', '---\na:    1\n---\nx\n').length, 1);
+  });
+});

@@ -1,6 +1,9 @@
 {
   "fuxiFmt.enable.description": "使用 fuxi-fmt 格式化 Markdown。",
   "fuxiFmt.config.description": "显式覆盖，最后合并。各个 fuxiFmt.* 设置在项目的 fuxi-fmt.json 之下，此项在其之上，因此个人偏好可以有意识地覆盖已提交的配置文件。",
+  "fuxiFmt.frontMatter.format.description": "是否规范化文件顶部的 YAML front matter 区块，或保持作者原有的区块（FM-03）。解析错误不会被修正：不是合法 YAML 的区块原样保留并报一次警告（FM-05）。",
+  "fuxiFmt.frontMatter.format.enum.0": "交给 YAML 序列化器：键的间距、缩进、流式集合的空格与空行被规范化，值不被改写。",
+  "fuxiFmt.frontMatter.format.enum.1": "完全保持区块原样。",
   "fuxiFmt.blankLines.aroundBlocks.description": "块与块之间用空行分隔的方式（BLK-01）。",
   "fuxiFmt.blankLines.aroundBlocks.enum.0": "块之间恰好一个空行。",
   "fuxiFmt.blankLines.aroundBlocks.enum.1": "块之间至少一个空行。",

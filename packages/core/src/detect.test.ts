@@ -265,7 +265,9 @@ describe('DET-12 and DET-11: a protected region is not a list', () => {
   // Every region kind is pinned here, not just a fence.
   const cases: readonly (readonly [string, string])[] = [
     ['a fenced code block', FENCE + '\n- list\n' + FENCE + '\n'],
-    ['front matter', '---\ntitle: x\n- list\n---\n'],
+    // Valid YAML, because a block that does not parse is now reported (FM-05)
+    // and this case is about the list scanner, not about that report.
+    ['front matter', '---\ntitle: x\ntags:\n- list\n---\n'],
     ['a math block', '$$\n- list\n$$\n'],
     ['an indented code block', 'text\n\n    - list\n'],
     ['an HTML block', '<div>\n- list\n</div>\n'],

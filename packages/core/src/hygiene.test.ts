@@ -58,7 +58,9 @@ describe('BLK-11 whitespace', () => {
     assert.equal(out(src), src);
   });
   test('never touches front matter', () => {
+    // Pinned with FM-03 off: with it on, the front matter rule rewrites the block
+    // and this test would be measuring that instead of hygiene.
     const src = '---\na:\tb  \n---\n\ntext\n';
-    assert.equal(out(src), src);
+    assert.equal(out(src, { frontMatter: { format: 'preserve' } }), src);
   });
 });

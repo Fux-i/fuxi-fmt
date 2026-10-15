@@ -44,6 +44,7 @@ export const RULES = {
   'DET-11': { severity: 'warning', messages: ['det.listItemOrphan'] },
   'DET-12': { severity: 'warning', messages: ['det.listExcluded'] },
   'DET-13': { severity: 'error', messages: ['det.tableIncomplete', 'det.tableRowOrphan'] },
+  'FM-05': { severity: 'warning', messages: ['fm.unparseable'] },
   'FM-06': { severity: 'warning', messages: ['fm.tomlPreserved'] },
   'GRT-01': {
     severity: 'error',

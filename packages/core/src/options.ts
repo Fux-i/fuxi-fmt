@@ -61,6 +61,15 @@ export const TABLE_MODES = ['preserve', 'normalize'] as const;
 export type TableMode = (typeof TABLE_MODES)[number];
 export const CJK_WIDTHS = [1, 2] as const;
 export type CjkWidth = (typeof CJK_WIDTHS)[number];
+/**
+ * What happens to a YAML front matter block (FM-03).
+ *
+ * There is no "off": turning protection off would format YAML as Markdown, which
+ * is worse than either mode here. `normalize` is the serializer's output,
+ * `preserve` is what the author wrote.
+ */
+export const FRONT_MATTER_FORMATS = ['normalize', 'preserve'] as const;
+export type FrontMatterFormat = (typeof FRONT_MATTER_FORMATS)[number];
 
 /**
  * Table padding and alignment (TBL-01).
@@ -213,6 +222,12 @@ export interface IgnoreInput {
   readonly line?: string;
 }
 
+/** YAML front matter (FM-01 ... FM-05). */
+export interface FrontMatterOptions {
+  /** Whether the block is handed to the YAML serializer (FM-03). */
+  readonly format: FrontMatterFormat;
+}
+
 export interface FormatOptions {
   readonly blankLines: BlankLinesOptions;
   readonly typography: TypographyOptions;
@@ -222,6 +237,8 @@ export interface FormatOptions {
   readonly thematicBreak: ThematicBreak;
   /** Table padding, alignment and width (TBL-01). */
   readonly table: TableOptions;
+  /** YAML front matter, the block another tool reads (FM-03). */
+  readonly frontMatter: FrontMatterOptions;
   readonly endOfLine: EndOfLine;
   readonly ignore: IgnoreOptions;
 }
@@ -269,6 +286,10 @@ export interface ListInput {
   readonly unorderedMarker?: UnorderedMarker;
 }
 
+export interface FrontMatterInput {
+  readonly format?: FrontMatterFormat;
+}
+
 export interface FormatOptionsInput {
   readonly blankLines?: BlankLinesInput;
   readonly typography?: TypographyInput;
@@ -276,6 +297,7 @@ export interface FormatOptionsInput {
   readonly codeBlock?: CodeBlockInput;
   readonly thematicBreak?: ThematicBreak;
   readonly table?: TableInput;
+  readonly frontMatter?: FrontMatterInput;
   readonly endOfLine?: EndOfLine;
   readonly ignore?: IgnoreInput;
 }
@@ -312,6 +334,7 @@ export const defaultOptions: FormatOptions = {
   codeBlock: { fenceChar: 'backticks', fenceLength: true, trimBlankLines: true },
   thematicBreak: 'dashes',
   table: { mode: 'normalize', maxWidth: 80, cjkWidth: 2 },
+  frontMatter: { format: 'normalize' },
   endOfLine: 'lf',
   ignore: {
     file: 'fuxi-fmt-ignore-file',
@@ -443,6 +466,9 @@ export const OPTION_VOCABULARY = {
     mode: { kind: 'oneOf', values: TABLE_MODES },
     maxWidth: { kind: 'nullableInt', min: 1 },
     cjkWidth: { kind: 'oneOf', values: CJK_WIDTHS },
+  },
+  frontMatter: {
+    format: { kind: 'oneOf', values: FRONT_MATTER_FORMATS },
   },
   endOfLine: { kind: 'oneOf', values: END_OF_LINES },
   ignore: {

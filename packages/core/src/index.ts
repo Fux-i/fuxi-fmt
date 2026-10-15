@@ -17,6 +17,8 @@ export type {
   CodeBlockInput,
   CodeBlockOptions,
   FenceChar,
+  FrontMatterFormat,
+  FrontMatterOptions,
   PunctuationStyle,
   UnorderedMarker,
   TypographyInput,

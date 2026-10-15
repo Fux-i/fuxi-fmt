@@ -62,3 +62,93 @@ describe('FM-06 TOML front matter is protected and reported', () => {
     assert.equal(format(once.output).output, once.output);
   });
 });
+
+describe('FM-03 front matter is normalized', () => {
+  test('key spacing, sequence indent and flow separators', () => {
+    const input = '---\ntitle:   my post\ntags:  [a,b]\nlist:\n- one\n- two\n---\n\nBody\n';
+    const expected = '---\ntitle: my post\ntags: [a, b]\nlist:\n  - one\n  - two\n---\n\nBody\n';
+    assert.equal(format(input).output, expected);
+  });
+
+  test('a long scalar is not folded', () => {
+    const long = 'description: ' + Array.from({ length: 12 }, (_, i) => 'word' + String(i)).join(' ');
+    const input = '---\n' + long + '\n---\n\nBody\n';
+    assert.equal(format(input).output, input);
+    assert.equal(format(input).changed, false);
+  });
+
+  test('a quoted scalar keeps its bytes and its quoting', () => {
+    const input = '---\ntitle: "a: b"\nescaped: "x\\ty"\n---\n\nBody\n';
+    assert.equal(format(input).output, input);
+  });
+
+  test('FM-03 is idempotent', () => {
+    const once = format('---\ntitle:   x\ntags:  [a,b]\n---\n\nBody\n').output;
+    assert.equal(format(once).output, once);
+  });
+
+  test('frontMatter.format: preserve hands the block back untouched', () => {
+    const input = '---\ntitle:   x\ntags:  [a,b]\n---\n\nBody\n';
+    const result = format(input, { frontMatter: { format: 'preserve' } });
+    assert.equal(result.output, input);
+    assert.equal(result.changed, false);
+  });
+
+  test('the body still formats while the block does too', () => {
+    const input = '---\ntitle:   x\n---\n\n#标题\n';
+    assert.equal(format(input).output, '---\ntitle: x\n---\n\n# 标题\n');
+  });
+});
+
+describe('FM-03 the serializer differences the specification accepts', () => {
+  // Each of these is in FM-03's list. They are here because a claim about what a
+  // third-party printer does is only worth making with a fixture behind it.
+  test('a flow collection gets a space after its commas', () => {
+    assert.equal(
+      format('---\ntags: [a,b,c]\n---\n\nBody\n').output,
+      '---\ntags: [a, b, c]\n---\n\nBody\n',
+    );
+  });
+
+  test('an explicit tag is re-quoted', () => {
+    assert.equal(
+      format('---\ntag: !!str 123\n---\n\nBody\n').output,
+      '---\ntag: !!str "123"\n---\n\nBody\n',
+    );
+  });
+
+  test('a folded scalar is folded flat', () => {
+    assert.equal(
+      format('---\nfold: >\n  p\n  q\n---\n\nBody\n').output,
+      '---\nfold: >\n  p q\n---\n\nBody\n',
+    );
+  });
+
+  test('a comment at the end of the block gets a blank line before it', () => {
+    assert.equal(
+      format('---\n# lead\ntitle: x\n# trailing\n---\n\nBody\n').output,
+      '---\n# lead\ntitle: x\n\n# trailing\n---\n\nBody\n',
+    );
+  });
+});
+
+describe('FM-05 front matter that does not parse is kept and reported', () => {
+  test('an unterminated flow sequence', () => {
+    const input = '---\ntitle: [unclosed\n---\n\n#标题\n';
+    const result = format(input);
+    assert.equal(result.output, '---\ntitle: [unclosed\n---\n\n# 标题\n');
+    assert.equal(result.diagnostics.length, 1);
+    assert.equal(result.diagnostics[0]?.ruleId, 'FM-05');
+    assert.equal(result.diagnostics[0]?.severity, 'warning');
+    assert.equal(result.diagnostics[0]?.line, 0);
+  });
+
+  test('a block whose content is only comments stays as written', () => {
+    // The serializer would append the `null` it makes of an empty document.
+    const input = '---\n# only a note\n---\n\nBody\n';
+    const result = format(input);
+    assert.equal(result.output, input);
+    assert.deepEqual(result.diagnostics, []);
+  });
+});
+

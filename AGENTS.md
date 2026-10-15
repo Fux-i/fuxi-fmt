@@ -16,9 +16,12 @@ the commit message. Never silently diverge.
 ## Invariants — do not break these
 
 1. **Protected regions are byte-verbatim.** Fenced code bodies, fence indentation and info
-   strings, front matter, inline code and math spans, HTML blocks and comments, MDX/JSX,
-   shortcodes, wikilinks, URLs and link destinations. Any rule that touches one of these is a
-   critical bug, not a rounding error. (Spec: SAFE-01 … SAFE-06, FM-01.)
+   strings, inline code and math spans, HTML blocks and comments, MDX/JSX, shortcodes, wikilinks,
+   URLs and link destinations, and TOML front matter. Any rule that touches one of these is a
+   critical bug, not a rounding error. (Spec: SAFE-01 … SAFE-06, FM-06.) The exception is the YAML
+   front matter block, which the Markdown pipeline still never touches but whose own rule hands to a
+   YAML serializer under a semantic guard (FM-01, FM-03, FM-05); the `preserve` mode of FM-03's
+   option puts it back under this invariant.
 2. **Idempotence.** `format(format(x)) === format(x)`. A rule that is not idempotent is not
    finished.
 3. **Semantic preservation.** Output must parse to the same tree as input, except for the
@@ -191,9 +194,11 @@ git tag -n          # verify
 
 ## Do not
 
-- Add a dependency to `packages/core` without arguing for it. The core currently has none, and
-  the benchmark says a hand-written scan is an order of magnitude faster than Prettier on a
-  10k-line file. Do not reach for a formatting framework.
+- Add a dependency to `packages/core` without arguing for it. The core has exactly one —
+  `yaml`, for front matter (FM-03) — and the argument is recorded in the specification's
+  section 7. Everything on the Markdown path is hand-written, and the benchmark says a
+  hand-written scan is an order of magnitude faster than Prettier on a 10k-line file. Do not
+  reach for a Markdown formatting framework.
 - Use remark/micromark on the formatting path. It parses the reference fixture 20x slower than
   markdown-it (164.5 ms vs 8.3 ms). See spec section 1.3.
 - Import pangu or copy its rule set wholesale. Spec section 1.2 lists where it is wrong for

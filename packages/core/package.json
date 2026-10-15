@@ -10,5 +10,8 @@
   },
   "scripts": {
     "test": "node --test \"src/**/*.test.ts\""
+  },
+  "dependencies": {
+    "yaml": "^2.9.1"
   }
 }
