@@ -19,14 +19,14 @@
 **具体的规范化行为**（全部位于 [src/language-markdown/](https://github.com/prettier/prettier/tree/main/src/language-markdown)）
 
 - 无序列表：主轴 `-`，相邻列表用 `*` 交替；任务项 `[x]`/`[ ]`（list.js）。
-- 有序列表：首项打印原文的起始编号，后续项打印 `start+index`；标记 `.`/`)` 在相邻列表间交替；对 git diff 友好的列表（≥2 项、第 2 项为 1，且第 1 项不为 0 或第 3 项为 1）每一项都打印成 `1.`；数值上限 999,999,999（list.js、utilities.js）。嵌套列表各自独立编号。
+- 有序列表：首项打印原文的起始编号，后续项打印 `start+index`；标记 `.`/`)` 在相邻列表间交替；对 git diff 友好的列表（**第二项为 `1.`**）首项照写、其后每一项都打印成 `1.`；数值上限 999,999,999（list.js、utilities.js）。实测 prettier 3.9.10：`1. a / 1. b / 7. c` → `1. / 1. / 1.`，`5. a / 1. b / 7. c` → `5. / 1. / 1.`，`5. a / 5. b / 1. c` → `5. / 6. / 7.`，`0. a / 1. b / 1. c` → `0. / 1. / 1.`。嵌套列表各自独立编号。
 - 强调默认 `_`，在紧邻单词字符、嵌套于强调中、或加粗紧邻单词时改用 `*`；加粗永远是 `**`；GFM 删除线是 `~~`（mdast.js）。
 - 分隔线 `---`；当它是根节点的第一个节点时用 `***`（这样不会被读成 front matter），在列表内交替时也用 `***`（mdast.js）。
 - 标题：样式保留而不转换 —— setext 标题按原来的 `=`/`-` 下划线重新输出；ATX 输出为 `#` 乘上深度再加一个空格（[print/heading.js](https://github.com/prettier/prettier/blob/main/src/language-markdown/print/heading.js)）。
 - 代码围栏：反引号；围栏长度 `max(3, 内容里最长的反引号串 + 1)`；info string 原样保留；除非命中嵌入格式化，围栏内容只做行尾规范化（[print/code.js](https://github.com/prettier/prettier/blob/main/src/language-markdown/print/code.js)）。
 - 行内代码：取内容中不存在的最小反引号串；内容以反引号开头或结尾，或以「空格 + 非空格」开头或结尾时补一个空格；除非 `proseWrap: preserve`，换行一律变成空格；表格单元格里的 `|` 会被转义（mdast.js）。
 - 链接与引用：行内链接规范化为 `[text](url "title")`，空 URL 打印成 `<>`；纯 autolink 保留 `<url>`；完整、折叠、快捷三种引用形态都保留；引用标签转义 `[`、`]`、`\`；URL 在需要时做反斜杠或实体转义，并用 `<...>` 包裹（`printUrl`）。
-- 表格：单元格按各列最大宽度补空格；`:` 对齐标记；在 `proseWrap: never` 下，只有超过 print width 才会使用紧凑表格（[print/table.js](https://github.com/prettier/prettier/blob/main/src/language-markdown/print/table.js)）。
+- 表格：单元格按各列最大宽度补空格；`:` 对齐标记；在 `proseWrap: never` 下，只有超过 print width 才会使用紧凑表格（[print/table.js](https://github.com/prettier/prettier/blob/main/src/language-markdown/print/table.js)）。列宽按显示宽度计，汉字记 2 列：实测 prettier 3.9.10 下 `| 中文 | bb |` 与 `| xxxx | bb |` 的分隔行都是 `| ---- | --- |`。
 - Front matter：只认 `---`（默认 YAML）与 `+++`（默认 TOML）；分隔符之后可以写显式语言；YAML 可以以 `...` 结束；正文交给 Prettier 自己的 yaml/toml 打印器；**不识别 JSON front matter**；分隔符保留（[parse.js](https://github.com/prettier/prettier/blob/main/src/main/front-matter/parse.js)、[embed.js](https://github.com/prettier/prettier/blob/main/src/main/front-matter/embed.js)）。
 - 空行：块之间恰好一个空行；多个空行合并；紧凑或宽松列表的间距从 AST 保留（`spread`）；相邻的列表项与定义之间不加空行；HTML 边界特殊处理（[print/children.js](https://github.com/prettier/prettier/blob/main/src/language-markdown/print/children.js)）。
 - 转义与安全：实体转义（`\&`）、URL 转义、标签转义、标题加引号；支持 `prettier-ignore` / `prettier-ignore-start|end`。Prettier 自称只改格式（[Option Philosophy](https://prettier.io/docs/option-philosophy)）；mdformat 的 FAQ 不认可它保持 Markdown AST 的说法（[mdformat FAQ](https://github.com/hukkin/mdformat#why-not-use-prettier-instead)）。

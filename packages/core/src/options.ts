@@ -162,9 +162,10 @@ export type OrderedDelimiter = (typeof ORDERED_DELIMITERS)[number];
 export interface ListOptions {
   /**
    * 'renumber' numbers sequentially from the declared start.
-   * 'keep-all-ones' is the default: the same, except that a list the author
-   * wrote with lazy all-ones markers is left that way, matching Prettier and
-   * dprint and keeping diffs minimal for the git-diff-friendly style.
+   * 'keep-all-ones' is the default: the same, except that a list whose first
+   * two markers are both '1.' is left that way - the lazy all-ones style, which
+   * keeps diffs minimal. Prettier keys on the second marker alone, which is a
+   * wider criterion; the rendered numbering is the same either way.
    * 'preserve' leaves every number exactly as written.
    */
   readonly orderedStyle: OrderedStyle;

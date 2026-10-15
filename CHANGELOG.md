@@ -25,6 +25,14 @@
   同样无效，配置文件里同时写了 `preset` 时也会丢掉这些键。现在合并由选项对象本身驱动（对象值的键往下一层合并，
   这正是 `typography.emphasis` 需要的；其余按叶子覆盖），新增一个 section 不再需要记得改第二处，并且有一条遍历
   `defaultOptions` 的测试守着这件事。
+- **一批设置说明与规范正文说错了事实。** `table.cjkWidth` 的两个枚举说明写反了（值 1 说「两列」），
+  `typography.quotes` 同样（`preserve` 说「转换」）；`list.unorderedMarker` 的规则 ID 写成 BLK-05，而
+  BLK-05 是标题井号的规则（应为 BLK-07）；扩展描述仍说「front matter 从不改动」，而 YAML front matter 自
+  FM-03 起默认交给序列化器规范化；`diagnostics.excludedList` 的英文说「含代码块」，实际是任何受保护块；
+  `codeBlock.fenceChar` 的 preserve、`typography.cjkClasses` 的 enclosed、`table.mode` 的 normalize
+  三条说明各漏了一半；规范的 `punctuationStyle` 值列表漏了 `off`。另外 `list.orderedStyle` 把
+  keep-all-ones 的判据说成「整份列表都是 1」，实际是「首项与第二项都写作 `1.`」——Prettier 的判据只看第二
+  项，两者渲染出的序号相同，先例报告里那条按实测重写。
 
 ## [0.31.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.30.0...v0.31.0) - 2026-10-15
 
