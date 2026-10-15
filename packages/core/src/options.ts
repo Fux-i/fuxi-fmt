@@ -59,8 +59,15 @@ export const THEMATIC_BREAKS = ['dashes', 'asterisks', 'underscores', 'preserve'
 export type ThematicBreak = (typeof THEMATIC_BREAKS)[number];
 export const TABLE_MODES = ['preserve', 'normalize'] as const;
 export type TableMode = (typeof TABLE_MODES)[number];
-export const CJK_WIDTHS = [1, 2] as const;
-export type CjkWidth = (typeof CJK_WIDTHS)[number];
+/**
+ * How many Latin advances a wide character occupies (TBL-01).
+ *
+ * A real number between these two, not a choice: a font designed 1:2 is 2, while
+ * an ideograph of 1 em against a 0.6 em Latin advance is about 1.67. The cell is
+ * rounded once, after summing, so the table still pads to whole columns.
+ */
+export const CJK_WIDTH_RANGE = { min: 1, max: 2 } as const;
+export type CjkWidth = number;
 /**
  * What happens to a YAML front matter block (FM-03).
  *
@@ -80,8 +87,10 @@ export type FrontMatterFormat = (typeof FRONT_MATTER_FORMATS)[number];
  * layout back to the author. `maxWidth` caps the padded width: a row wider than
  * the cap on its own does not decide the column widths, and is padded only as far
  * as it stays on the grid, so a few long rows cannot make the rest long with them.
- * `cjkWidth` is how many columns a wide character occupies in the font being
- * read - two in a fixed-pitch font, one in a proportional one.
+ * `cjkWidth` is how many Latin advances a wide character occupies in the font
+ * being read, anywhere in 1 to 2: 2 is the convention for a code font (and what
+ * a terminal, or the editor's `fullwidthCharacterWidth: "twoCells"`, centres each
+ * one in), while a 1 em ideograph against a 0.6 em Latin advance is about 1.67.
  */
 export interface TableOptions {
   readonly mode: TableMode;
@@ -479,7 +488,7 @@ export const OPTION_VOCABULARY = {
   table: {
     mode: { kind: 'oneOf', values: TABLE_MODES },
     maxWidth: { kind: 'nullableInt', min: 1 },
-    cjkWidth: { kind: 'oneOf', values: CJK_WIDTHS },
+    cjkWidth: { kind: 'number', min: CJK_WIDTH_RANGE.min, max: CJK_WIDTH_RANGE.max },
   },
   frontMatter: {
     format: { kind: 'oneOf', values: FRONT_MATTER_FORMATS },

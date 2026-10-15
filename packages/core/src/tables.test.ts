@@ -26,6 +26,16 @@ describe('TBL-01 display width', () => {
     assert.equal(displayWidth('a\u0301', 2), 1);
     assert.equal(displayWidth('\u{1f600}', 2), 2);
   });
+  test('a fractional width rounds the cell once, not each character', () => {
+    // 1.5 advances per ideograph: a cell of one is 2 columns, of two is 3, of
+    // three is 5. Rounding per character would make every one of them even, and
+    // the point of a fractional width is that it does not.
+    assert.equal(displayWidth('中', 1.5), 2);
+    assert.equal(displayWidth('中中', 1.5), 3);
+    assert.equal(displayWidth('中中中', 1.5), 5);
+    assert.equal(displayWidth('中a', 1.5), 3);
+    assert.equal(displayWidth('abc', 1.5), 3);
+  });
 });
 
 describe('TBL-01 padding and alignment', () => {
@@ -69,6 +79,15 @@ describe('TBL-01 padding and alignment', () => {
     const src = '| a | bbbb |\n| --- | --- |\n| 111 | 2 |\n';
     const once = out(src);
     assert.equal(out(once), once);
+  });
+  test('a fractional width still pads to whole columns', () => {
+    // The model is whole columns - padding is spaces - so a fractional width
+    // lands on the rounded width of the cell, and the delimiter row matches it.
+    const src = '| 中中中 | b |\n| --- | --- |\n| 1 | 2 |\n';
+    const options: FormatOptionsInput = { table: { mode: 'normalize', cjkWidth: 1.5 } };
+    const once = out(src, options);
+    assert.equal(once, '| 中中中 | b   |\n| ----- | --- |\n| 1     | 2   |\n');
+    assert.equal(out(once, options), once);
   });
 });
 

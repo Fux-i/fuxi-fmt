@@ -669,16 +669,11 @@
             "fuxi",
             "fuxi-fmt"
           ],
+          "type": "number",
           "default": 2,
           "scope": "resource",
-          "enum": [
-            1,
-            2
-          ],
-          "enumDescriptions": [
-            "%fuxiFmt.table.cjkWidth.enum.0%",
-            "%fuxiFmt.table.cjkWidth.enum.1%"
-          ],
+          "minimum": 1,
+          "maximum": 2,
           "markdownDescription": "%fuxiFmt.table.cjkWidth.description%"
         },
         "fuxiFmt.frontMatter.format": {

@@ -146,18 +146,22 @@ export function isDelimiterRow(line: string): boolean {
  * Wide and fullwidth characters are `cjkWidth` columns, combining marks and
  * joiners are none, everything else is one. Surrogate pairs are read as one code
  * point, so an emoji is two columns rather than four.
+ *
+ * `cjkWidth` may be fractional, and the sum is rounded once at the end: a table
+ * pads to whole columns, so rounding each character instead would make every
+ * ideograph count as a whole advance and lose the measurement entirely.
  */
-export function displayWidth(text: string, cjkWidth: 1 | 2): number {
+export function displayWidth(text: string, cjkWidth: number): number {
   let width = 0;
   for (let i = 0; i < text.length; i++) {
     const code = text.codePointAt(i) ?? 0;
     if (code > 0xffff) i++;
     width += charWidth(code, cjkWidth);
   }
-  return width;
+  return Math.round(width);
 }
 
-function charWidth(code: number, cjkWidth: 1 | 2): number {
+function charWidth(code: number, cjkWidth: number): number {
   // Combining marks and variation selectors take no column of their own.
   if ((code >= 0x0300 && code <= 0x036f) || (code >= 0xfe00 && code <= 0xfe0f)) return 0;
   if (code === 0x200b || code === 0x200d || code === 0xfeff) return 0;
@@ -254,7 +258,7 @@ function renderRow(
   row: TableRow,
   widths: readonly number[],
   aligns: readonly Align[],
-  cjkWidth: 1 | 2,
+  cjkWidth: number,
   outer: boolean,
   contentColumn: number,
 ): string {

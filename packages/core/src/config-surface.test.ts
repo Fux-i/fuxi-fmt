@@ -79,7 +79,7 @@ const SAMPLES: Record<string, unknown> = {
   'frontMatter.typography': false,
   'table.mode': 'preserve',
   'table.maxWidth': 100,
-  'table.cjkWidth': 1,
+  'table.cjkWidth': 1.5,
   endOfLine: 'crlf',
   'ignore.file': 'no-format-file',
   'ignore.start': 'no-format-start',
@@ -143,6 +143,17 @@ describe('CFG-01 the fuxi-fmt.json surface', () => {
 
   test('a boolean key rejects a non-boolean rather than ignoring it', () => {
     assert.throws(() => parseConfig('{"typography":{"cjkSpacing":"yes"}}'), /must be true or false/);
+  });
+
+  test('a width outside 1 to 2 is refused rather than clamped', () => {
+    // The measured ratio between an ideograph and a monospace Latin advance sits
+    // between 1.6 and 2 (TBL-01), so the range is the option's whole meaning: a
+    // value outside it is a mistake in the file, and silently clamping it would
+    // hide that.
+    assert.equal(parseConfig('{"table":{"cjkWidth":1.5}}').table?.cjkWidth, 1.5);
+    assert.throws(() => parseConfig('{"table":{"cjkWidth":2.5}}'), /between 1 and 2/);
+    assert.throws(() => parseConfig('{"table":{"cjkWidth":0.5}}'), /between 1 and 2/);
+    assert.throws(() => parseConfig('{"table":{"cjkWidth":"1.5"}}'), /between 1 and 2/);
   });
 
   test('an unknown key is ignored, so a config from a later version still loads', () => {

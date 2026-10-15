@@ -227,6 +227,21 @@ function readLeaf(spec: Record<string, unknown>, value: unknown, key: string): u
   }
   const min = spec['min'] as number;
   const hint = spec['hint'] as string | undefined;
+  // A measured quantity rather than a choice: any value in the range is
+  // meaningful, so the kind takes a real number and bounds it.
+  if (kind === 'number') {
+    const max = spec['max'] as number | undefined;
+    const bounds = max === undefined ? 'at least ' + min : 'between ' + min + ' and ' + max;
+    if (
+      typeof value === 'number' &&
+      Number.isFinite(value) &&
+      value >= min &&
+      (max === undefined || value <= max)
+    ) {
+      return value;
+    }
+    throw new Error('config: ' + key + ' must be a number ' + bounds);
+  }
   const wording = min === 0 ? 'a non-negative integer' : 'a positive integer';
   const suffix = hint === undefined ? '' : ' (' + hint + ')';
   if (kind === 'nullableInt') {

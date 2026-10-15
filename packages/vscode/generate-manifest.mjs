@@ -60,6 +60,8 @@ function rowFor(path, spec) {
     row.type = 'boolean';
   } else if (spec.kind === 'int') {
     row.type = 'integer';
+  } else if (spec.kind === 'number') {
+    row.type = 'number';
   } else if (spec.kind === 'nullableInt') {
     row.type = ['integer', 'null'];
   } else if (spec.kind === 'stringList' || spec.kind === 'stringSet' || spec.kind === 'oneOfList') {
@@ -78,6 +80,7 @@ function rowFor(path, spec) {
     row.items = { type: 'string' };
   }
   if (spec.min !== undefined) row.minimum = spec.min;
+  if (spec.max !== undefined) row.maximum = spec.max;
   row.markdownDescription = '%' + PREFIX + path + '.description%';
   return row;
 }
