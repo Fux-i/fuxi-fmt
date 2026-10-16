@@ -19,6 +19,7 @@
  */
 
 import { classifyContent, quoteContentOf } from './blocks.ts';
+import { isCjk } from './chars.ts';
 import { sameFrontMatter } from './front-matter.ts';
 import type { MessageArgs, MessageId } from './messages.ts';
 import type { FrontMatterFormat } from './options.ts';
@@ -38,16 +39,77 @@ export interface Violation {
   readonly line: number | undefined;
 }
 
-/** A paragraph that looks like an ATX heading missing its space. */
+/** A paragraph that looks like an ATX heading missing its separator (BLK-05). */
 const HEADING_MISSING_SPACE = /^( {0,3})(#{1,6})(?!#)(\S[\s\S]*)$/;
+/** A paragraph that looks like a bullet missing its separator (BLK-04). */
+const BULLET_MISSING_SPACE = /^(\s{0,3})([-+])(\S[\s\S]*)$/;
 
-function isHeadingPromotion(before: string, after: string): boolean {
-  const match = HEADING_MISSING_SPACE.exec(before);
-  if (match === null) return false;
-  const indent = match[1] ?? '';
-  const hashes = match[2] ?? '';
-  const rest = match[3] ?? '';
-  return after === indent + hashes + ' ' + rest;
+/**
+ * The line with every whitespace run that touches a CJK character removed.
+ *
+ * The guard compares lines by block kind, so a space TYPO-01 inserts between Han
+ * and Latin is already invisible to it. That is not true of the two lines the
+ * promotion check compares by content, and it should not be: the second space in
+ * '#中文abc' -> '# 中文 abc' is TYPO-01's, not the marker's, and demanding
+ * byte-equality refused the whole document over it.
+ */
+function stripBoundarySpaces(line: string): string {
+  let out = '';
+  let at = 0;
+  while (at < line.length) {
+    const ch = line.charAt(at);
+    if (ch !== ' ' && ch !== '\t') {
+      out += ch;
+      at++;
+      continue;
+    }
+    let end = at;
+    while (end < line.length) {
+      const next = line.charAt(end);
+      if (next !== ' ' && next !== '\t') break;
+      end++;
+    }
+    const before = at > 0 ? line.charAt(at - 1) : '';
+    const after = end < line.length ? line.charAt(end) : '';
+    if (!isCjk(before) && !isCjk(after)) out += line.slice(at, end);
+    at = end;
+  }
+  return out;
+}
+
+/**
+ * BLK-07 rewrites the bullet character - the default is dashes - and the promotion
+ * check is licensing the separator, not the choice of bullet: the guard already
+ * ignores that difference between two lists, and it has to ignore it here too.
+ */
+function canonical(line: string): string {
+  return stripBoundarySpaces(line).replace(/^([ \t]*)[-+]/, '$1-');
+}
+
+/**
+ * Whether a block-kind change is the marker separator the author left out.
+ *
+ * The bullet form keeps BLK-04's gate: only a bullet in front of a Han character
+ * was ever missing a separator, which is what keeps '-not-a-list' a paragraph.
+ */
+function isMarkerPromotion(before: string, after: string): boolean {
+  const heading = HEADING_MISSING_SPACE.exec(before);
+  if (heading !== null) {
+    const indent = heading[1] ?? '';
+    const hashes = heading[2] ?? '';
+    const rest = heading[3] ?? '';
+    if (canonical(after) === canonical(indent + hashes + ' ' + rest)) return true;
+  }
+  const bullet = BULLET_MISSING_SPACE.exec(before);
+  if (bullet !== null) {
+    const indent = bullet[1] ?? '';
+    const marker = bullet[2] ?? '';
+    const rest = bullet[3] ?? '';
+    if (isCjk(rest.charAt(0)) && canonical(after) === canonical(indent + marker + ' ' + rest)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -67,6 +129,11 @@ function regionSignature(text: string, region: Region, trimBlankLines: boolean):
     body = body.replace(/^(?:[ \t]*\n)+/, '').replace(/(?:\n[ \t]*)+$/, '');
   }
   return region.kind + ':' + body + '\u0000' + (region.info ?? '');
+}
+
+/** A line as it is quoted in a diagnostic: long enough to recognise, not to flood. */
+function snippet(line: string): string {
+  return line.length > 60 ? line.slice(0, 60) + '\u2026' : line;
 }
 
 /** Whether an offset falls inside a front matter block, which the region check owns. */
@@ -216,11 +283,17 @@ export function checkSemantics(
     const kindA = classifyContent(a);
     const kindB = classifyContent(b);
     if (kindA === kindB) continue;
-    if (kindA === 'paragraph' && kindB === 'heading' && isHeadingPromotion(a, b)) continue;
+    if (
+      kindA === 'paragraph' &&
+      (kindB === 'heading' || kindB === 'list') &&
+      isMarkerPromotion(a, b)
+    ) {
+      continue;
+    }
     violations.push({
       ruleId: 'GRT-01',
       messageId: 'grt.blockKindChanged',
-      args: [kindA, kindB],
+      args: [kindA, kindB, snippet(a), snippet(b)],
       line: beforeLines[i]?.line,
     });
   }

@@ -120,8 +120,8 @@ export const MESSAGES = {
     zh: '非空行数发生了变化：{0} -> {1}',
   },
   'grt.blockKindChanged': {
-    en: 'block kind changed: {0} -> {1}',
-    zh: '块的类型发生了变化：{0} -> {1}',
+    en: 'block kind changed: {0} -> {1} in "{2} -> {3}"; the line is left as written',
+    zh: '块类型发生了变化：{0} -> {1}，出在“{2} -> {3}”；该行保持原样',
   },
   'safe.regionChanged': {
     en: '{0} region changed: {1} -> {2}',

@@ -131,7 +131,7 @@ describe('GRT-01 a block quote is compared as content', () => {
     const violations = checkSemantics('> - “引用”\n', '> -“引用”\n');
     assert.equal(violations.length, 1);
     assert.equal(violations[0]?.ruleId, 'GRT-01');
-    assert.deepEqual(violations[0]?.args, ['list', 'paragraph']);
+    assert.deepEqual(violations[0]?.args, ['list', 'paragraph', '- “引用”', '-“引用”']);
   });
   test('a bare > is a blank line, so a rule may add one inside a quote', () => {
     assert.deepEqual(checkSemantics('> a\n> b\n', '> a\n>\n> b\n'), []);
@@ -139,6 +139,21 @@ describe('GRT-01 a block quote is compared as content', () => {
   test('renumbering and marker spacing inside a quote are still intended', () => {
     assert.deepEqual(checkSemantics('> 1. a\n> 3. b\n', '> 1. a\n> 2. b\n'), []);
     assert.deepEqual(checkSemantics('>quote\n', '> quote\n'), []);
+  });
+});
+
+describe('GRT-01 licenses the marker separator a line is missing', () => {
+  test('a heading promotion survives the spacing rules editing the same line', () => {
+    assert.deepEqual(checkSemantics('#中文abc\n', '# 中文 abc\n'), []);
+    assert.deepEqual(checkSemantics('#abc中文\n', '# abc 中文\n'), []);
+  });
+  test('a bullet promotion does too, at the top level and inside a quote', () => {
+    assert.deepEqual(checkSemantics('-中文abc\n', '- 中文 abc\n'), []);
+    assert.deepEqual(checkSemantics('> -中文abc\n', '> - 中文 abc\n'), []);
+  });
+  test('but the rest of the line still has to be the line the author wrote', () => {
+    assert.equal(checkSemantics('#中文abc\n', '# 中文def\n').length, 1);
+    assert.equal(checkSemantics('-中文abc\n', '- 中文def\n').length, 1);
   });
 });
 

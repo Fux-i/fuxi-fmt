@@ -269,7 +269,10 @@ export function normalizeLines(
   const marked = lines.map((line, index) => {
     if (protectedLine[index] === true) return line.text;
     const expanded = tabWidth === 0 ? line.text : line.text.split('\t').join(' '.repeat(tabWidth));
-    return normalizeUnorderedMarker(normalizeMarkers(expanded), options.list.unorderedMarker);
+    return normalizeUnorderedMarker(
+      normalizeMarkers(expanded, options.typography.cjkClasses),
+      options.list.unorderedMarker,
+    );
   });
   // BLK-06 then BLK-10: the ordered markers are what the fence pass measures the
   // text around, so the fences are written last.

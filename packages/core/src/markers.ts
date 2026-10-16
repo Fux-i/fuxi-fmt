@@ -6,11 +6,13 @@
  */
 
 import { classifyContent } from './blocks.ts';
+import { DEFAULT_CJK_CLASSES, isCjk, type CjkClass } from './chars.ts';
 import type { ThematicBreak, UnorderedMarker } from './options.ts';
 
 const UNORDERED = /^(\s*)([-*+])([ \t]+)([\s\S]*)$/;
 const HEADING = /^(\s{0,3})(#{1,6})(?!#)([ \t]*)([\s\S]*)$/;
 const LIST = /^(\s*)([-*+]|\d{1,9}[.)])([ \t]+)([\s\S]*)$/;
+const BULLET = /^(\s{0,3})([-+])([\s\S]*)$/;
 const TASK = /^\[([ xX])\]([ \t]+)([\s\S]*)$/;
 // BLK-09: one marker, at most one space after it, then the content. The old
 // pattern swallowed every space after every marker, which is why the content's
@@ -51,7 +53,29 @@ export function normalizeThematicBreak(text: string, target: ThematicBreak): str
   return indent + BREAK_CHAR[target].repeat(3);
 }
 
-export function normalizeMarkers(text: string): string {
+/**
+ * BLK-04. A bullet whose separator is missing in front of Han text.
+ *
+ * CommonMark reads '-中文' as a paragraph and '- 中文' as a list item, so the same
+ * reading BLK-05 gives '#中文' is given here: the author wrote a bullet and lost
+ * its space. The gate is the character after the marker, not the marker alone -
+ * TYPO-01 would separate nothing in '-not-a-list' or '--中文' (a hyphen and a
+ * bullet are both spacing symbols, so no boundary was ever missing), and '*'
+ * stays out because it is emphasis syntax while an ordered '1.' is ordinary
+ * prose.
+ */
+function normalizeMissingBullet(text: string, cjkClasses: readonly CjkClass[]): string {
+  const bullet = BULLET.exec(text);
+  if (bullet === null) return text;
+  const rest = bullet[3] ?? '';
+  if (rest.length === 0 || !isCjk(rest.charAt(0), cjkClasses)) return text;
+  return (bullet[1] ?? '') + (bullet[2] ?? '') + ' ' + rest;
+}
+
+export function normalizeMarkers(
+  text: string,
+  cjkClasses: readonly CjkClass[] = DEFAULT_CJK_CLASSES,
+): string {
   const heading = HEADING.exec(text);
   if (heading !== null) {
     const indent = heading[1] ?? '';
@@ -88,8 +112,13 @@ export function normalizeMarkers(text: string): string {
     // Adjacent markers ('>>') stay adjacent; only whitespace between markers
     // means the author wrote the spaced form ('> >').
     if (rest.length === 0) return indent + markers.trimEnd();
-    return indent + markers + (/[ \t]$/.test(markers) ? '' : ' ') + rest;
+    return (
+      indent +
+      markers +
+      (/[ \t]$/.test(markers) ? '' : ' ') +
+      normalizeMissingBullet(rest, cjkClasses)
+    );
   }
 
-  return text;
+  return normalizeMissingBullet(text, cjkClasses);
 }

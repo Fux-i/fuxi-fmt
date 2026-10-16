@@ -24,6 +24,13 @@ describe('BLK-05 heading marker spacing', () => {
   test('does not promote an issue reference to a heading', () => {
     assert.equal(out('#123 修复\n'), '#123 修复\n');
   });
+  test('keeps the promotion when spacing rules edit the same line', () => {
+    // The promotion used to be licensed only when the rest of the line was
+    // byte-identical, so the second space TYPO-01 inserts between Han and Latin
+    // ("中文abc" -> "中文 abc") made the guard refuse the whole document.
+    assert.equal(out('#中文abc\n'), '# 中文 abc\n');
+    assert.equal(out('#abc中文\n'), '# abc 中文\n');
+  });
 });
 
 describe('BLK-04 list marker spacing', () => {
@@ -44,6 +51,30 @@ describe('BLK-04 list marker spacing', () => {
   });
   test('leaves text that merely starts with a hyphen alone', () => {
     assert.equal(out('-not-a-list\n'), '-not-a-list\n');
+  });
+  // A bullet whose separator is missing in front of a Han character is the same
+  // shape as BLK-05's '#中文': the marker is read as a marker. The Han gate is
+  // what keeps '-not-a-list' a paragraph - TYPO-01 would insert no space there
+  // anyway, so no marker separation was ever missing.
+  test('supplies the separator a bullet is missing before a Han character', () => {
+    assert.equal(out('-中文abc\n'), '- 中文 abc\n');
+    // BLK-07 rewrites the bullet character, exactly as it does for '+ item'.
+    assert.equal(out('+中文abc\n'), '- 中文 abc\n');
+  });
+  test('supplies it inside a block quote too', () => {
+    assert.equal(out('> -中文abc\n'), '> - 中文 abc\n');
+  });
+  test('leaves the markers that are not bullets alone', () => {
+    assert.equal(out('--中文abc\n'), '-- 中文 abc\n');
+    assert.equal(out('*中文abc\n'), '*中文 abc\n');
+    assert.equal(out('1.中文abc\n'), '1.中文 abc\n');
+  });
+  test('what it supplies settles on the second run', () => {
+    const once = out('-中文abc\n');
+    assert.equal(out(once), once);
+  });
+  test('the promotion is licensed by the guard, not refused', () => {
+    assert.deepEqual(format('-中文abc\n').diagnostics, []);
   });
 });
 
