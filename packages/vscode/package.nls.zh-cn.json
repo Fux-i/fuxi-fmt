@@ -39,6 +39,7 @@
   "fuxiFmt.typography.emphasis.strikethrough.enum.1": "一个：~删除~",
   "fuxiFmt.typography.emphasis.strikethrough.enum.2": "保持作者原有的标记。",
   "fuxiFmt.typography.cjkSpacing.description": "在每一处中日韩文字与非中日韩文字的交界处插入一个空格（TYPO-01）。",
+  "fuxiFmt.typography.collapseBoundarySpaces.description": "把交界处已有的连续空格合并成一个。关掉它，作者写的那一段原样保留；完全没有空格时仍然补一个（TYPO-02）。",
   "fuxiFmt.typography.punctuationStyle.description": "标点全角/半角归一化的方向（TYPO-05）。",
   "fuxiFmt.typography.punctuationStyle.enum.0": "转换为全角。",
   "fuxiFmt.typography.punctuationStyle.enum.1": "转换为半角。",

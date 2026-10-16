@@ -52,6 +52,7 @@ const SAMPLES: Record<string, unknown> = {
   'blankLines.insideLists': 'preserve',
   'blankLines.insideBlockquotes': 'preserve',
   'typography.cjkSpacing': false,
+  'typography.collapseBoundarySpaces': false,
   'typography.punctuationStyle': 'halfwidth',
   'typography.punctuationChangeList': [',', ';'],
   'typography.halfwidthAlphanumerics': false,

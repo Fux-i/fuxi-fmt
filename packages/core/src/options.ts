@@ -123,6 +123,8 @@ export interface EmphasisOptions {
 export interface TypographyOptions {
   /** Insert one space at every CJK to non-CJK boundary (TYPO-01). */
   readonly cjkSpacing: boolean;
+  /** Merge a whitespace run at a boundary into one space (TYPO-02). */
+  readonly collapseBoundarySpaces: boolean;
   /** Direction of punctuation width normalisation (TYPO-05). */
   readonly punctuationStyle: PunctuationStyle;
   /** Half-width marks eligible for conversion (TYPO-05). */
@@ -272,6 +274,7 @@ export interface BlankLinesInput {
 
 export interface TypographyInput {
   readonly cjkSpacing?: boolean;
+  readonly collapseBoundarySpaces?: boolean;
   readonly punctuationStyle?: PunctuationStyle;
   readonly punctuationChangeList?: readonly string[];
   readonly halfwidthAlphanumerics?: boolean;
@@ -331,6 +334,7 @@ export const defaultOptions: FormatOptions = {
   },
   typography: {
     cjkSpacing: true,
+    collapseBoundarySpaces: true,
     punctuationStyle: 'fullwidth',
     punctuationChangeList: [',', '.', ':', '!', '?', ';'],
     halfwidthAlphanumerics: true,
@@ -446,6 +450,7 @@ export const OPTION_VOCABULARY = {
   },
   typography: {
     cjkSpacing: { kind: 'bool' },
+    collapseBoundarySpaces: { kind: 'bool' },
     punctuationStyle: { kind: 'oneOf', values: PUNCTUATION_STYLES },
     punctuationChangeList: { kind: 'stringList' },
     halfwidthAlphanumerics: { kind: 'bool' },

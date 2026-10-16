@@ -219,6 +219,8 @@ GFM 表格是唯一一种源码版式*就是*其呈现方式的块，所以补�
 
 CJK 交界处已有的多个空格合并成一个。合并**只作用于交界处**；其它地方的空白永不触碰。
 
+`typography.collapseBoundarySpaces`（默认 `true`）只关掉"合并"这半边：关掉它，交界处本来没有空白时仍然补一个空格（TYPO-01），本来有空白时保留作者写的那一段。`typography.cjkSpacing: false` 仍然把两条一起关掉，它是整条规则的开关。
+
 **TYPO-03 —— 复合词保护** · 始终开启
 
 绝不在复合 token 内部断开或加空格。非穷尽的受保护形态：`GPT-4o`、`claude-4-opus`、`state-of-the-art`、`Sci-Fi`、`USB-C`、`X-RAY`、`A/B`、`60公里/小時`、`Math.floor(x)`、`*[0-9].log`。
@@ -506,7 +508,7 @@ Y = 覆盖，P = 部分或带条件，N = 不覆盖。
 | （h）永不触碰围栏代码         | P（可关） | P（可关） | Y | Y | P（可关） | Y | **Y（默认）** |
 | （i）所有选项可调             | P   | P   | P   | P             | P   | P   | **P**（见下面的说明） |
 
-第（i）行是 **P** 而不是 Y，因为有些写进文档的选项尚未实现或已被撤回。设置它们只会得到沉默。权威清单是第 7 节末尾的状态注记，而 readme 带有同一份清单，由一条测试保持两者一致 —— 所以这一段不再重复它。它曾经重复过，而这份拷贝错了两个发布周期、被检查的那一份才是对的，这就是反对把同一个事实写两遍的全部论据。
+第（i）行是 **P** 而不是 Y，因为有两个写进文档的选项只实现了一部分（`list.orderedIndent` / `list.unorderedIndent`）：它们能设，但今天的语义比名字窄。权威清单是第 7 节末尾的状态注记，而 readme 带着同一份清单，由一条测试保持两者一致 —— 所以这一段不再重复它。它曾经重复过，而这份拷贝错了两个发布周期、被检查的那一份才是对的，这就是反对把同一个事实写两遍的全部论据。
 **最接近的单一工具：** Prettier —— 覆盖（a）（b）（c），并可以为了（h）调成代码安全，但完全缺少（e）（f）（g），而它对（h）的默认与需求正好相反。**CJK 那一半最接近的：** AutoCorrect 或 CJK Text Formatter —— 覆盖（f）（g）以及（e）的一部分，但两者作为格式化器都没有（a）（b）（c）中的任何一条，而 AutoCorrect 根本不是格式化提供程序。
 
 ---
@@ -550,6 +552,7 @@ frontMatter:
 
 typography:
   cjkSpacing: true
+  collapseBoundarySpaces: true    # 见 TYPO-02；false 即保留作者写的空白
   punctuationStyle: fullwidth     # fullwidth | halfwidth | mixed | off
   punctuationChangeList: [",", ".", ":", "!", "?", ";"]
   parenStyle: mixed               # mixed | fullwidth | halfwidth | preserve
@@ -573,7 +576,7 @@ ignore:
   line: fuxi-fmt-ignore
 ```
 
-**实现状态。** <!-- fuxi-fmt:not-implemented --> `typography.collapseBoundarySpaces`。
+**实现状态。** <!-- fuxi-fmt:not-implemented --> 没有：这个配置块里的键都已实现。
 <!-- fuxi-fmt:partially-implemented --> `list.orderedIndent` / `list.unorderedIndent`，今天只控制硬制表符如何展开，同时也设定列表重新缩进所瞄准的最小缩进宽度。这个块里其余的一切都已实现。
 
 配置从被格式化文件之上最近的 `fuxi-fmt.json` 读取，它可以包含注释与尾随逗号。预设（CFG-01）已实现；早期草稿里点名的平台预设被删掉，而不是靠猜去实现。这个块里的一切都已实现。

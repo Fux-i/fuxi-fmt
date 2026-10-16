@@ -233,6 +233,16 @@
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.typography.cjkSpacing.description%"
         },
+        "fuxiFmt.typography.collapseBoundarySpaces": {
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "markdownDescription": "%fuxiFmt.typography.collapseBoundarySpaces.description%"
+        },
         "fuxiFmt.typography.punctuationStyle": {
           "keywords": [
             "fuxi",

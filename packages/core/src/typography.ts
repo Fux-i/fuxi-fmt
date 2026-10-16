@@ -66,7 +66,13 @@ function classOf(ch: string, options: TypographyOptions): CharClass {
  * space, inserting one when there was none. Everything else keeps the
  * author's whitespace verbatim, so collapsing never leaks outside the boundary.
  */
-function separator(prev: Unit, cur: Unit, pending: string): string {
+function separator(
+  prev: Unit,
+  cur: Unit,
+  pending: string,
+  /** TYPO-02: merge the run the author wrote, or keep it as written. */
+  collapse: boolean,
+): string {
   if (prev.cls === 'fullpunct' || cur.cls === 'fullpunct') return '';
   // INL-01. A bracket is attached on its inside: nothing is ever placed between
   // '[' and the text it opens, or between the link text and '](destination)'.
@@ -75,7 +81,9 @@ function separator(prev: Unit, cur: Unit, pending: string): string {
   const left = prev.cls === 'close' ? 'latin' : prev.cls;
   const right = cur.cls === 'open' ? 'latin' : cur.cls;
   if ((left === 'cjk' && right === 'latin') || (left === 'latin' && right === 'cjk')) {
-    return ' ';
+    // TYPO-01 inserts the space the boundary needs. TYPO-02 decides what happens
+    // when the author already wrote one: merge it, or keep the run verbatim.
+    return pending.length === 0 || collapse ? ' ' : pending;
   }
   return pending;
 }
@@ -227,7 +235,7 @@ function formatLine(
     if (prev === null) {
       out += unit.text;
     } else {
-      let sep = separator(prev, unit, pending);
+      let sep = separator(prev, unit, pending, options.collapseBoundarySpaces);
       // TYPO-07 takes the whitespace from beside full-width punctuation, but not
       // the whitespace that separates a block marker from its content: taking
       // that one is what turns a list item into a paragraph. One space stays

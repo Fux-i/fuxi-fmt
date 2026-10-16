@@ -75,7 +75,7 @@ Y = 覆盖，P = 部分或带条件，N = 不覆盖。
 | 无序列表标记   | `list.unorderedMarker`：`dashes` / `asterisks` / `preserve` | dprint 的 `list.unorderedMarker`；remark 的 `bullet`；markdownlint 的 MD004 |
 | 列表缩进       | `list.orderedIndent` / `list.unorderedIndent`：`aligned` / `3` / `4`；`list.tabWidth` | dprint 的 `list.indentKind`；remark 的 `listItemIndent`；Markdown All in One 的 `list.indentationSize` |
 | 有序列表编号   | `list.orderedStyle`：`renumber` / `keep-all-ones` / `preserve`；`list.orderedDelimiter` | dprint 只会重编号；mdformat 的 `--number`；markdownlint 的 MD029 |
-| 中英之间加空格 | `typography.cjkSpacing`、`cjkClasses`、`spacingSymbols` | AutoCorrect 有自己的一套规则，不能逐项配 |
+| 中英之间加空格 | `typography.cjkSpacing`、`collapseBoundarySpaces`、`cjkClasses`、`spacingSymbols` | AutoCorrect 有自己的一套规则，不能逐项配 |
 | 中文标点宽度   | `typography.punctuationStyle`、`punctuationChangeList`、`parenStyle`、`context`、`quotes` | AutoCorrect 有总开关，没有这个粒度 |
 | 全角字母数字与表意空格 | `typography.halfwidthAlphanumerics`、`ideographicSpace` | AutoCorrect 有同类行为，默认开且不可分项配 |
 | 行内代码与公式 | 当作一个拉丁词加空格，内容逐字节不动 | 没有对应开关 |

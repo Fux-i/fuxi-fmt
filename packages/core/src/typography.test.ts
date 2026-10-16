@@ -40,6 +40,20 @@ describe('TYPO-02 whitespace collapse is local to the CJK boundary', () => {
   test('does not collapse whitespace between two CJK runs', () => {
     assert.equal(out('中文  中文\n'), '中文  中文\n');
   });
+  test('collapses a boundary run by default', () => {
+    assert.equal(out('中文  abc\n'), '中文 abc\n');
+    assert.equal(out('中文\t\tabc\n'), '中文 abc\n');
+  });
+  test('keeps the run the author wrote when the collapse is off', () => {
+    // The option separates the two halves of TYPO-01/02: inserting a space at a
+    // boundary that has none is the point of the rule, and collapsing one the
+    // author wrote is a choice.
+    const keep = { typography: { collapseBoundarySpaces: false } };
+    assert.equal(format('中文  abc\n', keep).output, '中文  abc\n');
+    assert.equal(format('abc   中文\n', keep).output, 'abc   中文\n');
+    assert.equal(format('中文abc\n', keep).output, '中文 abc\n');
+    assert.equal(format('中文  中文\n', keep).output, '中文  中文\n');
+  });
 });
 
 describe('TYPO-03 compound names stay intact', () => {
