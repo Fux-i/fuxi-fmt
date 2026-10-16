@@ -39,6 +39,7 @@
   "fuxiFmt.typography.emphasis.strikethrough.enum.1": "One: ~struck out~",
   "fuxiFmt.typography.emphasis.strikethrough.enum.2": "Leave the author's delimiter alone.",
   "fuxiFmt.typography.cjkSpacing.description": "Insert one space at every CJK to non-CJK boundary (TYPO-01).",
+  "fuxiFmt.typography.tags.description": "Treat a mid-text `#` as a tag: one space in front of it, never inside it. Off by default, because `#` is usually an ordinary character (TYPO-09).",
   "fuxiFmt.typography.collapseBoundarySpaces.description": "Merge a run of spaces at a CJK boundary into one. Off keeps the run the author wrote; a boundary with no space at all still gets one (TYPO-02).",
   "fuxiFmt.typography.punctuationStyle.description": "Direction of punctuation width normalisation (TYPO-05).",
   "fuxiFmt.typography.punctuationStyle.enum.0": "Convert toward full-width.",

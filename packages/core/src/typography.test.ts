@@ -119,39 +119,99 @@ describe('TYPO-07 keeps the space a block marker is separated by', () => {
   });
 });
 
-describe('TYPO-09 a tag is one word with a space in front of it', () => {
-  // The tag is the token, so the space goes in front of it and never inside it:
-  // '中文 # 标签' is what used to break a tag, and it is what the old opt-in did.
-  test('spaces a tag from the Han text it is written against', () => {
-    assert.equal(out('中文#标签\n'), '中文 #标签\n');
-    assert.equal(out('中文#abc\n'), '中文 #abc\n');
+describe('TYPO-09 tags are off by default', () => {
+  // Off means '#' is an ordinary character: no space on either side, and no
+  // protection for the run behind it - an English document that never writes a
+  // tag pays nothing for the rule.
+  const off: FormatOptionsInput = { typography: { tags: false } };
+  test('leaves a mid-text hash where it is', () => {
+    assert.equal(format('中文#标签\n', off).output, '中文#标签\n');
+    assert.equal(format('中文#abc\n', off).output, '中文#abc\n');
+    assert.equal(format('words#tag\n', off).output, 'words#tag\n');
+  });
+  test('an ordinary character does not hold a CJK boundary apart', () => {
+    // '#abc中文' is promoted to a heading by BLK-05 first, and then the Han in it
+    // is spaced like any other Han: the hash protects nothing.
+    assert.equal(format('#abc中文\n', off).output, '# abc 中文\n');
+    assert.equal(format('中文#abc中文\n', off).output, '中文#abc 中文\n');
+  });
+  test('the default is off', () => {
+    assert.equal(out('中文#标签\n'), '中文#标签\n');
+  });
+  test('tags work with CJK spacing off, because a tag is not a CJK rule', () => {
+    const only = { typography: { cjkSpacing: false, tags: true } };
+    assert.equal(format('中文abc\n', only).output, '中文abc\n');
+    assert.equal(format('结束。#标签\n', only).output, '结束。 #标签\n');
+    assert.equal(format('word.#tag\n', only).output, 'word. #tag\n');
+  });
+});
+
+describe('TYPO-09 a tag is one word with one space in front of it', () => {
+  const on: FormatOptionsInput = { typography: { tags: true } };
+  const tagged = (src: string) => format(src, on).output;
+  test('spaces a tag from whatever it is written against', () => {
+    assert.equal(tagged('中文#标签\n'), '中文 #标签\n');
+    assert.equal(tagged('中文#abc\n'), '中文 #abc\n');
+    assert.equal(tagged('words#tag\n'), 'words #tag\n');
+    // The space is syntax, so it is a boundary even beside full-width
+    // punctuation, which is the one place TYPO-07 gives way.
+    assert.equal(tagged('结束。#标签\n'), '结束。 #标签\n');
+    assert.equal(tagged('（#标签）\n'), '（ #标签）\n');
+    assert.equal(tagged('word.#tag\n'), 'word. #tag\n');
   });
   test('never puts a space inside the tag', () => {
-    // A tag runs to the end of its characters, Han included - which is what a
-    // tag is in the tools that read them.
-    assert.equal(out('中文#标签abc\n'), '中文 #标签abc\n');
-    assert.equal(out('中文#abc中文\n'), '中文 #abc中文\n');
+    assert.equal(tagged('中文#标签abc\n'), '中文 #标签abc\n');
+    assert.equal(tagged('中文#abc中文\n'), '中文 #abc中文\n');
+    assert.equal(tagged('中文#123\n'), '中文 #123\n');
   });
-  test('a tag written after a space keeps one space', () => {
-    assert.equal(out('中文 #标签\n'), '中文 #标签\n');
-    assert.equal(out('中文  #标签\n'), '中文 #标签\n');
+  test('a tag written after a space collapses to one', () => {
+    assert.equal(tagged('中文 #标签\n'), '中文 #标签\n');
+    assert.equal(tagged('中文  #标签\n'), '中文 #标签\n');
+    assert.equal(tagged('中文 #a   #b\n'), '中文 #a #b\n');
+    assert.equal(tagged('中文#a#b\n'), '中文 #a #b\n');
+  });
+  test('the collapse is the one the collapse option governs', () => {
+    const keep = { typography: { tags: true, collapseBoundarySpaces: false } };
+    assert.equal(format('中文 #a   #b\n', keep).output, '中文 #a   #b\n');
+    assert.equal(format('中文#a\n', keep).output, '中文 #a\n');
+  });
+  test('the right edge of a tag is the author\u2019s', () => {
+    assert.equal(tagged('#a   word\n'), '# a   word\n');
+    assert.equal(tagged('中文 #a   word\n'), '中文 #a   word\n');
   });
   test('a hash at the start of the content is a marker, not a tag', () => {
-    assert.equal(out('#标签\n'), '# 标签\n');
-    assert.equal(out('#123 修复\n'), '#123 修复\n');
+    assert.equal(tagged('#标签\n'), '# 标签\n');
+    assert.equal(tagged('#123 修复\n'), '#123 修复\n');
   });
   test('a bare hash is not a tag', () => {
-    assert.equal(out('中文#\n'), '中文#\n');
+    assert.equal(tagged('中文#\n'), '中文#\n');
   });
   test('what ends a tag ends it', () => {
-    assert.equal(out('中文#标签，后续\n'), '中文 #标签，后续\n');
+    assert.equal(tagged('中文#标签，后续\n'), '中文 #标签，后续\n');
   });
-  test('the tag does not reach into a protected span', () => {
-    assert.equal(out('中文#标签\u0060code\u0060\n'), '中文 #标签\u0060code\u0060\n');
+  test('the space is not inserted where it would make a block marker', () => {
+    // These are paragraphs whose first content character happens to be a marker
+    // character; a space there turns them into a list, which is a change of
+    // block structure rather than a spacing one.
+    assert.equal(tagged('-#标签\n'), '-#标签\n');
+    assert.equal(tagged('1.#标签\n'), '1.#标签\n');
+    assert.equal(tagged('**#标签**\n'), '**#标签**\n');
+    assert.deepEqual(format('-#标签\n', on).diagnostics, []);
+  });
+  test('a tag inside a link gets no space that would land in the link text', () => {
+    assert.equal(tagged('[#标签](a.md)\n'), '[#标签](a.md)\n');
+    assert.equal(tagged('中文[#标签](a.md)\n'), '中文 [#标签](a.md)\n');
+  });
+  test('a protected span is not normal text', () => {
+    assert.equal(tagged('中文\u0060#标签\u0060\n'), '中文 \u0060#标签\u0060\n');
+    assert.equal(tagged('中文 <span id="#标签">x</span>\n'), '中文 <span id="#标签">x</span>\n');
+    assert.equal(tagged('见 [a](a.md#标签)\n'), '见 [a](a.md#标签)\n');
   });
   test('what it settles on is stable on the second run', () => {
-    const once = out('中文#标签abc\n');
-    assert.equal(out(once), once);
+    for (const src of ['中文#标签abc\n', '结束。#标签\n', '中文 #a   #b\n', '中文#a#b\n']) {
+      const once = tagged(src);
+      assert.equal(tagged(once), once, 'not stable: ' + JSON.stringify(src));
+    }
   });
 });
 

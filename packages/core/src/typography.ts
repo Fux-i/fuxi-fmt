@@ -36,7 +36,7 @@ import {
  * on the right would put the space inside the link text), 'close' on its right
  * only ('](destination)' - spacing it on the left would do the same).
  */
-type CharClass = 'cjk' | 'latin' | 'open' | 'close' | 'fullpunct' | 'other' | 'space';
+type CharClass = 'cjk' | 'latin' | 'tag' | 'open' | 'close' | 'fullpunct' | 'other' | 'space';
 
 interface Unit {
   readonly text: string;
@@ -70,9 +70,19 @@ function separator(
   prev: Unit,
   cur: Unit,
   pending: string,
-  /** TYPO-02: merge the run the author wrote, or keep it as written. */
-  collapse: boolean,
+  options: TypographyOptions,
 ): string {
+  // TYPO-09. A tag's left edge is syntax, so it is a boundary wherever it is
+  // written - even beside full-width punctuation, which is the one place TYPO-07
+  // gives way. A bracket that opens a link is the exception: '[' already binds to
+  // what follows it, and the space there would land inside the link text.
+  if (cur.cls === 'tag') {
+    if (prev.cls === 'open') return pending;
+    return pending.length === 0 || options.collapseBoundarySpaces ? ' ' : pending;
+  }
+  // Everything below is CJK typography; a tag works without it, and with it off
+  // TYPO-07 must not eat the whitespace around full-width punctuation either.
+  if (!options.cjkSpacing) return pending;
   if (prev.cls === 'fullpunct' || cur.cls === 'fullpunct') return '';
   // INL-01. A bracket is attached on its inside: nothing is ever placed between
   // '[' and the text it opens, or between the link text and '](destination)'.
@@ -83,7 +93,7 @@ function separator(
   if ((left === 'cjk' && right === 'latin') || (left === 'latin' && right === 'cjk')) {
     // TYPO-01 inserts the space the boundary needs. TYPO-02 decides what happens
     // when the author already wrote one: merge it, or keep the run verbatim.
-    return pending.length === 0 || collapse ? ' ' : pending;
+    return pending.length === 0 || options.collapseBoundarySpaces ? ' ' : pending;
   }
   return pending;
 }
@@ -122,6 +132,12 @@ function protectedClassAt(
   if (bracket === 2) return 'close';
   return syntaxMask[at] === 1 ? 'other' : 'latin';
 }
+
+/**
+ * The block-marker candidates a tag's space must not turn into a real marker: a
+ * run of marker characters - or an ordered marker - with nothing else in it.
+ */
+const MARKER_ONLY = /^\s*(?:#{1,6}|[-+*]+|\d{1,9}[.)])\s*$/;
 
 /**
  * TYPO-09. The characters a tag is written with: letters, digits, Han (and the
@@ -184,11 +200,11 @@ function tokenize(
     // from the Han in front of it is the point; a space inside it would end it
     // ('中文 # 标签' is not a tag any more). The first character of the content is
     // not a tag - there the '#' is an ATX marker, which BLK-05 owns.
-    if (ch === '#' && i > contentStart) {
+    if (options.tags && ch === '#' && i > contentStart) {
       let end = i + 1;
       while (end < to && mask[end] !== 1 && isTagChar(text.charAt(end), options)) end++;
       if (end > i + 1) {
-        units.push({ text: text.slice(i, end), cls: 'latin', start: i });
+        units.push({ text: text.slice(i, end), cls: 'tag', start: i });
         i = end;
         continue;
       }
@@ -235,7 +251,15 @@ function formatLine(
     if (prev === null) {
       out += unit.text;
     } else {
-      let sep = separator(prev, unit, pending, options.collapseBoundarySpaces);
+      let sep = separator(prev, unit, pending, options);
+      // TYPO-09: the one space a tag needs is not worth a block marker. '-#标签'
+      // and '1.#标签' are paragraphs whose first content character happens to be a
+      // marker character, and inserting the space turns them into a list;
+      // '**#标签**' would gain a space inside its own emphasis. The tag keeps what
+      // the author wrote in those cases, and no block ever changes kind.
+      if (unit.cls === 'tag' && MARKER_ONLY.test(text.slice(contentStart, unit.start))) {
+        sep = pending;
+      }
       // TYPO-07 takes the whitespace from beside full-width punctuation, but not
       // the whitespace that separates a block marker from its content: taking
       // that one is what turns a list item into a paragraph. One space stays
@@ -263,7 +287,9 @@ export function applyTypography(
   options: TypographyOptions,
   extra: readonly CharRange[] = [],
 ): string {
-  if (!options.cjkSpacing) return text;
+  // typography.tags is not a CJK rule - an English document has tags too - so
+  // the pass runs for either switch and gates each rule on its own.
+  if (!options.cjkSpacing && !options.tags) return text;
 
   const regions = scanRegions(text);
   const mask = protectedMask(text, extra, regions);

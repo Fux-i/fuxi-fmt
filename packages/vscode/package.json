@@ -243,6 +243,16 @@
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.typography.collapseBoundarySpaces.description%"
         },
+        "fuxiFmt.typography.tags": {
+          "keywords": [
+            "fuxi",
+            "fuxi-fmt"
+          ],
+          "type": "boolean",
+          "default": false,
+          "scope": "resource",
+          "markdownDescription": "%fuxiFmt.typography.tags.description%"
+        },
         "fuxiFmt.typography.punctuationStyle": {
           "keywords": [
             "fuxi",

@@ -125,6 +125,8 @@ export interface TypographyOptions {
   readonly cjkSpacing: boolean;
   /** Merge a whitespace run at a boundary into one space (TYPO-02). */
   readonly collapseBoundarySpaces: boolean;
+  /** Treat a mid-text '#' as a tag, separated from what precedes it (TYPO-09). */
+  readonly tags: boolean;
   /** Direction of punctuation width normalisation (TYPO-05). */
   readonly punctuationStyle: PunctuationStyle;
   /** Half-width marks eligible for conversion (TYPO-05). */
@@ -275,6 +277,7 @@ export interface BlankLinesInput {
 export interface TypographyInput {
   readonly cjkSpacing?: boolean;
   readonly collapseBoundarySpaces?: boolean;
+  readonly tags?: boolean;
   readonly punctuationStyle?: PunctuationStyle;
   readonly punctuationChangeList?: readonly string[];
   readonly halfwidthAlphanumerics?: boolean;
@@ -335,6 +338,7 @@ export const defaultOptions: FormatOptions = {
   typography: {
     cjkSpacing: true,
     collapseBoundarySpaces: true,
+    tags: false,
     punctuationStyle: 'fullwidth',
     punctuationChangeList: [',', '.', ':', '!', '?', ';'],
     halfwidthAlphanumerics: true,
@@ -451,6 +455,7 @@ export const OPTION_VOCABULARY = {
   typography: {
     cjkSpacing: { kind: 'bool' },
     collapseBoundarySpaces: { kind: 'bool' },
+    tags: { kind: 'bool' },
     punctuationStyle: { kind: 'oneOf', values: PUNCTUATION_STYLES },
     punctuationChangeList: { kind: 'stringList' },
     halfwidthAlphanumerics: { kind: 'bool' },

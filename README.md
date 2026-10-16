@@ -78,6 +78,7 @@ Y = 覆盖，P = 部分或带条件，N = 不覆盖。
 | 中英之间加空格 | `typography.cjkSpacing`、`collapseBoundarySpaces`、`cjkClasses`、`spacingSymbols` | AutoCorrect 有自己的一套规则，不能逐项配 |
 | 中文标点宽度   | `typography.punctuationStyle`、`punctuationChangeList`、`parenStyle`、`context`、`quotes` | AutoCorrect 有总开关，没有这个粒度 |
 | 全角字母数字与表意空格 | `typography.halfwidthAlphanumerics`、`ideographicSpace` | AutoCorrect 有同类行为，默认开且不可分项配 |
+| 话题标签       | `typography.tags`（默认关）：打开后 `中文#标签` → `中文 #标签`，标签内部一个空格都不加 | 没有对应开关 |
 | 行内代码与公式 | 当作一个拉丁词加空格，内容逐字节不动 | 没有对应开关 |
 | 表格           | `table.mode`、`table.cjkWidth`、`table.maxWidth` | Prettier 总是补空格；dprint 的 `table.cellPadding`；remark 的 `tableCellPadding` 等 |
 | 折行           | 不提供，有意为之                     | Prettier 的 `proseWrap`；dprint 与 deno 的 `textWrap` / `proseWrap`；mdformat 的 `--wrap` |
@@ -115,7 +116,7 @@ code --install-extension output/fuxi-fmt-<version>.vsix
 | 3   | `fuxi-fmt.json`  | 提交进版本库的仓库根目录文件 |
 | 4   | `fuxiFmt.config` | 你的编辑器，作为显式覆盖     |
 
-**第 3 层故意压过第 2 层。** 命令行与 CI 永远看不到编辑器设置；如果它们优先，编辑器与命令行（`--check`，用法见[贡献指南](CONTRIBUTING.md)）会对同一份文档给出不同结论 —— 保存时通过，流水线里失败。确实想覆盖项目配置时，用第 4 层的 `fuxiFmt.config`。
+**第 3 层故意压过第 2 层。** 命令行与 CI 永远看不到编辑器设置；如果它们优先，编辑器与命令行（`--check`，用法见 [贡献指南](CONTRIBUTING.md)）会对同一份文档给出不同结论 —— 保存时通过，流水线里失败。确实想覆盖项目配置时，用第 4 层的 `fuxiFmt.config`。
 
 ```json
 {
