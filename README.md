@@ -1,6 +1,6 @@
 # fuxi-fmt
 
-<img src="packages/vscode/assets/logo.png" alt="一个穿着绿色恐龙连帽衫、捧着一份文档的角色" width="160" align="right" />
+<img src="packages/vscode/assets/logo.png" alt="fuxi-fmt logo" width="160" align="right" />
 
 **面向中文技术写作的 Markdown 格式化工具。**
 
@@ -42,7 +42,7 @@
 | 中英文之间加空格 | 有       |
 ```
 
-表格那一列的宽度按显示宽度算：一个汉字记两格。你的字体如果不是这个比例（很多等宽字体里汉字约为拉丁字符的 1.6–1.7 倍），可以在设置里把 `table.cjkWidth` 调到 1 到 2 之间的任意值。
+表格那一列的宽度按显示宽度算：一个汉字记两格（也推荐安装并使用汉字记两格的等宽字体如 `Maple Mono NF CN`）。你的字体如果不是这个比例（很多等宽字体里汉字约为拉丁字符的 1.6–1.7 倍），可以在设置里把 `table.cjkWidth` 调到 1 到 2 之间的任意值。
 
 ## 与主流工具对比
 
@@ -52,21 +52,17 @@
 
 Y = 覆盖，P = 部分或带条件，N = 不覆盖。
 
-| 需求                   | Prettier | dprint / Deno | markdownlint | Markdown All in One | AutoCorrect | CJK Text Formatter | **fuxi-fmt** |
-| ---------------------- | --- | --- | --- | --- | --- | --- | ----- |
-| 块与块之间的空行       | Y   | Y   | Y   | N   | N   | N   | **Y** |
-| 有序列表重新编号       | Y   | Y   | Y   | P   | N   | N   | **Y** |
-| front matter           | Y   | P   | N   | N   | N   | N   | **Y** |
-| 行内代码两侧的空格     | N   | N   | N   | N   | P   | N   | **Y** |
-| CJK 与拉丁文之间的空格 | N   | N   | N   | N   | Y   | Y   | **Y** |
-| 中文标点宽度           | N   | N   | N   | N   | Y   | Y   | **Y** |
-| 不改代码块             | P   | P   | Y   | Y   | P   | Y   | **Y** |
-
-「全部选项可调」这一行留给下面的表回答——它需要逐项看，而不是一个字母。
+| 需求                   | **fuxi-fmt** | Prettier | dprint / Deno | markdownlint | Markdown All in One | AutoCorrect | CJK Text Formatter |
+| ---------------------- | ----- | --- | --- | --- | --- | --- | --- |
+| 块与块之间的空行       | **Y** | Y   | Y   | Y   | N   | N   | N   |
+| 有序列表重新编号       | **Y** | Y   | Y   | Y   | P   | N   | N   |
+| front matter           | **Y** | Y   | P   | N   | N   | N   | N   |
+| 行内代码两侧的空格     | **Y** | N   | N   | N   | N   | P   | N   |
+| CJK 与拉丁文之间的空格 | **Y** | N   | N   | N   | N   | Y   | Y   |
+| 中文标点宽度           | **Y** | N   | N   | N   | N   | Y   | Y   |
+| 不改代码块             | **Y** | P   | P   | Y   | Y   | P   | Y   |
 
 ### 可配置项对比
-
-左列是 fuxi-fmt 的设置，右列是主流工具里对应的开关。空着是说「没有对应的选项」，不是「没查过」。
 
 | 可配置项       | fuxi-fmt                             | 其它工具     |
 | -------------- | ------------------------------------ | ------------ |
