@@ -14,54 +14,39 @@
 
 ### 1.1 组合缺口
 
-没有任何一个 VS Code 扩展能覆盖所需的行为集合，生态也拼不出来：
-
-- VS Code 每种语言、每次格式化动作或保存**只运行一个**格式化提供程序，由 `editor.defaultFormatter` 选定。注册了多个提供程序却一个都没配置时，它直接拒绝，并提示“There are multiple formatters...”。
-- **范围**提供程序也算文档格式化器，于是每个候选都在抢同一个位子。
-- 保存参与者按**固定顺序**执行：TrimWhitespace → CodeActionOnSave → FormatOnSave → FinalNewLine → TrimFinalNewLines。所以 `source.fixAll.*` 提供程序在默认格式化器**之前**运行，下游任何大范围的重新打印都会把它覆盖掉。
-- Prettier 自带一个显式守卫：当别的扩展是默认格式化器时，它会关掉自己的 `source.fixAll.prettier`，其源码说这是“to prevent double-formatting”。上游承认了这个问题，而不是解决它。
-- **AutoCorrect 根本不是格式化提供程序。** 它注册的是命令、代码动作和自己的 `onWillSaveTextDocument` 钩子，完全落在保存参与者顺序**之外**——它相对于格式化器的位置不由任何设置决定。它占不到 `editor.defaultFormatter` 这个位子。
+没有任何一个 VS Code 扩展能覆盖所需的行为集合，生态也拼不出来。VS Code 每种语言、每次格式化动作或保存**只运行一个**格式化提供程序（`editor.defaultFormatter`），注册了多个却一个都没配置时它直接拒绝。保存参与者按固定顺序执行（TrimWhitespace → CodeActionOnSave → FormatOnSave → FinalNewLine → TrimFinalNewLines），所以 `source.fixAll.*` 提供程序跑在默认格式化器**之前**，下游任何大范围的重新打印都会把它覆盖掉——Prettier 为此自带一个“别的扩展是默认格式化器时关掉自己”的守卫。而 **AutoCorrect 根本不是格式化提供程序**：它注册命令、代码动作和自己的 `onWillSaveTextDocument` 钩子，完全落在保存参与者顺序**之外**，占不到 `editor.defaultFormatter` 这个位子。
 
 **结论：** 缺口不是少了一条规则，而是缺少一个引擎、一套配置，同时掌管结构与中国排版。
 
 ### 1.2 规范缺口
 
-没有可继承的单一规范。面向人的来源是《中文文案排版指北》（sparanoid）；机器实现是 pangu.js、AutoCorrect、zhlint 与 `textlint-rule-preset-zh-technical-writing`，它们在可测量的案例上互相矛盾：
+没有可继承的单一规范：面向人的来源是《中文文案排版指北》，机器实现是 pangu.js、AutoCorrect、zhlint 与 `textlint-rule-preset-zh-technical-writing`，它们在可测量的案例上互相矛盾。
 
-| 案例    | 分歧                                                       |
-| ------- | ---------------------------------------------------------- |
-| 日期    | `3月10日` 在 zhlint 里保持紧贴；在 AutoCorrect 与 pangu 里变成 `3 月 10 日` |
-| 百分号与单位 | `textlint-zh` 强制 `0.05%` 与 `70℃` 紧贴；《指北》要求 `10 Gbps` 带空格而 `15%` 不带 |
-| 括号    | 《指北》与 `textlint-zh` 的 `mixed` 对中文内容选全角；**zhlint 默认把 `（）` 降成半角** |
+| 案例 | 分歧                                                      |
+| ---- | --------------------------------------------------------- |
+| 括号 | 《指北》与 `textlint-zh` 的 `mixed` 对中文内容选全角；**zhlint 默认把 `（）` 降成半角** |
 | 行内代码 | zhlint 与 `textlint-zh` 在外侧加空格；AutoCorrect 在 Markdown 里从不碰它；textlint-ja 默认不加空格 |
-| 负数    | AutoCorrect 把 `-255` 当带符号的数；pangu 把连字符当运算符 |
-| `第1章` | 三个机器工具都产出 `第 1 章`                               |
-| 引号    | zhlint 把 `「」` 统一成弯引号；AutoCorrect 从不做宽度转换  |
+| 百分号与单位 | `textlint-zh` 强制 `0.05%` 与 `70℃` 紧贴；《指北》要求 `10 Gbps` 带空格而 `15%` 不带 |
+| 日期 | `3月10日` 在 zhlint 里保持紧贴；在 AutoCorrect 与 pangu 里变成 `3 月 10 日` |
+| 引号 | zhlint 把 `「」` 统一成弯引号；AutoCorrect 从不做宽度转换 |
 
-此外，**pangu.js 自己的 README 就说了不要在 Markdown 上用它**（它的目标是 HTML 与纯文本，没有 Markdown 语法；它会给 `#` 标签加空格，还会弄乱表格竖线）。
+此外，**pangu.js 自己的 README 就说了不要在 Markdown 上用它**：它的目标是 HTML 与纯文本，没有 Markdown 语法，会给 `#` 标签加空格，还会弄乱表格竖线。
 
 **结论：** fuxi-fmt 自己持有规范。《指北》是散文式的理由，本文档的规则表才是规范产物。
 
 ### 1.3 实测性能范围
 
-在一个确定性的 fixture 上测量：10,129 行 / 372 KB / 55,175 个汉字（75% 的行位于代码围栏内），取 best-of-N：
+在一个确定性的 fixture 上测量（10,129 行 / 372 KB / 55,175 个汉字，75% 的行位于代码围栏内，best-of-N，Node 24）：
 
-fuxi-fmt 在这个 fixture 上测得 47.3 ms，best-of-5，Node 24。它不区分解析与格式化，因为这两件事它都不按通常意义去做：只有一次扫描和一次重建。相对 Prettier 的 461.5 ms 是 9.8 倍，也就是本节所称的「一个数量级」。
+| 引擎                               | 解析     | 格式化 / 往返 |
+| ---------------------------------- | -------- | ------------- |
+| Rust + comrak（原生 release）      | 0.9 ms   | 6.1 ms        |
+| markdown-it(JS)                    | 8.3 ms   | —             |
+| remark / micromark → mdast(JS)     | 164.5 ms | 199.8 ms      |
+| Prettier(markdown)                 | —        | 461.5 ms      |
+| **fuxi-fmt**（本仓库，整条流水线） | —        | **47.3 ms**   |
 
-| 引擎                                | 解析     | 格式化 / 往返 |
-| ----------------------------------- | -------- | ------------- |
-| Rust + comrak（原生 release）       | 0.9 ms   | 6.1 ms        |
-| markdown-it(JS)                     | 8.3 ms   | —             |
-| 20 遍 Unicode 感知的 CJK 正则（JS） | —        | 12.1 ms       |
-| remark / micromark → mdast(JS)      | 164.5 ms | 199.8 ms      |
-| Prettier(markdown)                  | —        | 461.5 ms      |
-| **fuxi-fmt**（本仓库，整条流水线）  | —        | **47.3 ms**   |
-
-有两个结论对设计有承重作用：
-
-1. JavaScript 里的 tokenizer 加扫描引擎在这个负载上大约比 Prettier 快一个数量级。在所声明的规模上，原生或 WASM 执行**并非必需**，引擎也**不是**保存时格式化的瓶颈——瓶颈是编辑器应用这次编辑（见 §2.F）。
-2. 在这个文件上，remark/micromark 的**解析慢 20 倍**于 markdown-it。它不能出现在每次保存的路径上。
-
+两条结论对设计有承重作用：JavaScript 里的扫描引擎在这个负载上比 Prettier 快一个数量级（47.3 ms 对 461.5 ms），所以原生或 WASM 执行**并非必需**，引擎也**不是**保存时格式化的瓶颈——瓶颈是编辑器应用这次编辑（见 §2.F）；而 remark/micromark **解析慢 20 倍**于 markdown-it，它不能出现在每次保存的路径上。
 ---
 
 ## 2. 目标
