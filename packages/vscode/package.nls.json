@@ -47,7 +47,6 @@
   "fuxiFmt.typography.punctuationChangeList.description": "Half-width marks eligible for conversion; each entry is a single character (TYPO-05).",
   "fuxiFmt.typography.halfwidthAlphanumerics.description": "Full-width letters and digits become half-width (TYPO-06).",
   "fuxiFmt.typography.ideographicSpace.description": "U+3000 becomes an ordinary space (TYPO-06).",
-  "fuxiFmt.typography.hashtag.description": "Space a mid-text `#` from CJK. Off by default, because `#` is usually a hashtag or an anchor (TYPO-09).",
   "fuxiFmt.typography.parenStyle.description": "Parenthesis width, decided by the context typography.context selects (TYPO-08).",
   "fuxiFmt.typography.parenStyle.enum.0": "By the selected context.",
   "fuxiFmt.typography.parenStyle.enum.1": "Force full-width.",

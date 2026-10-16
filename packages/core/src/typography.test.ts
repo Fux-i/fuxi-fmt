@@ -105,15 +105,39 @@ describe('TYPO-07 keeps the space a block marker is separated by', () => {
   });
 });
 
-describe('TYPO-09 hashtags are not spaced', () => {
-  test('leaves a CJK hashtag intact', () => {
-    assert.equal(out('中文#标签\n'), '中文#标签\n');
+describe('TYPO-09 a tag is one word with a space in front of it', () => {
+  // The tag is the token, so the space goes in front of it and never inside it:
+  // '中文 # 标签' is what used to break a tag, and it is what the old opt-in did.
+  test('spaces a tag from the Han text it is written against', () => {
+    assert.equal(out('中文#标签\n'), '中文 #标签\n');
+    assert.equal(out('中文#abc\n'), '中文 #abc\n');
   });
-  test('spaces it only when the opt-in is set', () => {
-    assert.equal(
-      format('中文#标签\n', { typography: { hashtag: true } }).output,
-      '中文 # 标签\n',
-    );
+  test('never puts a space inside the tag', () => {
+    // A tag runs to the end of its characters, Han included - which is what a
+    // tag is in the tools that read them.
+    assert.equal(out('中文#标签abc\n'), '中文 #标签abc\n');
+    assert.equal(out('中文#abc中文\n'), '中文 #abc中文\n');
+  });
+  test('a tag written after a space keeps one space', () => {
+    assert.equal(out('中文 #标签\n'), '中文 #标签\n');
+    assert.equal(out('中文  #标签\n'), '中文 #标签\n');
+  });
+  test('a hash at the start of the content is a marker, not a tag', () => {
+    assert.equal(out('#标签\n'), '# 标签\n');
+    assert.equal(out('#123 修复\n'), '#123 修复\n');
+  });
+  test('a bare hash is not a tag', () => {
+    assert.equal(out('中文#\n'), '中文#\n');
+  });
+  test('what ends a tag ends it', () => {
+    assert.equal(out('中文#标签，后续\n'), '中文 #标签，后续\n');
+  });
+  test('the tag does not reach into a protected span', () => {
+    assert.equal(out('中文#标签\u0060code\u0060\n'), '中文 #标签\u0060code\u0060\n');
+  });
+  test('what it settles on is stable on the second run', () => {
+    const once = out('中文#标签abc\n');
+    assert.equal(out(once), once);
   });
 });
 

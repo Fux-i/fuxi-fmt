@@ -47,7 +47,6 @@ function variant(n: number): FormatOptionsInput {
     typography: {
       punctuationStyle: take(PUNCT),
       parenStyle: take(PAREN),
-      hashtag: take(FLAGS),
     },
   };
 }

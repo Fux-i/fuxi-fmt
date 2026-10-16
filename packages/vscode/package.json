@@ -295,16 +295,6 @@
           "scope": "resource",
           "markdownDescription": "%fuxiFmt.typography.ideographicSpace.description%"
         },
-        "fuxiFmt.typography.hashtag": {
-          "keywords": [
-            "fuxi",
-            "fuxi-fmt"
-          ],
-          "type": "boolean",
-          "default": false,
-          "scope": "resource",
-          "markdownDescription": "%fuxiFmt.typography.hashtag.description%"
-        },
         "fuxiFmt.typography.parenStyle": {
           "keywords": [
             "fuxi",

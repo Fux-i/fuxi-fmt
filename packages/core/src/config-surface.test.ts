@@ -56,7 +56,6 @@ const SAMPLES: Record<string, unknown> = {
   'typography.punctuationChangeList': [',', ';'],
   'typography.halfwidthAlphanumerics': false,
   'typography.ideographicSpace': false,
-  'typography.hashtag': true,
   'typography.parenStyle': 'preserve',
   'typography.context': 'adjacent',
   'typography.quotes': 'preserve',

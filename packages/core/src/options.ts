@@ -131,8 +131,6 @@ export interface TypographyOptions {
   readonly halfwidthAlphanumerics: boolean;
   /** U+3000 becomes a normal space (TYPO-06). */
   readonly ideographicSpace: boolean;
-  /** Space a mid-text '#' from CJK; off by default (TYPO-09). */
-  readonly hashtag: boolean;
   /** Parenthesis width, by the script of the contents (TYPO-08). */
   readonly parenStyle: ParenStyle;
   /** How Chinese context is decided for every width rule (TYPO-05, TYPO-08). */
@@ -278,7 +276,6 @@ export interface TypographyInput {
   readonly punctuationChangeList?: readonly string[];
   readonly halfwidthAlphanumerics?: boolean;
   readonly ideographicSpace?: boolean;
-  readonly hashtag?: boolean;
   readonly parenStyle?: ParenStyle;
   readonly context?: ContextMode;
   readonly quotes?: QuoteStyle;
@@ -338,7 +335,6 @@ export const defaultOptions: FormatOptions = {
     punctuationChangeList: [',', '.', ':', '!', '?', ';'],
     halfwidthAlphanumerics: true,
     ideographicSpace: true,
-    hashtag: false,
     parenStyle: 'mixed',
     context: 'line',
     quotes: 'paired',
@@ -454,7 +450,6 @@ export const OPTION_VOCABULARY = {
     punctuationChangeList: { kind: 'stringList' },
     halfwidthAlphanumerics: { kind: 'bool' },
     ideographicSpace: { kind: 'bool' },
-    hashtag: { kind: 'bool' },
     parenStyle: { kind: 'oneOf', values: PAREN_STYLES },
     context: { kind: 'oneOf', values: CONTEXT_MODES },
     quotes: { kind: 'oneOf', values: QUOTE_STYLES },

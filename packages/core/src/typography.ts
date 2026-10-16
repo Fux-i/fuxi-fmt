@@ -12,12 +12,12 @@
  * with no exclusion list.
  *
  * Spec references: TYPO-01 (spacing), TYPO-02 (boundary-only collapse),
- * TYPO-03 (compound names), TYPO-07 (full-width punctuation), TYPO-09 (hashtags),
+ * TYPO-03 (compound names), TYPO-07 (full-width punctuation), TYPO-09 (tags),
  * INL-01 (a link bracket is half a word).
  */
 
 import { contentStartOf } from './blocks.ts';
-import { isCjk, isFullPunct, isSpacingChar, type CjkClass } from './chars.ts';
+import { isAlphanumeric, isCjk, isFullPunct, isSpacingChar, type CjkClass } from './chars.ts';
 import type { CharRange } from './ignores.ts';
 import type { TypographyOptions } from './options.ts';
 import {
@@ -47,10 +47,6 @@ interface Unit {
 
 function classOf(ch: string, options: TypographyOptions): CharClass {
   if (isCjk(ch, options.cjkClasses)) return 'cjk';
-  // TYPO-09: a mid-text '#' is a hashtag or an anchor and is never spaced by
-  // default, because '中文#标签' becoming '中文 # 标签' breaks the tag wherever
-  // it is published. Opting in is a deliberate choice, not an oversight.
-  if (ch === '#' && options.hashtag) return 'latin';
   if (isSpacingChar(ch, options.spacingSymbols)) return 'latin';
   // INL-01: the opening bracket of a link, an image or a reference. It is a word
   // on its left, whichever of those it turns out to be.
@@ -119,10 +115,28 @@ function protectedClassAt(
   return syntaxMask[at] === 1 ? 'other' : 'latin';
 }
 
+/**
+ * TYPO-09. The characters a tag is written with: letters, digits, Han (and the
+ * other configured scripts), and the punctuation tags conventionally carry. A tag
+ * ends at anything else, which is what keeps '中文#标签，后续' from swallowing the
+ * comma.
+ */
+function isTagChar(ch: string, options: TypographyOptions): boolean {
+  return (
+    isAlphanumeric(ch) ||
+    isCjk(ch, options.cjkClasses) ||
+    ch === '_' ||
+    ch === '-' ||
+    ch === '/'
+  );
+}
+
 function tokenize(
   text: string,
   from: number,
   to: number,
+  /** Offset of the first content character, past the block markers. */
+  contentStart: number,
   mask: Uint8Array,
   syntaxMask: Uint8Array,
   bracketMask: Uint8Array,
@@ -158,6 +172,19 @@ function tokenize(
       i = j;
       continue;
     }
+    // TYPO-09: a mid-text '#' opens a tag, and the tag is one word. Spacing it
+    // from the Han in front of it is the point; a space inside it would end it
+    // ('中文 # 标签' is not a tag any more). The first character of the content is
+    // not a tag - there the '#' is an ATX marker, which BLK-05 owns.
+    if (ch === '#' && i > contentStart) {
+      let end = i + 1;
+      while (end < to && mask[end] !== 1 && isTagChar(text.charAt(end), options)) end++;
+      if (end > i + 1) {
+        units.push({ text: text.slice(i, end), cls: 'latin', start: i });
+        i = end;
+        continue;
+      }
+    }
     units.push({ text: ch, cls: classOf(ch, options), start: i });
     i++;
   }
@@ -186,7 +213,7 @@ function formatLine(
   }
   if (allBlock) return text.slice(from, to);
 
-  const units = tokenize(text, from, to, mask, syntaxMask, bracketMask, options);
+  const units = tokenize(text, from, to, contentStart, mask, syntaxMask, bracketMask, options);
   let out = '';
   let prev: Unit | null = null;
   let pending = '';
