@@ -12,7 +12,8 @@
  * with no exclusion list.
  *
  * Spec references: TYPO-01 (spacing), TYPO-02 (boundary-only collapse),
- * TYPO-03 (compound names), TYPO-07 (full-width punctuation), TYPO-09 (hashtags).
+ * TYPO-03 (compound names), TYPO-07 (full-width punctuation), TYPO-09 (hashtags),
+ * INL-01 (a link bracket is half a word).
  */
 
 import { contentStartOf } from './blocks.ts';
@@ -25,10 +26,17 @@ import {
   regionMask,
   scanRegions,
   splitSourceLines,
+  type Region,
   type RegionKind,
 } from './scan.ts';
 
-type CharClass = 'cjk' | 'latin' | 'fullpunct' | 'other' | 'space';
+/**
+ * 'open' and 'close' are the two halves of a link bracket (INL-01). A word is a
+ * boundary on both sides; 'open' is a boundary on its left only ('[' - spacing it
+ * on the right would put the space inside the link text), 'close' on its right
+ * only ('](destination)' - spacing it on the left would do the same).
+ */
+type CharClass = 'cjk' | 'latin' | 'open' | 'close' | 'fullpunct' | 'other' | 'space';
 
 interface Unit {
   readonly text: string;
@@ -44,6 +52,9 @@ function classOf(ch: string, options: TypographyOptions): CharClass {
   // it is published. Opting in is a deliberate choice, not an oversight.
   if (ch === '#' && options.hashtag) return 'latin';
   if (isSpacingChar(ch, options.spacingSymbols)) return 'latin';
+  // INL-01: the opening bracket of a link, an image or a reference. It is a word
+  // on its left, whichever of those it turns out to be.
+  if (ch === '[') return 'open';
   if (isFullPunct(ch)) return 'fullpunct';
   return 'other';
 }
@@ -61,10 +72,51 @@ function classOf(ch: string, options: TypographyOptions): CharClass {
  */
 function separator(prev: Unit, cur: Unit, pending: string): string {
   if (prev.cls === 'fullpunct' || cur.cls === 'fullpunct') return '';
-  if ((prev.cls === 'cjk' && cur.cls === 'latin') || (prev.cls === 'latin' && cur.cls === 'cjk')) {
+  // INL-01. A bracket is attached on its inside: nothing is ever placed between
+  // '[' and the text it opens, or between the link text and '](destination)'.
+  if (prev.cls === 'open' || prev.cls === 'other') return pending;
+  if (cur.cls === 'close' || cur.cls === 'other') return pending;
+  const left = prev.cls === 'close' ? 'latin' : prev.cls;
+  const right = cur.cls === 'open' ? 'latin' : cur.cls;
+  if ((left === 'cjk' && right === 'latin') || (left === 'latin' && right === 'cjk')) {
     return ' ';
   }
   return pending;
+}
+
+/**
+ * The link brackets, as the half of the word they are (INL-01).
+ *
+ * 1 is the opening half - '[' and the '![' of an image - and 2 is the closing
+ * one, the '](destination)' tail the scanner claims as one region. Everything
+ * else protected is either a word ('latin') or markup that binds on both sides
+ * ('other', which is what an inline HTML tag is).
+ */
+function linkBracketMask(text: string, regions: readonly Region[]): Uint8Array {
+  const mask = new Uint8Array(text.length);
+  for (const region of regions) {
+    if (region.kind !== 'linkSyntax') continue;
+    // An image marker is scanned as '![' - one region - so the bracket is the
+    // second character there.
+    const at = text.charAt(region.start) === '!' ? region.start + 1 : region.start;
+    const head = text.charAt(at);
+    const value = head === '[' ? 1 : head === ']' ? 2 : 0;
+    if (value === 0) continue;
+    for (let i = region.start; i < region.end; i++) mask[i] = value;
+  }
+  return mask;
+}
+
+/** The class of one character inside a protected region. */
+function protectedClassAt(
+  at: number,
+  syntaxMask: Uint8Array,
+  bracketMask: Uint8Array,
+): CharClass {
+  const bracket = bracketMask[at];
+  if (bracket === 1) return 'open';
+  if (bracket === 2) return 'close';
+  return syntaxMask[at] === 1 ? 'other' : 'latin';
 }
 
 function tokenize(
@@ -73,6 +125,7 @@ function tokenize(
   to: number,
   mask: Uint8Array,
   syntaxMask: Uint8Array,
+  bracketMask: Uint8Array,
   options: TypographyOptions,
 ): Unit[] {
   const units: Unit[] = [];
@@ -83,18 +136,15 @@ function tokenize(
       while (j < to && mask[j] === 1) j++;
       // A protected span usually behaves as one opaque Latin word (SAFE-03), so
       // an inline code span gains the spaces that make it a word in the
-      // sentence. Punctuation that delimits a link or a tag is not a word:
-      // treating the destination as one put a space inside the link text and
-      // another after the destination, which is a change the author never asked
-      // for and a rule that never wanted to make it. It takes the class the
-      // markup characters take, which is to say neither side of it is a
-      // boundary.
+      // sentence, and so does a wikilink. A link bracket is the exception: each
+      // half is a word on its outside and markup on its inside (INL-01), and an
+      // inline HTML tag is markup on both.
       let k = i;
       while (k < j) {
-        const syntax = syntaxMask[k] === 1;
+        const cls = protectedClassAt(k, syntaxMask, bracketMask);
         let end = k;
-        while (end < j && (syntaxMask[end] === 1) === syntax) end++;
-        units.push({ text: text.slice(k, end), cls: syntax ? 'other' : 'latin', start: k });
+        while (end < j && protectedClassAt(end, syntaxMask, bracketMask) === cls) end++;
+        units.push({ text: text.slice(k, end), cls, start: k });
         k = end;
       }
       i = j;
@@ -122,6 +172,7 @@ function formatLine(
   contentStart: number,
   mask: Uint8Array,
   syntaxMask: Uint8Array,
+  bracketMask: Uint8Array,
   blockMask: Uint8Array,
   options: TypographyOptions,
 ): string {
@@ -135,7 +186,7 @@ function formatLine(
   }
   if (allBlock) return text.slice(from, to);
 
-  const units = tokenize(text, from, to, mask, syntaxMask, options);
+  const units = tokenize(text, from, to, mask, syntaxMask, bracketMask, options);
   let out = '';
   let prev: Unit | null = null;
   let pending = '';
@@ -165,14 +216,12 @@ function formatLine(
 }
 
 /**
- * Protected characters that are punctuation rather than a word: the delimiters of
- * a link or an image, and an inline HTML tag. They are protected either way; the
- * distinction is only about spacing, and it is needed because SAFE-03's model - a
- * protected span is one opaque Latin word - is right for an inline code span and
- * wrong for a bracket or a tag.
+ * Protected characters that are markup rather than a word: an inline HTML tag,
+ * which binds on both sides. The link brackets are the third case and are not
+ * here: each half binds on its inside only (INL-01), which is what
+ * linkBracketMask is for.
  */
-const isInlineSyntax = (kind: RegionKind): boolean =>
-  kind === 'linkSyntax' || kind === 'inlineHtml';
+const isInlineSyntax = (kind: RegionKind): boolean => kind === 'inlineHtml';
 
 export function applyTypography(
   text: string,
@@ -185,6 +234,7 @@ export function applyTypography(
   const mask = protectedMask(text, extra, regions);
   const blockMask = regionMask(text, isBlockRegionKind, extra, regions);
   const syntaxMask = regionMask(text, isInlineSyntax, [], regions);
+  const bracketMask = linkBracketMask(text, regions);
   const lines = splitSourceLines(text);
   let out = '';
   for (let li = 0; li < lines.length; li++) {
@@ -194,7 +244,17 @@ export function applyTypography(
     const newline = text.slice(line.end, next === undefined ? text.length : next.start);
     const contentStart = line.start + contentStartOf(text.slice(line.start, line.end));
     out +=
-      formatLine(text, line.start, line.end, contentStart, mask, syntaxMask, blockMask, options) +
+      formatLine(
+        text,
+        line.start,
+        line.end,
+        contentStart,
+        mask,
+        syntaxMask,
+        bracketMask,
+        blockMask,
+        options,
+      ) +
       newline;
   }
   return out;

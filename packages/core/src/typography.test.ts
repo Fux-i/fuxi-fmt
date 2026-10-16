@@ -215,7 +215,7 @@ describe('SAFE-06 link and image syntax survives the typography passes', () => {
   // destination whose parentheses became full width is not a link any more, and
   // an image whose "!" became "！" is not an image.
   test('leaves a relative destination alone', () => {
-    assert.equal(out('中文[链接](a.md)中文\n'), '中文[链接](a.md)中文\n');
+    assert.equal(out('中文[链接](a.md)中文\n'), '中文 [链接](a.md) 中文\n');
   });
   test('leaves the image marker and its destination alone', () => {
     assert.equal(out('中文 ![图](a.png) 中文\n'), '中文 ![图](a.png) 中文\n');
@@ -235,7 +235,37 @@ describe('SAFE-06 link and image syntax survives the typography passes', () => {
   test('still formats the prose around the syntax', () => {
     // Protection must not become an excuse to stop working: the text outside the
     // link is still spaced and still gets full-width punctuation.
-    assert.equal(out('中文[链接](a.md)中文,后面\n'), '中文[链接](a.md)中文，后面\n');
+    assert.equal(out('中文[链接](a.md)中文,后面\n'), '中文 [链接](a.md) 中文，后面\n');
+  });
+});
+
+describe('INL-01 a link is a Latin word whose brackets are attached inside', () => {
+  // The two halves of the bracket point opposite ways. '[' opens a word: it takes
+  // the space in front of it and nothing behind it, or the space lands inside the
+  // link text ('[ 中文](a.md)'). '](destination)' closes one: attached on the left,
+  // a word on the right.
+  test('spaces the outer edges and never the inside', () => {
+    assert.equal(out('中文[abc](url)\n'), '中文 [abc](url)\n');
+    assert.equal(out('[abc](url)中文\n'), '[abc](url) 中文\n');
+    assert.equal(out('中文[abc](url)中文\n'), '中文 [abc](url) 中文\n');
+    assert.equal(out('[中文](url)\n'), '[中文](url)\n');
+  });
+  test('collapses an author run on both edges', () => {
+    assert.equal(out('中文  [abc](url)  中文\n'), '中文 [abc](url) 中文\n');
+  });
+  test('an image marker is the same shape', () => {
+    assert.equal(out('中文![图](a.png)中文\n'), '中文 ![图](a.png) 中文\n');
+  });
+  test('a bracket without a destination gets the left space only', () => {
+    // Only '](destination)' is a closing half; a bare ']' is ordinary prose and
+    // stays attached, which is what '[ref]中文' keeps as written.
+    assert.equal(out('中文[ref]\n'), '中文 [ref]\n');
+    assert.equal(out('中文[ref][1]\n'), '中文 [ref][1]\n');
+    assert.equal(out('中文[^1]\n'), '中文 [^1]\n');
+  });
+  test('what it settles on is stable on the second run', () => {
+    const once = out('中文[abc](url)中文\n');
+    assert.equal(out(once), once);
   });
 });
 
