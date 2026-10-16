@@ -1,6 +1,6 @@
 # 贡献指南
 
-给改这个仓库的人的说明。面向 agent 的操作约束在 [AGENTS.md](AGENTS.md)；行为契约在[功能规范](FUXI-FMT-SPEC.md)。
+给改这个仓库的人的说明。面向 agent 的操作约束在 [AGENTS.md](AGENTS.md)；行为契约在 [功能规范](FUXI-FMT-SPEC.md)。
 
 ## 环境
 
@@ -51,7 +51,7 @@ npm run ci > /tmp/ci.log 2>&1 || { tail -20 /tmp/ci.log; exit 1; }
 
 然后是按「文档随代码一起走」：一个提交如果让某份文档说出了它刚刚弄错的话，那它就不算完成，即使测试全绿。同一次提交里要更新的东西：
 
-- 规范里受影响的规则文字，以及第 6 节的状态注记；
+- 规范里受影响的规则文字，以及第 5 节的状态注记；
 - 如果新增、改名或删除选项，`packages/vscode/package.json`（它由选项词汇表生成，跑 `npm run manifest`，不要手改）**以及** `package.nls.json` 与 `package.nls.zh-cn.json` 里对应的那几条字符串；
 - 用户看得见的改动要更新 `CHANGELOG.md`。
 
@@ -72,7 +72,7 @@ npm run ci > /tmp/ci.log 2>&1 || { tail -20 /tmp/ci.log; exit 1; }
 
 ## 剩余工作
 
-规范是权威；这里只写最短的准确摘要。**未实现选项的清单只在规范第 6 节末尾的「实现状态」一段，本文件不重复它。**<!-- fuxi-fmt:work-in-progress -->
+规范是权威；这里只写最短的准确摘要。**选项的实现状态（含未实现与部分实现）只在规范第 5 节末尾的「实现状态」一段，本文件不重复它。**<!-- fuxi-fmt:work-in-progress -->
 
 | 事项 | 状态 |
 | ---- | ---- |

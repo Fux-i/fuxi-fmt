@@ -159,7 +159,7 @@ function spanEnd(
  * BLK-08 step four: which lists contain a protected block?
  *
  * A list that contains one is excluded from indentation normalisation entirely,
- * and the caller reports a diagnostic (spec section 7 item 1, option b). Moving
+ * and the caller reports a diagnostic (SAFE-02 × BLK-08, reported as DET-12). Moving
  * code the author fixed at a particular indentation is what SAFE-02 exists to
  * prevent, and reindenting a list around a fence would either move the fence or
  * leave the list half normalised.

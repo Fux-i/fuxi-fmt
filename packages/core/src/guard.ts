@@ -156,7 +156,7 @@ interface Anchor {
  * Blankness is decided on the content, so a bare `>` counts as the blank line it
  * renders as rather than as a line of text. Without that, no rule could add or
  * remove a blank line inside a block quote: the guard would read the `>` line as a
- * new line and refuse the document for it (section 7, item 0).
+ * new line and refuse the document for it (BLK-14).
  */
 function nonBlankLines(text: string): Anchor[] {
   const out: Anchor[] = [];

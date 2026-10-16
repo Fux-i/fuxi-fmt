@@ -105,7 +105,7 @@ mixed punctuation, CRLF, CJK adjacent to every ASCII punctuation mark, deeply ne
 
 Every commit that changes behaviour updates, **in the same commit**:
 
-- the specification's rule text and its section 6 status note, if either is affected;
+- the specification's rule text and its section 5 status note, if either is affected;
 - `packages/vscode/package.json` — generated from the option vocabulary, so run `npm run manifest`
   rather than editing it — **and both** `package.nls.json` and `package.nls.zh-cn.json`, if an option was
   added, renamed or removed;
@@ -189,14 +189,14 @@ git tag -n          # verify
 3. Write tests first — a positive case, a negative case, and a protected-region case proving the
    rule does not leak into code blocks, front matter or inline spans.
 4. Verify idempotence (run the formatter twice in the test).
-5. Add the config key to the spec's section 6 if it is new.
+5. Add the config key to the spec's section 5 if it is new.
 6. Commit as `feat(<scope>): <rule id> <what it does>`.
 
 ## Do not
 
 - Add a dependency to `packages/core` without arguing for it. The core has exactly one —
-  `yaml`, for front matter (FM-03) — and the argument is recorded in the specification's
-  section 7. Everything on the Markdown path is hand-written, and the benchmark says a
+  `yaml`, for front matter (FM-03) — and the argument is recorded with FM-03 in the
+  specification. Everything on the Markdown path is hand-written, and the benchmark says a
   hand-written scan is an order of magnitude faster than Prettier on a 10k-line file. Do not
   reach for a Markdown formatting framework.
 - Use remark/micromark on the formatting path. It parses the reference fixture 20x slower than
