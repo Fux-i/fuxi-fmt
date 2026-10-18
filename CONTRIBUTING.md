@@ -91,3 +91,15 @@ npm run ci > /tmp/ci.log 2>&1 || { tail -20 /tmp/ci.log; exit 1; }
 一次提交只做一件连贯的事 —— 一条规则或一次重构 —— 并在每个测试转绿的节点提交。不要留下与当前工作无关的脏工作区。
 
 版本遵循语义化版本；标签沿用 Linux 内核的约定：发布是 `vMAJOR.MINOR.PATCH`，候选版本后缀 `-rcN`，标签必须用 `git tag -a` 打注解标签。**除非明确要求，不要 push。**
+
+## 发布流程
+
+推一个 `v` 开头的标签（`v*`）就触发 `.github/workflows/release.yml`：它先跑完整的 `npm run ci`，校验标签存在、其提交是 `origin/main` 的祖先、标签版本与四份清单一致，然后构建 vsix，再用该版本的 CHANGELOG 小节（没有小节时退回提交列表）造出 GitHub Release，并把 vsix 作为附件挂上去。`-rcN` 标签只创建预发布，版本校验比的是去掉 `-rcN` 后的基准版本。工作流跑在 GitHub environment `release` 下，将来若要发布，token 与 required reviewers 都放在那里。
+
+**Marketplace 那一步是手动的。** 工作流只在仓库变量 `PUBLISH_TO_MARKETPLACE` 为 `true` 时才发布到 Visual Studio Marketplace，打开它需要一个 Azure DevOps personal access token（scope `Marketplace > Manage`，organization 选 `All accessible organizations`）存成 environment `release` 的 secret `VSCE_PAT`。没有 token 时的做法：从 GitHub Release 下载 `fuxi-fmt-<version>.vsix`，到 https://marketplace.visualstudio.com/manage 上传 —— 网页上传是官方并列的两种发布方式之一，本来就不需要 token。
+
+**日常流程。** 把 `package.json` 与 `packages/{cli,core,vscode}/package.json` 四份清单里的版本号改掉 → 提交 → 打标签 → 分支和标签分两次 push（`git push && git push --tags`）：一次推完的话，标签那次运行可能取到还不含这个提交的 `main`，祖先检查会失败。
+
+**彩排。** 手动触发工作流（`workflow_dispatch`）并设 `dry_run=true`，可以逐步看完整流程：新的标签只创建 **draft** Release，已经存在的 Release 一个字都不改，什么都不发布。要连 Release 创建也走一遍真实路径，就推一个候选标签（例如 `v1.1.0-rc1`）：它按真实流程创建预发布并附上 vsix，但绝不碰 Marketplace，看完用 `gh release delete <tag> --cleanup-tag` 收掉。候选标签会成为「最新标签」，而 `docs.test.ts` 要求最新标签在 CHANGELOG.md 里有对应小节，所以先写下 `## [1.1.0-rc1]` 那一节再打标签，否则工作流里的 `npm run ci` 会先失败。
+
+**想要全自动发布时。** Azure DevOps 的 global PAT 在 **2026-12-01** 退役，`VSCE_PAT` 届时失效；而且新建 Azure DevOps 组织现在要求绑定 Azure 订阅。更稳的官方路线是 Entra ID + workload identity federation（新建 Entra 租户官方要求付费订阅，个人 Microsoft 账号单独建不了）：在 Entra 建一个 user-assigned managed identity（或 app registration），挂一条 federated credential，subject 写 `repo:Fux-i/fuxi-fmt:environment:release`；把它以 Contributor 加进 publisher；工作流补上 `permissions: id-token: write` 和一步 `azure/login@v3`（`allow-no-subscriptions: true`），发布命令换成 `vsce publish --azure-credential --packagePath ...`。`--oidc`（trusted publishing）那条后端还没上线，不能用。

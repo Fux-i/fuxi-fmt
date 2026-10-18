@@ -391,8 +391,9 @@ describe('documentation stays true to the code', () => {
       // than the newest tag contradicts its release: the tag is published and the
       // manifest is not - that is the bug this check exists for. A package NEWER
       // than the newest tag is the release sequence working: the version is bumped,
-      // the commit is pushed, and the tag is pushed next, and tag pushes do not
-      // trigger this workflow. Demanding equality made CI red on a commit that was
+      // the commit is pushed, and the tag is pushed next. The tag push starts the
+      // release workflow, which runs this suite again on the released commit.
+      // Demanding equality made CI red on a commit that was
       // already correct, with a message about a version mismatch that did not
       // exist - which is exactly what happened on the v0.25.0 release.
       assert.ok(

@@ -74,7 +74,8 @@ npm run build                              # bundle the VS Code extension
    sequence working, not an error — bump, commit, tag, then push the branch and
    the tag together (`git push && git push --tags`). Pushing the branch first
    leaves CI comparing a bumped manifest against a tag that only exists on your
-   machine, and a tag push does not trigger the workflow, so nothing re-runs.
+   machine, and a tag push does trigger the release workflow, which re-runs the
+   full check itself and then publishes.
 5. Confirm `git status` is clean afterwards. Nothing above should write to the
    tree.
 

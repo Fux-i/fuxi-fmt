@@ -1,0 +1,148 @@
+name: Release
+
+# A pushed tag is what normally publishes. An -rcN tag is a rehearsal release:
+# it gets a GitHub pre-release and never reaches the Marketplace. A manual dispatch
+# can publish deliberately, by asking for dry_run=false.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to rehearse; defaults to the newest tag
+        required: false
+      dry_run:
+        description: Do everything except create a real release or publish
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # The VSCE_PAT secret, and any required reviewers, live on this environment.
+    environment: release
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # A dispatch must build the tag its guard is about to check, not the
+          # branch it was launched from. inputs.tag is empty on a tag push, so
+          # that path still checks out the tag that was pushed.
+          ref: ${{ inputs.tag || github.ref }}
+          # The guard walks back to the previous tag and checks that the tagged
+          # commit is on main; neither works on a shallow clone.
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Resolve the tag and refuse to publish anything inconsistent
+        id: meta
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = workflow_dispatch ]; then
+            tag="${INPUT_TAG}"
+            if [ -z "$tag" ]; then tag="$(git describe --tags --abbrev=0)"; fi
+            dry_run="${INPUT_DRY_RUN}"
+          else
+            tag="${GITHUB_REF_NAME}"
+            dry_run=false
+          fi
+
+          git rev-parse -q --verify "refs/tags/${tag}" >/dev/null || {
+            echo "::error::${tag} is not a tag"; exit 1; }
+          git merge-base --is-ancestor "${tag}^{commit}" origin/main || {
+            echo "::error::${tag} is not on main"; exit 1; }
+
+          # The tag is the version; a manifest that disagrees would publish a
+          # number nobody asked for. A version ahead of the tag is not a mistake
+          # (that is the next release being prepared), so this compares equality
+          # rather than trusting the suite's 'nothing is behind the newest tag'.
+          version="${tag#v}"
+          # A manifest holds x.y.z; an -rcN tag names that same candidate but is
+          # never a version a manifest may carry, so compare the base.
+          release_version="${version%%-*}"
+          for manifest in package.json packages/cli/package.json \
+                          packages/core/package.json packages/vscode/package.json; do
+            found="$(node -p "require('./${manifest}').version")"
+            [ "$found" = "$release_version" ] || {
+              echo "::error::${manifest} says ${found}, ${tag} says ${release_version}"; exit 1; }
+          done
+
+          case "$tag" in *-rc*) is_rc=true ;; *) is_rc=false ;; esac
+          previous="$(git describe --tags --abbrev=0 "${tag}^" 2>/dev/null || true)"
+          {
+            echo "tag=${tag}"
+            echo "version=${version}"
+            echo "release_version=${release_version}"
+            echo "previous=${previous}"
+            echo "is_rc=${is_rc}"
+            echo "dry_run=${dry_run}"
+          } >> "${GITHUB_OUTPUT}"
+          echo "releasing ${tag}: rc=${is_rc} dry_run=${dry_run} previous=${previous:-none}"
+
+      - run: npm run ci
+
+      - run: npm run vsix
+
+      - name: The body is the changelog entry, with the commit subjects as fallback
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          PREVIOUS: ${{ steps.meta.outputs.previous }}
+        run: |
+          set -euo pipefail
+          args=(--version "${VERSION}" --tag "${TAG}")
+          if [ -n "${PREVIOUS}" ]; then args+=(--previous "${PREVIOUS}"); fi
+          node scripts/release-notes.mjs "${args[@]}" > release-notes.md
+          cat release-notes.md
+
+      - name: Create the release, or bring an existing one back up to date
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.meta.outputs.release_version }}
+          IS_RC: ${{ steps.meta.outputs.is_rc }}
+          DRY_RUN: ${{ steps.meta.outputs.dry_run }}
+        run: |
+          set -euo pipefail
+          vsix="output/fuxi-fmt-${RELEASE_VERSION}.vsix"
+          test -f "${vsix}" || { echo "::error::no ${vsix}"; exit 1; }
+          # Explicit booleans: a re-run takes the edit path and must land on the
+          # same state, not keep whatever the first run happened to leave.
+          flags=(--title "${TAG}" --notes-file release-notes.md)
+          if [ "${IS_RC}" = true ]; then flags+=(--prerelease=true); else flags+=(--prerelease=false); fi
+          if [ "${DRY_RUN}" = true ]; then flags+=(--draft=true); else flags+=(--draft=false); fi
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            # A rehearsal must not draft a release that is already published.
+            if [ "${DRY_RUN}" = true ]; then
+              echo "::notice::${TAG} already has a release; a rehearsal leaves it alone"
+            else
+              gh release edit "${TAG}" "${flags[@]}"
+              gh release upload "${TAG}" "${vsix}" --clobber
+            fi
+          else
+            gh release create "${TAG}" "${vsix}" --verify-tag "${flags[@]}"
+          fi
+
+      # Off unless the repository variable says otherwise: publishing needs a
+      # VSCE_PAT, and without one the route is to upload the .vsix attached to
+      # the release by hand at https://marketplace.visualstudio.com/manage.
+      # Last, and only for a real release: a Marketplace version cannot be taken
+      # back, and a failure above leaves a finished GitHub release behind.
+      - name: Publish to the Visual Studio Marketplace
+        if: vars.PUBLISH_TO_MARKETPLACE == 'true' && steps.meta.outputs.dry_run != 'true' && steps.meta.outputs.is_rc != 'true'
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          RELEASE_VERSION: ${{ steps.meta.outputs.release_version }}
+        run: node_modules/.bin/vsce publish --packagePath "output/fuxi-fmt-${RELEASE_VERSION}.vsix" --skip-duplicate
