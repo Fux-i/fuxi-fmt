@@ -31,10 +31,20 @@ export interface Block {
   readonly blanksBefore: number;
 }
 
+/**
+ * The kind of a range that occupies whole lines: a block, or a run of prose.
+ *
+ * A code span or an HTML comment may contain a line ending (SAFE-03, SAFE-04), and
+ * the lines it covers are then prose rather than a block of their own. segment()
+ * glues them into the paragraph around them; the distinction is why this type is
+ * wider than BlockKind.
+ */
+export type AtomicKind = BlockKind | 'prose';
+
 export interface AtomicRange {
   readonly start: number;
   readonly end: number;
-  readonly kind: BlockKind;
+  readonly kind: AtomicKind;
 }
 
 const THEMATIC_BREAK = /^ {0,3}(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/;
@@ -59,7 +69,7 @@ export function classifyLine(text: string): LineKind {
   return text.trim().length === 0 ? 'blank' : classifyContent(text);
 }
 
-function extendsBlock(current: ContentKind, next: ContentKind): boolean {
+function extendsBlock(current: BlockKind, next: ContentKind): boolean {
   if (current === 'paragraph') return next === 'paragraph';
   if (current === 'list') return next === 'list' || next === 'paragraph';
   if (current === 'blockquote') return next === 'blockquote' || next === 'paragraph';
@@ -231,7 +241,42 @@ export function segment(texts: readonly string[], atomic: readonly AtomicRange[]
     }
 
     const atom = starts.get(i);
-    if (atom !== undefined) {
+    // SAFE-03. A run of prose is not a block: the paragraph it sits in swallows it,
+    // so the two are one block and no blank line may separate them. A blank inside a
+    // paragraph rewrites it as two, and inside a quote or a list item it splits the
+    // container itself - the change GRT-01 refuses for a lazy continuation.
+    if (atom !== undefined && atom.kind === 'prose') {
+      const previous = blocks[blocks.length - 1];
+      const joins =
+        previous !== undefined && previous.end === i && extendsBlock(previous.kind, 'paragraph');
+      const kind = joins ? previous.kind : classifyContent(text);
+      const start = joins ? previous.start : i;
+      const blanksBefore = joins ? previous.blanksBefore : blanks;
+      if (joins) blocks.pop();
+      let j = atom.end;
+      for (;;) {
+        const next = starts.get(j);
+        if (next !== undefined) {
+          if (next.kind !== 'prose') break;
+          j = next.end;
+          continue;
+        }
+        const candidate = texts[j];
+        if (
+          candidate === undefined ||
+          candidate.trim().length === 0 ||
+          !extendsBlock(kind, classifyContent(candidate))
+        ) {
+          break;
+        }
+        j++;
+      }
+      blocks.push({ kind, start, end: j, blanksBefore });
+      i = j;
+      blanks = 0;
+      continue;
+    }
+    if (atom !== undefined && atom.kind !== 'prose') {
       blocks.push({ kind: atom.kind, start: atom.start, end: atom.end, blanksBefore: blanks });
       i = atom.end;
       blanks = 0;

@@ -41,3 +41,25 @@ describe('SAFE-01 a region that spans lines is left byte for byte', () => {
     assert.equal(result.output, '<!--\n- list\n-->\n\n中文 abc\n');
   });
 });
+
+describe('BLK-01 a region that spans lines is prose, not a block', () => {
+  // The lines a region covers are protected, and the blank-line policy used to read
+  // every run of protected lines as a block. A code span or a comment in the middle
+  // of a paragraph is not one: the blank line it then inserted split the paragraph
+  // in two, and inside a quote or a list item it split the container itself.
+  const cases: readonly (readonly [string, string])[] = [
+    ['a code span in the middle of a paragraph', 'Para ' + TICK + 'a\nb' + TICK + ' and more\nstill same.\n'],
+    ['a code span that opens the paragraph', TICK + 'a\nb' + TICK + ' tail\nmore text\n'],
+    ['a code span inside a list item', '- item ' + TICK + 'a\nb' + TICK + ' and\n  more\n'],
+    ['a code span inside a block quote', '> quote ' + TICK + 'a\nb' + TICK + ' and\n> more\n'],
+    ['a comment in the middle of a paragraph', 'text <!--\nc\nd -->\nmore\n'],
+    ['a comment that interrupts a paragraph', 'Para\n<!-- c\nd -->\nmore text\n'],
+  ];
+  for (const [name, input] of cases) {
+    test(name + ' gets no blank line inserted', () => {
+      const result = format(input);
+      assert.deepEqual(result.diagnostics, []);
+      assert.equal(result.output, input);
+    });
+  }
+});

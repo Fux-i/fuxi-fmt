@@ -574,8 +574,35 @@ export function protectedLines(
   lines: readonly SourceLine[],
   regions: readonly Region[],
 ): boolean[] {
+  return coveredLines(text, lines, regions, () => true);
+}
+
+/**
+ * The protected lines whose content is prose rather than a block (SAFE-03, SAFE-04).
+ *
+ * A code span and an HTML comment may contain a line ending, and a structural pass
+ * reads every run of protected lines as a block. These lines are not one: they are
+ * part of the paragraph around them, and segment() glues them into it instead of
+ * separating them. An ignored line is not prose - CFG-03 asks for its bytes, not
+ * for a reading of it.
+ */
+export function proseLines(
+  text: string,
+  lines: readonly SourceLine[],
+  regions: readonly Region[],
+): boolean[] {
+  return coveredLines(text, lines, regions, (kind) => !isBlockRegionKind(kind));
+}
+
+function coveredLines(
+  text: string,
+  lines: readonly SourceLine[],
+  regions: readonly Region[],
+  accept: (kind: RegionKind) => boolean,
+): boolean[] {
   const out = new Array<boolean>(lines.length).fill(false);
   for (const region of regions) {
+    if (!accept(region.kind)) continue;
     const start = lineIndexOf(lines, region.start);
     const last = lineIndexOf(lines, Math.max(region.start, region.end - 1));
     if (start < 0 || last < 0 || last < start) continue;

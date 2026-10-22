@@ -20,6 +20,7 @@ import {
   atomicRanges,
   lineIndexOf,
   looksLikeYamlKey,
+  proseLines,
   protectedLines,
   protectedMask,
   scanRegions,
@@ -432,6 +433,9 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   }
 
   const protectedLine = protectedLines(base, lines, regions);
+  // SAFE-03. The lines a code span or a comment crosses are protected, and a
+  // protected run used to be read as a block - which split the paragraph it sat in.
+  const proseLine = proseLines(base, lines, regions);
   // CFG-03: an ignored range is copied verbatim, like a protected region.
   const ignoredLines = ignoreLines(base, options.ignore);
   for (let i = 0; i < protectedLine.length; i++) {
@@ -471,6 +475,7 @@ export function format(source: string, input?: FormatOptionsInput): FormatResult
   const assembled = applyBlankPolicy(reindented, {
     options,
     protectedLine,
+    proseLine,
     excludedItemLines,
     ranges: [...ranges, ...tableRanges],
   });

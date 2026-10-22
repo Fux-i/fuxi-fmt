@@ -4,6 +4,13 @@
 
 格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，本项目遵循 [语义化版本](https://semver.org/spec/v2.0.0.html)。发布使用 Linux 内核的标签约定：`vMAJOR.MINOR[.PATCH]`，候选版本以 `-rcN` 结尾。
 
+## [Unreleased]
+
+### 修复
+
+- **跨行的行内代码 span 与 HTML 注释不再被当成块。** 它们所在的段落是一整块，前后不再补空行——过去一段会被拆成两段，
+  在引用块里甚至会插入一个裸空行、把一个引用拆成两个（BLK-01、SAFE-03）。
+
 ## [1.0.0](https://github.com/Fux-i/fuxi-fmt/compare/v0.31.0...v1.0.0) - 2026-10-16
 
 ### 新增

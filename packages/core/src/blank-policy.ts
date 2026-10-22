@@ -29,6 +29,8 @@ export interface BlankPolicyContext {
   readonly options: FormatOptions;
   /** Whether each input line is protected (SAFE-01, CFG-03), by input line index. */
   readonly protectedLine: readonly boolean[];
+  /** Whether each protected line is prose rather than a block (SAFE-03, SAFE-04). */
+  readonly proseLine: readonly boolean[];
   /** Input lines of items in a list holding a protected block (DET-12). */
   readonly excludedItemLines: ReadonlySet<number>;
   /** Atomic ranges over input line indices: protected regions, and tables. */
@@ -242,14 +244,31 @@ function isQuoteRun(texts: readonly string[], block: Block): boolean {
  */
 function levelRanges(level: readonly InputLine[], ctx: BlankPolicyContext): AtomicRange[] {
   const out: AtomicRange[] = [];
+  const kindAt = (index: number): AtomicRange['kind'] | null => {
+    const line = level[index];
+    if (line === undefined || line.from < 0 || ctx.protectedLine[line.from] !== true) return null;
+    return ctx.proseLine[line.from] === true ? 'prose' : 'code';
+  };
   let run = -1;
+  let kind: AtomicRange['kind'] = 'code';
   for (let i = 0; i <= level.length; i++) {
-    const line = level[i];
-    const here = line !== undefined && line.from >= 0 && ctx.protectedLine[line.from] === true;
-    if (here && run < 0) run = i;
-    else if (!here && run >= 0) {
-      out.push({ start: run, end: i, kind: 'code' });
-      run = -1;
+    const here = kindAt(i);
+    if (here === null) {
+      if (run >= 0) {
+        out.push({ start: run, end: i, kind });
+        run = -1;
+      }
+      continue;
+    }
+    if (run < 0) {
+      run = i;
+      kind = here;
+      continue;
+    }
+    if (here !== kind) {
+      out.push({ start: run, end: i, kind });
+      run = i;
+      kind = here;
     }
   }
   const first = level[0]?.from ?? -1;

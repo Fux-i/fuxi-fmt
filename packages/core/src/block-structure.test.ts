@@ -80,6 +80,7 @@ describe('GRT-01 the block structure survives formatting', () => {
     ['the reported nested-quote shape', '> 1. 333\n>    1. 2\n> > 1. 22\n> hello\n'],
     ['a multi-line HTML comment', '<!--\n- list\n# heading\n-->\n'],
     ['a code span wrapped across lines', '\u0060a\n# heading\nb\u0060\n'],
+    ['a code span wrapped across lines inside a paragraph', 'Para \u0060a\nb\u0060 and more\nstill same.\n'],
     ['a table row cut off by a blank line', '| a | b |\n| --- | --- |\n\n| 1 | 2 |\n'],
   ];
   for (const [name, input] of shapes) {
