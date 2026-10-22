@@ -82,6 +82,7 @@ describe('GRT-01 the block structure survives formatting', () => {
     ['a code span wrapped across lines', '\u0060a\n# heading\nb\u0060\n'],
     ['a code span wrapped across lines inside a paragraph', 'Para \u0060a\nb\u0060 and more\nstill same.\n'],
     ['a table row cut off by a blank line', '| a | b |\n| --- | --- |\n\n| 1 | 2 |\n'],
+    ['a setext underline under a wrapped paragraph', 'a\nb\n---\n'],
   ];
   for (const [name, input] of shapes) {
     test('the reported shape keeps its structure: ' + name, () => {

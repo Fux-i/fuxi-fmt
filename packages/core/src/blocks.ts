@@ -271,6 +271,7 @@ export function segment(texts: readonly string[], atomic: readonly AtomicRange[]
         }
         j++;
       }
+      if (kind === 'paragraph' && !inside.has(j) && SETEXT_UNDERLINE.test(texts[j] ?? '')) j++;
       blocks.push({ kind, start, end: j, blanksBefore });
       i = j;
       blanks = 0;
@@ -285,21 +286,18 @@ export function segment(texts: readonly string[], atomic: readonly AtomicRange[]
 
     const kind = classifyContent(text);
     let j = i + 1;
-    let setext = false;
-    // A '-' run directly under a paragraph is a setext heading underline, not a
-    // thematic break: 'text' followed by '---' is an H2, and a blank line inserted
-    // between the two would rewrite it as a paragraph and a horizontal rule. They
-    // are one block, so nothing separates them.
-    if (kind === 'paragraph' && !inside.has(i + 1) && SETEXT_UNDERLINE.test(texts[i + 1] ?? '')) {
-      j = i + 2;
-      setext = true;
-    }
-    while (!setext && j < texts.length) {
+    while (j < texts.length) {
       const candidate = texts[j] ?? '';
       if (candidate.trim().length === 0 || inside.has(j)) break;
       if (!extendsBlock(kind, classifyContent(candidate))) break;
       j++;
     }
+    // A '-' run directly under a paragraph is a setext heading underline, not a
+    // thematic break: 'text' followed by '---' is an H2, and a blank line inserted
+    // between the two would rewrite it as a paragraph and a horizontal rule. The
+    // underline follows the paragraph's last line, however many lines that is, so
+    // they are one block and nothing separates them.
+    if (kind === 'paragraph' && !inside.has(j) && SETEXT_UNDERLINE.test(texts[j] ?? '')) j++;
     blocks.push({ kind, start: i, end: j, blanksBefore: blanks });
     i = j;
     blanks = 0;

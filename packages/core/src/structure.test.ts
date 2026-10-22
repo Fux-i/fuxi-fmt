@@ -125,6 +125,13 @@ describe('BLK-13 thematic break character', () => {
     assert.equal(out('text\n---\n'), 'text\n---\n');
     assert.equal(out('标题\n---\n'), '标题\n---\n');
   });
+  test('leaves the underline of a wrapped paragraph alone', () => {
+    // The underline follows the paragraph's LAST line, not the line after its
+    // first: '---' there is an H2 just as it is under a one-line paragraph, and a
+    // blank line would rewrite the heading as a paragraph and a thematic break.
+    assert.equal(out('text\ntext\n---\n'), 'text\ntext\n---\n');
+    assert.equal(out('文字\n折行\n---\n'), '文字\n折行\n---\n');
+  });
   test('normalises a break that the blank-line policy has separated', () => {
     // Separate blocks, so a blank line comes first and the dashes are then safe.
     assert.equal(out('text\n***\n'), 'text\n\n---\n');
