@@ -83,6 +83,22 @@ describe('SAFE-01 a fence inside a tab-indented list', () => {
   });
 });
 
+describe('SAFE-01 a tab-indented list survives its own output', () => {
+  const cases: readonly (readonly [string, string])[] = [
+    ['content column 4', '10. a\n\ttext\n    ```js\n    code\n    ```\n'],
+    ['content column 2', '- a\n\ttext\n  ```js\n  code\n  ```\n'],
+  ];
+  for (const [name, src] of cases) {
+    test(name + ': the second pass writes what the first one did', () => {
+      const once = format(src);
+      const twice = format(once.output);
+      assert.deepEqual(once.diagnostics.filter((d) => d.severity === 'error'), []);
+      assert.deepEqual(twice.diagnostics.filter((d) => d.severity === 'error'), []);
+      assert.equal(twice.output, once.output);
+    });
+  }
+});
+
 describe('SAFE-03 a code span between two fences', () => {
   test('the span keeps its bytes and the prose around it is spaced', () => {
     const src = '```\na\n\nb\n```\n把`x中文`写好看\n```\nc\n```\n';

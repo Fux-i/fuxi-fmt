@@ -244,6 +244,14 @@ describe('DET-12 a list left alone because it contains a protected block', () =>
     assert.equal(result.diagnostics[0]?.line, 0);
   });
 
+  test('a blank line above the block does not take it out of the item', () => {
+    // The item continues across a blank line as long as what follows is indented
+    // to its content column, so the fence is still the list's.
+    const input = '- a\n\n  text\n\n  ' + FENCE + 'js\n  x\n  ' + FENCE + '\n';
+    const result = format(input);
+    assert.ok(result.diagnostics.some((d) => d.ruleId === 'DET-12'));
+  });
+
   test('a quoted block inside an item is still inside it', () => {
     // The item is unquoted, so its containment is the line's own indentation; the
     // quote marker below it is content, not a shallower line.

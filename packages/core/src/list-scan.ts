@@ -147,7 +147,12 @@ function spanEnd(
   let end = item.line;
   for (let j = item.line + 1; j < lines.length; j++) {
     const text = lines[j] ?? '';
-    if (text.trim().length === 0 || isItemLine.has(j)) break;
+    // A blank line does not end an item - only a shallower line or the next item
+    // does. Breaking here made the answer depend on the blank-line policy: it
+    // inserts one above a fence, and the second pass then read the fence as
+    // outside the list it had just written.
+    if (text.trim().length === 0) continue;
+    if (isItemLine.has(j)) break;
     // The item's body starts at its content column, so a line to the left of that
     // column ends the item. Comparing against the marker column said a fence at
     // the margin was part of the item, and the whole list was then excluded from
