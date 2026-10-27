@@ -15,6 +15,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { format } from './format.ts';
 import { protectedLines, scanRegions, splitSourceLines } from './scan.ts';
 
 const linesOf = (text: string): boolean[] =>
@@ -40,5 +41,24 @@ describe('SAFE-01 the lines a protected region covers', () => {
 
   test('an inline region that contains a line ending protects both lines', () => {
     assert.deepEqual(linesOf('a <!-- c\nd --> b'), [true, true]);
+  });
+});
+
+describe('SAFE-01 a fence nested in a list keeps its body', () => {
+  // The body used to be prose: the fence was read at column 4 against the left
+  // margin, so TYPO-01 inserted spaces into code and the hygiene pass trimmed a
+  // trailing space inside it - with no diagnostic in either case.
+  test('CJK next to Latin in the body is not spaced out', () => {
+    const src = '- a\n  - b\n    ```c\n    中文abc混排\n\n    第二段\n    ```\n';
+    const result = format(src);
+    assert.equal(result.output, src);
+    assert.deepEqual(result.diagnostics.filter((d) => d.severity === 'error'), []);
+  });
+
+  test('a trailing space in the body survives', () => {
+    const src = '- a\n  - b\n    ```c\n    中文abc \n    ```\n';
+    const result = format(src);
+    assert.equal(result.output, src);
+    assert.deepEqual(result.diagnostics.filter((d) => d.severity === 'error'), []);
   });
 });

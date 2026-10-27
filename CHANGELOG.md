@@ -4,6 +4,14 @@
 
 格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，本项目遵循 [语义化版本](https://semver.org/spec/v2.0.0.html)。发布使用 Linux 内核的标签约定：`vMAJOR.MINOR[.PATCH]`，候选版本以 `-rcN` 结尾。
 
+## [Unreleased]
+
+### 修复
+
+- **列表里的围栏按容器缩进识别，正文不再被改写。** 围栏的缩进过去按左边界测量，列表项内第 4 列及以后的围栏因此被读成
+  散文：正文里的中英混排被加空格、行尾空格被裁掉，而代码块是受保护区域（SAFE-01）。闭合围栏现在也必须留在同一个容器内，
+  缩进退回内容列左侧的那一行结束的是列表项本身，围栏报未终止（DET-01、SAFE-02）。
+
 ## [1.0.1](https://github.com/Fux-i/fuxi-fmt/compare/v1.0.0...v1.0.1) - 2026-10-22
 
 ### 修复

@@ -114,6 +114,7 @@ function closerIn(
   opener: LineContent,
   openerEnd: number,
   isCloser: (rest: string, content: LineContent) => boolean,
+  containerColumn?: number,
 ): BlockEnd {
   let end = openerEnd;
   for (let j = from; j < lines.length; j++) {
@@ -121,6 +122,16 @@ function closerIn(
     if (cand === undefined) continue;
     const content = lineContentOf(cand.text);
     if (content.depth < opener.depth) return { end, next: j, closed: false };
+    // A line less indented than the list item the fence opened in ends that item,
+    // and the code block with it (SAFE-02): its closer has to be inside too. A
+    // blank line does not end a list item, which is the difference from a quote.
+    if (
+      containerColumn !== undefined &&
+      content.columns < containerColumn &&
+      !isBlank(cand.text.slice(content.body))
+    ) {
+      return { end, next: j, closed: false };
+    }
     end = cand.end;
     if (isCloser(cand.text.slice(content.body), content)) {
       return { end, next: j + 1, closed: true };
@@ -221,7 +232,17 @@ export function scanRegions(source: string): Region[] {
   return regions;
 }
 
+/** A list marker at the head of a line, with the whitespace that follows it. */
+const LIST_HEAD = /^([ \t]*)(?:[-*+]|\d{1,9}[.)])([ \t]+)/;
+
 function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Region[]): void {
+  /**
+   * The content column of every list item still open, innermost last. A fence is
+   * indented relative to its container, so the column to compare against is the
+   * item's, not the left margin - reading the margin hid every fence at column 4
+   * or more and left its body to the prose rules (SAFE-02).
+   */
+  const containers: { readonly depth: number; readonly column: number }[] = [];
   let i = 0;
   const first = lines[0];
   const opener = first === undefined ? '' : first.text.trimEnd();
@@ -277,7 +298,30 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
     const content = lineContentOf(line.text);
     const rest = line.text.slice(content.body);
 
-    if (content.columns <= 3 && rest.length > 0) {
+    // A blank line does not close a list item, so the stack is only updated for
+    // lines that carry content. An item is closed by anything less indented than
+    // its content column, which is the same test CommonMark uses for the item.
+    if (rest.trim().length > 0) {
+      while (containers.length > 0) {
+        const open = containers[containers.length - 1];
+        if (open === undefined) break;
+        if (open.depth > content.depth || open.column <= content.columns) break;
+        containers.pop();
+      }
+      const head = LIST_HEAD.exec(rest);
+      if (head !== null) {
+        containers.push({ depth: content.depth, column: content.columns + (head[0] ?? '').length });
+      }
+    }
+    const container = containers[containers.length - 1];
+
+    // A fence may sit up to three columns past the content column of the item it
+    // belongs to, so this gate is relative to the container rather than the margin.
+    const fenceColumn =
+      content.columns <= 3 ||
+      (container !== undefined && content.columns <= container.column + 3);
+
+    if (fenceColumn && rest.length > 0) {
       const code = rest.charCodeAt(0);
 
       if (code === BACKTICK || code === TILDE) {
@@ -285,12 +329,19 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
         if (fenceLen >= 3) {
           const info = rest.slice(fenceLen).trim();
           const indent = line.text.slice(0, content.body);
-          const found = closerIn(lines, i + 1, content, line.end, (candRest, candContent) => {
-            if (candContent.columns > content.columns + 3) return false;
-            if (candRest.length === 0 || candRest.charCodeAt(0) !== code) return false;
-            const closing = runLength(candRest, 0, code);
-            return closing >= fenceLen && candRest.slice(closing).trim() === '';
-          });
+          const found = closerIn(
+            lines,
+            i + 1,
+            content,
+            line.end,
+            (candRest, candContent) => {
+              if (candContent.columns > content.columns + 3) return false;
+              if (candRest.length === 0 || candRest.charCodeAt(0) !== code) return false;
+              const closing = runLength(candRest, 0, code);
+              return closing >= fenceLen && candRest.slice(closing).trim() === '';
+            },
+            container?.column,
+          );
           if (claim(mask, line.start, found.end)) {
             regions.push({
               kind: 'fencedCode',
@@ -305,6 +356,10 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
           continue;
         }
       }
+    }
+
+    if (content.columns <= 3 && rest.length > 0) {
+      const code = rest.charCodeAt(0);
 
       // Display math occupies whole lines and belongs with code (SAFE-03). The
       // inline matcher cannot do this job: it matches the two $$ markers as

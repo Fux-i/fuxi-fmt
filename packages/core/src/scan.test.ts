@@ -287,3 +287,43 @@ describe('scan: a protected region inside a block quote (SAFE-01, SAFE-04)', () 
     assert.deepEqual(slices('> ---\ntitle: x\n> ---\n'), []);
   });
 });
+
+describe('scan: a fence inside a list item (SAFE-02)', () => {
+  // A fence is indented relative to the container it sits in, not to the left
+  // margin. Reading the raw column made every fence nested in a list at column 4
+  // or more invisible, so its body was prose the spacing rules could rewrite.
+  test('a fence at a nested item content column is a fence', () => {
+    const src = '- a\n  - b\n    ```c\n    x\n    ```\n';
+    const regions = scanRegions(src);
+    assert.equal(regions.length, 1);
+    assert.equal(regions[0]?.kind, 'fencedCode');
+    assert.equal(regions[0]?.info, 'c');
+    assert.equal(regions[0]?.indent, '    ');
+    assert.equal(src.slice(regions[0]!.start, regions[0]!.end), '    ```c\n    x\n    ```');
+  });
+
+  test('a fence inside a quoted list is measured from inside the quote', () => {
+    const src = '> - a\n>   - b\n>     ```nasm\n>     x\n>     ```\n';
+    assert.deepEqual(slices(src), [['fencedCode', '>     ```nasm\n>     x\n>     ```']]);
+  });
+
+  test('four columns past the content column are not a fence', () => {
+    const src = '- a\n\n      ```\n      x\n      ```\n';
+    assert.deepEqual(scanRegions(src).filter((r) => r.kind === 'fencedCode'), []);
+  });
+
+  test('a line back at the margin ends the item, so its fence is not measured from it', () => {
+    const src = '- a\n\ntext\n\n    ```\n    x\n    ```\n';
+    assert.deepEqual(scanRegions(src).filter((r) => r.kind === 'fencedCode'), []);
+  });
+
+  test('a closing fence dedented out of the item does not close it', () => {
+    const src = '- a\n  ```\n  x\n```\n';
+    const regions = scanRegions(src).filter((r) => r.kind === 'fencedCode');
+    // Two regions: the dedented line is a second opener, which is how the
+    // reference parser reads this input too.
+    assert.equal(regions.length, 2);
+    assert.equal(src.slice(regions[0]!.start, regions[0]!.end), '  ```\n  x');
+    assert.equal(regions[0]?.closed, false);
+  });
+});

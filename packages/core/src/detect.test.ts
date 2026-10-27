@@ -407,3 +407,20 @@ describe('DET-01 … DET-04 inside a block quote', () => {
     assert.equal(result.output, input);
   });
 });
+
+describe('DET-01 a fence a list item ends before its closer', () => {
+  // The closing fence fell back to the margin, which ends the item, so the code
+  // block has no closer inside its container. The scanner used to accept that
+  // line as the closer and swallow it into the region.
+  test('an unterminated fence inside a list item is refused and names the line', () => {
+    // Two fences, because the dedented line is a second opener to the reference
+    // parser as well: markdown-it reads this input as fence 2-3 and fence 4-4.
+    const input = '- a\n  ' + FENCE + '\n  x\n' + FENCE + '\n';
+    const result = format(input);
+    assert.equal(result.output, input);
+    assert.equal(result.diagnostics[0]?.ruleId, 'DET-01');
+    assert.equal(result.diagnostics[0]?.severity, 'error');
+    assert.equal(result.diagnostics[0]?.line, 1);
+    assert.deepEqual(result.diagnostics.map((d) => d.ruleId), ['DET-01', 'DET-01']);
+  });
+});
