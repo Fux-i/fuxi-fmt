@@ -241,6 +241,8 @@ export function findExcludedLists(
 export interface Reindent {
   readonly line: number;
   readonly text: string;
+  /** The top-level item of the list this line belongs to. */
+  readonly root: number;
 }
 
 /**
@@ -272,7 +274,7 @@ export function planListIndent(
   brokeOut: readonly boolean[] = [],
 ): Reindent[] {
   const isItemLine = new Set(items.map((item) => item.line));
-  const planned = new Map<number, string>();
+  const planned = new Map<number, Reindent>();
   const placed: number[] = [];
 
   for (let i = 0; i < items.length; i++) {
@@ -305,16 +307,23 @@ export function planListIndent(
 
     const delta = target - item.indent;
     if (delta === 0) continue;
+    const root = rootOf(parents, i);
 
     const original = lines[item.line] ?? '';
-    planned.set(
-      item.line,
-      item.prefix + ' '.repeat(target) + original.slice(item.prefix.length + item.indent),
-    );
+    planned.set(item.line, {
+      line: item.line,
+      text: item.prefix + ' '.repeat(target) + original.slice(item.prefix.length + item.indent),
+      root,
+    });
 
     for (let j = item.line + 1; j < lines.length; j++) {
       const text = lines[j] ?? '';
-      if (text.trim().length === 0 || isItemLine.has(j)) break;
+      // A blank line does not end the item, so what follows it moves with the
+      // item too. Breaking here left a continuation at its old column while the
+      // item moved, and a line that was prose before the move could become an
+      // indented code block after it.
+      if (text.trim().length === 0) continue;
+      if (isItemLine.has(j)) break;
       // Continuation lines move by the same delta, inside whatever prefix each of
       // them carries, so a quoted continuation stays quoted.
       const quote = quotePrefix(text);
@@ -323,14 +332,13 @@ export function planListIndent(
       const body = text.slice(afterQuote);
       const indent = (/^\s*/.exec(body)?.[0] ?? '').length;
       if (indent < item.indent) break;
-      planned.set(
-        j,
-        text.slice(0, afterQuote) + ' '.repeat(Math.max(0, indent + delta)) + body.slice(indent),
-      );
+      planned.set(j, {
+        line: j,
+        text: text.slice(0, afterQuote) + ' '.repeat(Math.max(0, indent + delta)) + body.slice(indent),
+        root,
+      });
     }
   }
 
-  return [...planned.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([line, text]) => ({ line, text }));
+  return [...planned.values()].sort((a, b) => a.line - b.line);
 }

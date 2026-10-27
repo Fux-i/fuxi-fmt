@@ -389,9 +389,9 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
       }
     }
 
-    // Display math and HTML blocks follow the same container rule as a fence: the
-    // block is measured from the item it sits in, so a formula four columns past
-    // the content column is still that item's formula.
+    // Display math and HTML blocks follow the same container rule as a fence: up to
+    // three columns past the content column of the item they sit in. Four or more
+    // is an indented code block, which is the branch below.
     const blockAt =
       content.columns <= 3 ||
       (container !== undefined && content.columns <= container.column + 3);

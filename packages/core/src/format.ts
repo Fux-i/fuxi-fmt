@@ -349,7 +349,10 @@ export function planLists(
   const diagnostics: Detection[] = [];
   if (excludedLists.size > 0) {
     const applied = new Map(plan.map((change) => [change.line, change.text]));
-    const withheld = planListIndent(
+    // Which lists were actually held back, not merely which ones hold a block:
+    // one excluded list being withheld says nothing about its neighbour.
+    const withheld = new Set<number>();
+    for (const change of planListIndent(
       texts,
       listItems,
       listParents,
@@ -357,18 +360,18 @@ export function planLists(
       orderedMin,
       unorderedMin,
       listBrokeOut,
-    ).some((change) => applied.get(change.line) !== change.text);
-    if (withheld) {
-      for (const root of excludedLists) {
-        const item = listItems[root];
-        if (item === undefined) continue;
-        diagnostics.push({
-          ruleId: 'DET-12',
-          messageId: 'det.listExcluded',
-          args: [],
-          line: item.line,
-        });
-      }
+    )) {
+      if (applied.get(change.line) !== change.text) withheld.add(change.root);
+    }
+    for (const root of excludedLists) {
+      const item = listItems[root];
+      if (item === undefined || !withheld.has(root)) continue;
+      diagnostics.push({
+        ruleId: 'DET-12',
+        messageId: 'det.listExcluded',
+        args: [],
+        line: item.line,
+      });
     }
   }
 

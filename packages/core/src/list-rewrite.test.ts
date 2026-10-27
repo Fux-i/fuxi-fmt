@@ -42,8 +42,22 @@ describe('BLK-08 marker rewriting', () => {
     ]);
   });
 
-  test('a blank line ends the continuation run', () => {
-    assert.deepEqual(apply(['- a', '    - b', '', '    loose']), ['- a', '  - b', '', '    loose']);
+  test('a continuation does not cross the indented-code threshold', () => {
+    // Moving the item up one column and leaving the body at 8 made a line that was
+    // prose an indented code block - a region that was not there before, which the
+    // guard refused the document for.
+    assert.deepEqual(
+      apply(['- x', '   - a', '', '        code']),
+      ['- x', '  - a', '', '       code'],
+    );
+  });
+
+  test('a blank line does not end the continuation run', () => {
+    // The line after the blank line is still the item's body, so it moves with it.
+    // Leaving it behind changed the column its paragraph started at, and a
+    // continuation four columns below the item's content column became an
+    // indented code block the moment the item moved up.
+    assert.deepEqual(apply(['- a', '    - b', '', '    loose']), ['- a', '  - b', '', '  loose']);
   });
 
   test('the result settles in one pass', () => {
