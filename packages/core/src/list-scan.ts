@@ -145,13 +145,17 @@ function spanEnd(
   item: ListItem,
 ): number {
   let end = item.line;
+  // The quote chain the item lives in: a line that carries less of it is outside
+  // the item's container, however far it happens to be indented.
+  const depth = quotePrefix(item.prefix).depth;
   for (let j = item.line + 1; j < lines.length; j++) {
     const text = lines[j] ?? '';
     // A blank line does not end an item, and neither does a nested item: the body
     // of an item continues past its own children, and a fence written at the
-    // item's content column below them is still that item's. Only a line to the
-    // left of the content column ends it.
+    // item's content column below them is still that item's. Only a line that
+    // leaves the container or sits to the left of the content column ends it.
     if (text.trim().length === 0) continue;
+    if (quotePrefix(text).depth < depth) break;
     // The item's body starts at its content column, so a line to the left of that
     // column ends the item. Comparing against the marker column said a fence at
     // the margin was part of the item, and the whole list was then excluded from
@@ -315,6 +319,7 @@ export function planListIndent(
       root,
     });
 
+    const itemDepth = quotePrefix(item.prefix).depth;
     for (let j = item.line + 1; j < lines.length; j++) {
       const text = lines[j] ?? '';
       // A blank line does not end the item, so what follows it moves with the
@@ -323,6 +328,7 @@ export function planListIndent(
       // indented code block after it.
       if (text.trim().length === 0) continue;
       if (isItemLine.has(j)) break;
+      if (quotePrefix(text).depth < itemDepth) break;
       // Whether the line belongs to this item is decided the way spanEnd decides
       // it - in the item's own frame, against its content column. The marker
       // column is shallower, and a line between the two is the parent's: moving

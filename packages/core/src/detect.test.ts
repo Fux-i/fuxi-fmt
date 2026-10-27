@@ -238,6 +238,15 @@ describe('DET-12 a list left alone because it contains a protected block', () =>
   // withholds - a list already at its columns is not reported at all.
   const LIST = '- a\n  ' + FENCE + 'js\n  x\n  ' + FENCE + '\n    - child\n';
 
+  test('a block outside the quote does not exclude the list inside it', () => {
+    // The blank line ends the quote, so the fence below is not in the list at all
+    // and reindenting the quoted list is safe.
+    const input = '> - x\n>    - a\n\n  ' + FENCE + 'js\n  code\n  ' + FENCE + '\n';
+    const result = format(input);
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.output, '> - x\n>   - a\n\n  ' + FENCE + 'js\n  code\n  ' + FENCE + '\n');
+  });
+
   test('only the list whose reindentation was withheld is reported', () => {
     // The first list is aligned and holds a block; the second is one column off.
     // One excluded list being withheld says nothing about its neighbour.
