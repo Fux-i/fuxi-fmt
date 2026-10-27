@@ -150,6 +150,15 @@ describe('DET-06/DET-07 a delimiter with no partner', () => {
     assert.deepEqual(format(input).diagnostics, []);
   });
 
+  test('a code span between two fences is not an unmatched backtick', () => {
+    // The span matcher used to pair the closing fence above the prose with the
+    // opening fence below it and jump past the line in between, so the two real
+    // backticks on it were reported as unmatched and left unprotected.
+    const input =
+      FENCE + '\na\n\nb\n' + FENCE + '\n把' + TICK + 'x' + TICK + '写好看\n' + FENCE + '\nc\n' + FENCE + '\n';
+    assert.deepEqual(format(input).diagnostics, []);
+  });
+
   test('a code span the author wrapped across lines is not reported', () => {
     // DET-05 was proposed for exactly this shape and dropped: a hard-wrapped
     // inline code span is correct Markdown, it appears in this repository's own

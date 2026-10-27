@@ -62,3 +62,12 @@ describe('SAFE-01 a fence nested in a list keeps its body', () => {
     assert.deepEqual(result.diagnostics.filter((d) => d.severity === 'error'), []);
   });
 });
+
+describe('SAFE-03 a code span between two fences', () => {
+  test('the span keeps its bytes and the prose around it is spaced', () => {
+    const src = '```\na\n\nb\n```\n把`x中文`写好看\n```\nc\n```\n';
+    const result = format(src);
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.output, '```\na\n\nb\n```\n\n把 `x中文` 写好看\n\n```\nc\n```\n');
+  });
+});

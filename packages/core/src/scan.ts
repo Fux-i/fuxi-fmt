@@ -503,7 +503,10 @@ function scanPattern(
 function scanInlineCode(source: string, mask: Uint8Array, regions: Region[]): void {
   let i = 0;
   while (i < source.length) {
-    if (source.charCodeAt(i) !== BACKTICK || isEscaped(source, i)) {
+    // A backtick a block region already claimed is a fence delimiter, not a span
+    // delimiter. Without this test a fence's three backticks paired with the next
+    // fence's, inventing a span across the prose in between.
+    if (source.charCodeAt(i) !== BACKTICK || mask[i] === 1 || isEscaped(source, i)) {
       i++;
       continue;
     }
@@ -524,7 +527,7 @@ function scanInlineCode(source: string, mask: Uint8Array, regions: Region[]): vo
         }
         if (k >= source.length || source.charCodeAt(k) === LF) break;
       }
-      if (source.charCodeAt(j) !== BACKTICK) {
+      if (source.charCodeAt(j) !== BACKTICK || mask[j] === 1) {
         j++;
         continue;
       }
@@ -547,8 +550,15 @@ function scanInlineCode(source: string, mask: Uint8Array, regions: Region[]): vo
       continue;
     }
     const end = closeAt + open;
-    if (claim(mask, i, end)) regions.push({ kind: 'inlineCode', start: i, end });
-    i = end;
+    // A span whose bytes another region holds is no span at all, and the scan
+    // resumes just past its opener: jumping to `end` skipped every backtick the
+    // rejected pair enclosed, leaving the spans there unmasked (DET-06).
+    if (claim(mask, i, end)) {
+      regions.push({ kind: 'inlineCode', start: i, end });
+      i = end;
+    } else {
+      i += open;
+    }
   }
 }
 
