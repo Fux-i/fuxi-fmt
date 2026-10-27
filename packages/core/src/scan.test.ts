@@ -317,6 +317,13 @@ describe('scan: a fence inside a list item (SAFE-02)', () => {
     assert.deepEqual(scanRegions(src).filter((r) => r.kind === 'fencedCode'), []);
   });
 
+  test('a thematic break does not open a list container', () => {
+    // '- - -' matches a bullet at its head, but it is a break, not an item. Taking
+    // it as a container made the indented block below read as a fence.
+    const src = '- - -\n\n    ```\n\n    x\n\n    ```\n';
+    assert.deepEqual(scanRegions(src).filter((r) => r.kind === 'fencedCode'), []);
+  });
+
   test('a fence that is the item own content is a fence', () => {
     const src = '- ```js\n  x\n  ```\n';
     const regions = scanRegions(src);

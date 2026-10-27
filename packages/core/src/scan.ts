@@ -10,7 +10,14 @@
  * SAFE-06 (URLs and destinations), FM-01 (front matter).
  */
 
-import { isBlank, lineContentOf, type AtomicRange, type BlockKind, type LineContent } from './blocks.ts';
+import {
+  classifyContent,
+  isBlank,
+  lineContentOf,
+  type AtomicRange,
+  type BlockKind,
+  type LineContent,
+} from './blocks.ts';
 import type { CharRange } from './ignores.ts';
 
 export type RegionKind =
@@ -301,7 +308,9 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
     // A blank line does not close a list item, so the stack is only updated for
     // lines that carry content. An item is closed by anything less indented than
     // its content column, which is the same test CommonMark uses for the item.
-    const head = rest.trim().length > 0 ? LIST_HEAD.exec(rest) : null;
+    // Only a list item opens a container: a thematic break matches a bullet at
+    // its head too, and taking it as one made an indented block read as a fence.
+    const head = classifyContent(rest) === 'list' ? LIST_HEAD.exec(rest) : null;
     if (rest.trim().length > 0) {
       while (containers.length > 0) {
         const open = containers[containers.length - 1];
