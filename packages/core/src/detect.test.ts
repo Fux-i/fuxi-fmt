@@ -244,6 +244,15 @@ describe('DET-12 a list left alone because it contains a protected block', () =>
     assert.equal(result.diagnostics[0]?.line, 0);
   });
 
+  test('a fence at the margin after an item is not inside it', () => {
+    // The item's content column is where its body starts, so a fence written at
+    // the margin ends the item instead of belonging to it. Reading the marker
+    // column said otherwise, and the list was left out of every later pass.
+    const result = format('1. a\n' + FENCE + '\nx\n' + FENCE + '\n');
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.output, '1. a\n\n' + FENCE + '\nx\n' + FENCE + '\n');
+  });
+
   test('a list without a protected block is reindented, and not reported', () => {
     const result = format('- a\n      - deep\n');
     assert.deepEqual(result.diagnostics, []);

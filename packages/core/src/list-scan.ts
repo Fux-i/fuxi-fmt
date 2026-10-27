@@ -148,8 +148,15 @@ function spanEnd(
   for (let j = item.line + 1; j < lines.length; j++) {
     const text = lines[j] ?? '';
     if (text.trim().length === 0 || isItemLine.has(j)) break;
-    const indent = (/^\s*/.exec(text)?.[0] ?? '').length;
-    if (indent < item.indent) break;
+    // The item's body starts at its content column, so a line to the left of that
+    // column ends the item. Comparing against the marker column said a fence at
+    // the margin was part of the item, and the whole list was then excluded from
+    // reindentation and the blank-line policy for a block it never contained.
+    const quote = quotePrefix(text);
+    const afterQuote =
+      quote.depth > 0 && isSpace(text.charCodeAt(quote.end)) ? quote.end + 1 : quote.end;
+    const indent = (/^\s*/.exec(text.slice(afterQuote))?.[0] ?? '').length;
+    if (indent < item.contentColumn) break;
     end = j;
   }
   return end;
