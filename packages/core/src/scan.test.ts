@@ -350,6 +350,39 @@ describe('scan: a fence inside a list item (SAFE-02)', () => {
     assert.equal(src.slice(regions[0]!.start, regions[0]!.end), '- ```js\n  x\n  ```');
   });
 
+  test('an indented code block inside an item is code', () => {
+    const src = '- a\n\n      code\n      more\n';
+    const regions = scanRegions(src).filter((r) => r.kind === 'indentedCode');
+    assert.equal(regions.length, 1);
+    assert.equal(src.slice(regions[0]!.start, regions[0]!.end), '      code\n      more');
+  });
+
+  test('an indented code block runs across a blank line', () => {
+    const src = '- a\n\n      code\n\n      more\n';
+    const regions = scanRegions(src).filter((r) => r.kind === 'indentedCode');
+    assert.equal(regions.length, 1);
+    assert.equal(src.slice(regions[0]!.start, regions[0]!.end), '      code\n\n      more');
+  });
+
+  test('four columns past the item content column are what make it code', () => {
+    const src = '- a\n  - b\n\n        code\n';
+    assert.deepEqual(scanRegions(src).filter((r) => r.kind === 'indentedCode').map((r) => src.slice(r.start, r.end)), ['        code']);
+  });
+
+  test('a display math block inside an item is a math block', () => {
+    const src = '- a\n  - b\n\n      $$\n      中文abc\n      $$\n';
+    const regions = scanRegions(src).filter((r) => r.kind === 'mathBlock');
+    assert.equal(regions.length, 1);
+    assert.equal(src.slice(regions[0]!.start, regions[0]!.end), '      $$\n      中文abc\n      $$');
+  });
+
+  test('an HTML block inside an item is an HTML block', () => {
+    const src = '- a\n  - b\n\n      <div>\n      中文,abc\n      </div>\n';
+    const regions = scanRegions(src).filter((r) => r.kind === 'htmlBlock');
+    assert.equal(regions.length, 1);
+    assert.equal(src.slice(regions[0]!.start, regions[0]!.end), '      <div>\n      中文,abc\n      </div>');
+  });
+
   test('a closing fence dedented out of the item does not close it', () => {
     const src = '- a\n  ```\n  x\n```\n';
     const regions = scanRegions(src).filter((r) => r.kind === 'fencedCode');

@@ -72,6 +72,37 @@ describe('SAFE-01 a fence that is the item own content', () => {
   });
 });
 
+describe('SAFE-01 an indented code block inside a list item', () => {
+  test('CJK next to Latin keeps its bytes', () => {
+    const src = '- a\n\n      中文abc混排\n      x\n';
+    const result = format(src);
+    assert.equal(result.output, src);
+  });
+
+  test('a trailing space keeps its bytes', () => {
+    const src = '- a\n\n      code \n      x\n';
+    assert.equal(format(src).output, src);
+  });
+
+  test('a thematic break above the block does not make it a refusal', () => {
+    const src = '- - -\n\n    ```\n\n    x\n\n    ```\n';
+    const result = format(src);
+    assert.deepEqual(result.diagnostics.filter((d) => d.severity === 'error'), []);
+  });
+});
+
+describe('SAFE-01 display math and HTML inside a list item', () => {
+  test('the math body keeps its bytes', () => {
+    const src = '- a\n  - b\n\n      $$\n      中文abc混排\n      $$\n';
+    assert.equal(format(src).output, src);
+  });
+
+  test('the HTML body keeps its bytes', () => {
+    const src = '- a\n  - b\n\n      <div>\n      中文,abc\n      </div>\n';
+    assert.equal(format(src).output, src);
+  });
+});
+
 describe('SAFE-01 a fence inside a tab-indented list', () => {
   test('the list keeps its tab, so the fence does not move out of it', () => {
     // Expanding the tab above the fence but not inside it would move the fence

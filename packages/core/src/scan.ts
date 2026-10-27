@@ -199,8 +199,6 @@ export function isBlockRegionKind(kind: RegionKind): boolean {
   );
 }
 
-const LIST_ITEM = /^\s*(?:[-*+]|\d{1,9}[.)])\s/;
-
 /** A YAML mapping key: `title:`, `tags:`, `draft :`. The FM-02 heuristic. */
 const YAML_KEY = /^\s*[A-Za-z_][\w.-]*\s*:/;
 
@@ -319,6 +317,10 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
     const marker = candidate?.[2] ?? '';
     const head =
       !previousIsParagraph || !/^\d/.test(marker) || /^1[.)]$/.test(marker) ? candidate : null;
+    // The item this line sits in, before the item it may open itself: an indented
+    // code block is measured from the former, a fence that is the item's own
+    // content from the latter.
+    let enclosing: { readonly depth: number; readonly column: number } | undefined;
     if (rest.trim().length > 0) {
       while (containers.length > 0) {
         const open = containers[containers.length - 1];
@@ -330,6 +332,7 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
         }
         break;
       }
+      enclosing = containers[containers.length - 1];
       if (head !== null) {
         containers.push({ depth: content.depth, column: content.columns + (head[0] ?? '').length });
       }
@@ -386,7 +389,14 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
       }
     }
 
-    if (content.columns <= 3 && rest.length > 0) {
+    // Display math and HTML blocks follow the same container rule as a fence: the
+    // block is measured from the item it sits in, so a formula four columns past
+    // the content column is still that item's formula.
+    const blockAt =
+      content.columns <= 3 ||
+      (container !== undefined && content.columns <= container.column + 3);
+
+    if (blockAt && rest.length > 0) {
       const code = rest.charCodeAt(0);
 
       // Display math occupies whole lines and belongs with code (SAFE-03). The
@@ -397,7 +407,14 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
         const single = rest.length > 4;
         const found: BlockEnd = single
           ? { end: line.end, next: i + 1, closed: true }
-          : closerIn(lines, i + 1, content, line.end, (candRest) => candRest.trim() === '$$');
+          : closerIn(
+              lines,
+              i + 1,
+              content,
+              line.end,
+              (candRest) => candRest.trim() === '$$',
+              container?.column,
+            );
         if (claim(mask, line.start, found.end)) {
           regions.push({
             kind: 'mathBlock',
@@ -418,8 +435,13 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
           if (cand === undefined) continue;
           const candContent = lineContentOf(cand.text);
           // A bare '>' is a blank line inside the quote, and that is where the
-          // block ends; a line without the marker ends the quote itself.
-          if (candContent.depth < content.depth || isBlank(cand.text.slice(candContent.body))) {
+          // block ends; a line without the marker ends the quote itself, and so
+          // does one that returns to the left of the item the block opened in.
+          if (
+            candContent.depth < content.depth ||
+            isBlank(cand.text.slice(candContent.body)) ||
+            (container !== undefined && candContent.columns < container.column)
+          ) {
             next = j;
             break;
           }
@@ -434,29 +456,31 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
       }
     }
 
-    if (content.columns >= 4) {
+    // An indented code block is four columns past the container it sits in, and it
+    // cannot interrupt a paragraph. Once it starts it runs across blank lines while
+    // what follows is still indented that far (SAFE-01).
+    const codeColumn = enclosing === undefined ? 4 : enclosing.column + 4;
+    if (content.columns >= codeColumn) {
       const before = i === 0 ? undefined : lines[i - 1];
       const beforeContent = before === undefined ? undefined : lineContentOf(before.text);
       const prevBlank =
         before === undefined ||
         beforeContent === undefined ||
         isBlank(before.text.slice(beforeContent.body));
-      if (i === 0 || (prevBlank && !isWithinList(lines, i))) {
+      if (i === 0 || prevBlank) {
         let end = line.end;
         let last = i;
         for (let j = i + 1; j < lines.length; j++) {
           const cand = lines[j];
           if (cand === undefined) continue;
           const candContent = lineContentOf(cand.text);
-          if (
-            candContent.depth < content.depth ||
-            candContent.columns < 4 ||
-            isBlank(cand.text.slice(candContent.body))
-          ) {
-            break;
+          if (candContent.depth < content.depth) break;
+          const blank = isBlank(cand.text.slice(candContent.body));
+          if (!blank && candContent.columns < codeColumn) break;
+          if (!blank) {
+            end = cand.end;
+            last = j;
           }
-          end = cand.end;
-          last = j;
         }
         if (claim(mask, line.start, end)) {
           regions.push({ kind: 'indentedCode', start: line.start, end });
@@ -466,18 +490,6 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
       }
     }
   }
-}
-
-/** True when the nearest preceding non-blank line opens a list or blockquote. */
-function isWithinList(lines: Line[], index: number): boolean {
-  for (let j = index - 1; j >= 0; j--) {
-    const text = lines[j]?.text ?? '';
-    const content = lineContentOf(text);
-    if (isBlank(text.slice(content.body))) continue;
-    if (content.columns >= 4) return true;
-    return LIST_ITEM.test(text.slice(content.body));
-  }
-  return false;
 }
 
 function scanInline(source: string, mask: Uint8Array, regions: Region[]): void {
