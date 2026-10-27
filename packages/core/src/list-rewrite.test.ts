@@ -53,11 +53,14 @@ describe('BLK-08 marker rewriting', () => {
   });
 
   test('a blank line does not end the continuation run', () => {
-    // The line after the blank line is still the item's body, so it moves with it.
-    // Leaving it behind changed the column its paragraph started at, and a
-    // continuation four columns below the item's content column became an
-    // indented code block the moment the item moved up.
-    assert.deepEqual(apply(['- a', '    - b', '', '    loose']), ['- a', '  - b', '', '  loose']);
+    // The line after the blank is still the item's body, so it moves with it. It
+    // has to be its body: measured against the item's content column, not its
+    // marker column, because a line between the two belongs to the parent.
+    assert.deepEqual(apply(['- a', '    - b', '', '      loose']), ['- a', '  - b', '', '    loose']);
+  });
+
+  test('a line at the parent content column does not move with the child', () => {
+    assert.deepEqual(apply(['- a', '    - b', '', '    loose']), ['- a', '  - b', '', '    loose']);
   });
 
   test('the result settles in one pass', () => {

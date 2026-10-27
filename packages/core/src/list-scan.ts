@@ -147,12 +147,11 @@ function spanEnd(
   let end = item.line;
   for (let j = item.line + 1; j < lines.length; j++) {
     const text = lines[j] ?? '';
-    // A blank line does not end an item - only a shallower line or the next item
-    // does. Breaking here made the answer depend on the blank-line policy: it
-    // inserts one above a fence, and the second pass then read the fence as
-    // outside the list it had just written.
+    // A blank line does not end an item, and neither does a nested item: the body
+    // of an item continues past its own children, and a fence written at the
+    // item's content column below them is still that item's. Only a line to the
+    // left of the content column ends it.
     if (text.trim().length === 0) continue;
-    if (isItemLine.has(j)) break;
     // The item's body starts at its content column, so a line to the left of that
     // column ends the item. Comparing against the marker column said a fence at
     // the margin was part of the item, and the whole list was then excluded from
@@ -324,6 +323,16 @@ export function planListIndent(
       // indented code block after it.
       if (text.trim().length === 0) continue;
       if (isItemLine.has(j)) break;
+      // Whether the line belongs to this item is decided the way spanEnd decides
+      // it - in the item's own frame, against its content column. The marker
+      // column is shallower, and a line between the two is the parent's: moving
+      // it here dragged a parent's code block - protected bytes included - along.
+      const own =
+        item.prefix.length > 0 && text.startsWith(item.prefix)
+          ? text.slice(item.prefix.length)
+          : text;
+      const ownIndent = (/^\s*/.exec(own)?.[0] ?? '').length;
+      if (indentColumns(own, ownIndent) < item.contentColumn) break;
       // Continuation lines move by the same delta, inside whatever prefix each of
       // them carries, so a quoted continuation stays quoted.
       const quote = quotePrefix(text);
@@ -331,7 +340,6 @@ export function planListIndent(
         quote.depth > 0 && isSpace(text.charCodeAt(quote.end)) ? quote.end + 1 : quote.end;
       const body = text.slice(afterQuote);
       const indent = (/^\s*/.exec(body)?.[0] ?? '').length;
-      if (indent < item.indent) break;
       planned.set(j, {
         line: j,
         text: text.slice(0, afterQuote) + ' '.repeat(Math.max(0, indent + delta)) + body.slice(indent),
