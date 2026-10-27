@@ -240,7 +240,7 @@ export function scanRegions(source: string): Region[] {
 }
 
 /** A list marker at the head of a line, with the whitespace that follows it. */
-const LIST_HEAD = /^([ \t]*)(?:[-*+]|\d{1,9}[.)])([ \t]+)/;
+const LIST_HEAD = /^([ \t]*)([-*+]|\d{1,9}[.)])([ \t]+)/;
 
 function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Region[]): void {
   /**
@@ -250,6 +250,8 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
    * or more and left its body to the prose rules (SAFE-02).
    */
   const containers: { readonly depth: number; readonly column: number }[] = [];
+  /** Whether the last line was prose, which is what stops `2.` opening a list. */
+  let previousIsParagraph = false;
   let i = 0;
   const first = lines[0];
   const opener = first === undefined ? '' : first.text.trimEnd();
@@ -310,32 +312,43 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
     // its content column, which is the same test CommonMark uses for the item.
     // Only a list item opens a container: a thematic break matches a bullet at
     // its head too, and taking it as one made an indented block read as a fence.
-    const head = classifyContent(rest) === 'list' ? LIST_HEAD.exec(rest) : null;
+    // '2.' does not open one after a paragraph either - only '1.' interrupts a
+    // paragraph, so a higher numeral there is that paragraph's continuation.
+    const kind = classifyContent(rest);
+    const candidate = kind === 'list' ? LIST_HEAD.exec(rest) : null;
+    const marker = candidate?.[2] ?? '';
+    const head =
+      !previousIsParagraph || !/^\d/.test(marker) || /^1[.)]$/.test(marker) ? candidate : null;
     if (rest.trim().length > 0) {
       while (containers.length > 0) {
         const open = containers[containers.length - 1];
         if (open === undefined) break;
-        if (open.depth > content.depth || open.column <= content.columns) break;
-        containers.pop();
+        // A shallower line, by indentation or by quote depth, ends the item.
+        if (open.depth > content.depth || open.column > content.columns) {
+          containers.pop();
+          continue;
+        }
+        break;
       }
       if (head !== null) {
         containers.push({ depth: content.depth, column: content.columns + (head[0] ?? '').length });
       }
     }
+    previousIsParagraph = kind === 'paragraph';
     const container = containers[containers.length - 1];
     // An item that opens with a fence keeps it: the delimiter starts at the item's
     // content column, so the marker in front of it is a prefix, not prose.
     const markerWidth = head === null ? 0 : (head[0] ?? '').length;
     const fenceRest = rest.slice(markerWidth);
-    const fenceColumns = content.columns + markerWidth;
+    const fenceColumn = content.columns + markerWidth;
 
     // A fence may sit up to three columns past the content column of the item it
     // belongs to, so this gate is relative to the container rather than the margin.
-    const fenceColumn =
-      fenceColumns <= 3 ||
-      (container !== undefined && fenceColumns <= container.column + 3);
+    const fenceAt =
+      content.columns <= 3 ||
+      (container !== undefined && fenceColumn <= container.column + 3);
 
-    if (fenceColumn && fenceRest.length > 0) {
+    if (fenceAt && fenceRest.length > 0) {
       const code = fenceRest.charCodeAt(0);
 
       if (code === BACKTICK || code === TILDE) {
@@ -349,7 +362,7 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
             content,
             line.end,
             (candRest, candContent) => {
-              if (candContent.columns > content.columns + 3) return false;
+              if (candContent.columns > fenceColumn + 3) return false;
               if (candRest.length === 0 || candRest.charCodeAt(0) !== code) return false;
               const closing = runLength(candRest, 0, code);
               return closing >= fenceLen && candRest.slice(closing).trim() === '';
@@ -367,6 +380,7 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
             });
           }
           i = found.next - 1;
+          previousIsParagraph = false;
           continue;
         }
       }

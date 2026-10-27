@@ -317,6 +317,22 @@ describe('scan: a fence inside a list item (SAFE-02)', () => {
     assert.deepEqual(scanRegions(src).filter((r) => r.kind === 'fencedCode'), []);
   });
 
+  test('a block quote that ends pops its container', () => {
+    // The quote's item is not a container for anything after the quote, so an
+    // indented block below it is an indented code block, not a fence.
+    const src = '> - a\n\n     ```\n     x\n';
+    assert.deepEqual(scanRegions(src).filter((r) => r.kind === 'fencedCode'), []);
+  });
+
+  test('an ordered marker that cannot interrupt a paragraph opens nothing', () => {
+    // Only "1." interrupts a paragraph, so '2. a' here is its continuation. Taking
+    // it as an item made the fence below start inside a container it never had.
+    const src = 'text\n2. a\n   ```js\n   x\n```\n';
+    const regions = scanRegions(src).filter((r) => r.kind === 'fencedCode');
+    assert.equal(regions.length, 1);
+    assert.equal(regions[0]?.closed, true);
+  });
+
   test('a thematic break does not open a list container', () => {
     // '- - -' matches a bullet at its head, but it is a break, not an item. Taking
     // it as a container made the indented block below read as a fence.

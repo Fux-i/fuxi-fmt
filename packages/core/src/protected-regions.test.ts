@@ -72,6 +72,17 @@ describe('SAFE-01 a fence that is the item own content', () => {
   });
 });
 
+describe('SAFE-01 a fence inside a tab-indented list', () => {
+  test('the list keeps its tab, so the fence does not move out of it', () => {
+    // Expanding the tab above the fence but not inside it would move the fence
+    // out of its container, and the guard refused the document for it.
+    const src = '- a\n\t- b\n\t\t```\n\t\tx\n\t\t```\n';
+    const result = format(src);
+    assert.deepEqual(result.diagnostics.filter((d) => d.severity === 'error'), []);
+    assert.equal(result.output, src);
+  });
+});
+
 describe('SAFE-03 a code span between two fences', () => {
   test('the span keeps its bytes and the prose around it is spaced', () => {
     const src = '```\na\n\nb\n```\n把`x中文`写好看\n```\nc\n```\n';

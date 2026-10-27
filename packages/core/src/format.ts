@@ -15,7 +15,13 @@ import {
   type FormatOptionsInput,
   type ListOptions,
 } from './options.ts';
-import { assignParents, findExcludedLists, planListIndent, scanListItems } from './list-scan.ts';
+import {
+  assignParents,
+  excludedListLines,
+  findExcludedLists,
+  planListIndent,
+  scanListItems,
+} from './list-scan.ts';
 import {
   atomicRanges,
   lineIndexOf,
@@ -267,8 +273,18 @@ export function normalizeLines(
   ranges: readonly AtomicRange[],
 ): readonly string[] {
   const tabWidth = options.list.tabWidth;
+  // A list holding a protected block is not reindented (DET-12), so its lines keep
+  // the whitespace they were written with: expanding a tab above a fence but not
+  // inside it moves the fence out of the container the scanner found.
+  const held =
+    tabWidth === 0
+      ? new Set<number>()
+      : excludedListLines(
+          lines.map((line) => line.text),
+          (index) => protectedLine[index] === true,
+        );
   const marked = lines.map((line, index) => {
-    if (protectedLine[index] === true) return line.text;
+    if (protectedLine[index] === true || held.has(index)) return line.text;
     const expanded = tabWidth === 0 ? line.text : line.text.split('\t').join(' '.repeat(tabWidth));
     return normalizeUnorderedMarker(
       normalizeMarkers(expanded, options.typography.cjkClasses),

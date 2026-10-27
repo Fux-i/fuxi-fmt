@@ -18,7 +18,7 @@
  * rather than guessed at, and neither occurs in the fixture corpus.
  */
 
-import { quotePrefix } from './blocks.ts';
+import { indentColumns, quotePrefix } from './blocks.ts';
 
 export interface ListItem {
   /** Index into the lines array. */
@@ -152,14 +152,50 @@ function spanEnd(
     // column ends the item. Comparing against the marker column said a fence at
     // the margin was part of the item, and the whole list was then excluded from
     // reindentation and the blank-line policy for a block it never contained.
-    const quote = quotePrefix(text);
-    const afterQuote =
-      quote.depth > 0 && isSpace(text.charCodeAt(quote.end)) ? quote.end + 1 : quote.end;
-    const indent = (/^\s*/.exec(text.slice(afterQuote))?.[0] ?? '').length;
-    if (indent < item.contentColumn) break;
+    // The item's own quote prefix is not indentation: a quoted block inside an
+    // unquoted item is indented where it is written.
+    const body =
+      item.prefix.length > 0 && text.startsWith(item.prefix) ? text.slice(item.prefix.length) : text;
+    const indent = (/^\s*/.exec(body)?.[0] ?? '').length;
+    // Columns, not characters: a tab is one character and four columns, and the
+    // item ends where the line is less indented than its content, which is a
+    // column comparison. Against a character content column, this can only read
+    // a tab-indented line as inside, which keeps the list where it was.
+    if (indentColumns(body, indent) < item.contentColumn) break;
     end = j;
   }
   return end;
+}
+
+/**
+ * The lines of every list that holds a protected block (DET-12).
+ *
+ * The tab expansion of BLK-11 rewrites a line's leading whitespace, so expanding
+ * the item above a fence and leaving the fence alone moves the fence out of its
+ * container: the document then has one fence in the input and no fence in the
+ * output, and the guard refuses it. A list that is already left out of BLK-08 is
+ * left out of the expansion too.
+ */
+export function excludedListLines(
+  lines: readonly string[],
+  isProtectedLine: (index: number) => boolean,
+): Set<number> {
+  const items = scanListItems(lines, isProtectedLine);
+  const brokeOut: boolean[] = [];
+  const parents = assignParents(items, brokeOut);
+  const protectedLines = lines.map((_, index) => isProtectedLine(index));
+  const excluded = findExcludedLists(lines, items, parents, protectedLines);
+  const out = new Set<number>();
+  if (excluded.length === 0) return out;
+  const isItemLine = new Set(items.map((item) => item.line));
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (item === undefined) continue;
+    if (!excluded.includes(rootOf(parents, i))) continue;
+    const end = spanEnd(lines, isItemLine, item);
+    for (let j = item.line; j <= end; j++) out.add(j);
+  }
+  return out;
 }
 
 /**

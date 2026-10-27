@@ -128,7 +128,7 @@ function leadingIndent(text: string): number {
 }
 
 /** Column width of the leading whitespace, expanding tabs to four-column stops. */
-function indentColumns(text: string, chars: number): number {
+export function indentColumns(text: string, chars: number): number {
   let column = 0;
   for (let i = 0; i < chars; i++) {
     column = text.charCodeAt(i) === 9 ? column + (4 - (column % 4)) : column + 1;
