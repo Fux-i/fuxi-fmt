@@ -331,22 +331,9 @@ export function planLists(
     if (excludedLists.has(at)) excludedItemLines.add(item.line);
   }
 
-  const diagnostics: Detection[] = [];
-  for (const root of excludedLists) {
-    const item = listItems[root];
-    if (item === undefined) continue;
-    diagnostics.push({
-      ruleId: 'DET-12',
-      messageId: 'det.listExcluded',
-      args: [],
-      line: item.line,
-    });
-  }
-
-  const reindented = [...texts];
   const orderedMin = list.orderedIndent === 'aligned' ? 0 : list.orderedIndent;
   const unorderedMin = list.unorderedIndent === 'aligned' ? 0 : list.unorderedIndent;
-  for (const change of planListIndent(
+  const plan = planListIndent(
     texts,
     listItems,
     listParents,
@@ -354,9 +341,39 @@ export function planLists(
     orderedMin,
     unorderedMin,
     listBrokeOut,
-  )) {
-    reindented[change.line] = change.text;
+  );
+
+  // DET-12 reports a reindentation that was withheld. A list already at its
+  // columns needs no explanation, and the blank-line policy standing down here is
+  // not a defect either: a blank line inside the item would make the list loose.
+  const diagnostics: Detection[] = [];
+  if (excludedLists.size > 0) {
+    const applied = new Map(plan.map((change) => [change.line, change.text]));
+    const withheld = planListIndent(
+      texts,
+      listItems,
+      listParents,
+      new Set<number>(),
+      orderedMin,
+      unorderedMin,
+      listBrokeOut,
+    ).some((change) => applied.get(change.line) !== change.text);
+    if (withheld) {
+      for (const root of excludedLists) {
+        const item = listItems[root];
+        if (item === undefined) continue;
+        diagnostics.push({
+          ruleId: 'DET-12',
+          messageId: 'det.listExcluded',
+          args: [],
+          line: item.line,
+        });
+      }
+    }
   }
+
+  const reindented = [...texts];
+  for (const change of plan) reindented[change.line] = change.text;
   return { reindented, excludedItemLines, diagnostics };
 }
 

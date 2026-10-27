@@ -16,8 +16,8 @@ import { resolveOptions } from './options.ts';
 
 describe('BLK-08/DET-12 the list plan', () => {
   test('a list holding a protected block is left alone, and reported once', () => {
-    const texts = ['- a', '  ```', '  code', '  ```'];
-    const protectedLine = [false, true, true, true];
+    const texts = ['- a', '  ```', '  code', '  ```', '    - child'];
+    const protectedLine = [false, true, true, true, false];
     const out = planLists(texts, protectedLine, resolveOptions().list);
     assert.deepEqual(out.reindented, texts);
     assert.deepEqual(out.diagnostics.map((d) => [d.ruleId, d.line]), [['DET-12', 0]]);

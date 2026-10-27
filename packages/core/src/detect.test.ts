@@ -234,7 +234,16 @@ describe('DET-11 an item indented as if nested that belongs to no parent', () =>
 });
 
 describe('DET-12 a list left alone because it contains a protected block', () => {
-  const LIST = '- a\n  ' + FENCE + 'js\n  x\n  ' + FENCE + '\n  - child\n';
+  // The child is one level too deep, which is the reindentation the exclusion
+  // withholds - a list already at its columns is not reported at all.
+  const LIST = '- a\n  ' + FENCE + 'js\n  x\n  ' + FENCE + '\n    - child\n';
+
+  test('a list already at its columns is not reported', () => {
+    const input = '- a\n  - b\n    ' + FENCE + 'c\n    中文abc混排\n\n    第二段\n    ' + FENCE + '\n';
+    const result = format(input);
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.output, input);
+  });
 
   test('the list is reported, and the document still formats', () => {
     const result = format(LIST);
@@ -249,7 +258,7 @@ describe('DET-12 a list left alone because it contains a protected block', () =>
     // to its content column, so the fence is still the list's.
     const input = '- a\n\n  text\n\n  ' + FENCE + 'js\n  x\n  ' + FENCE + '\n';
     const result = format(input);
-    assert.ok(result.diagnostics.some((d) => d.ruleId === 'DET-12'));
+    assert.equal(result.output, input);
   });
 
   test('a quoted block inside an item is still inside it', () => {
