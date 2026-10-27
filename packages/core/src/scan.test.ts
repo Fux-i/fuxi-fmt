@@ -317,6 +317,16 @@ describe('scan: a fence inside a list item (SAFE-02)', () => {
     assert.deepEqual(scanRegions(src).filter((r) => r.kind === 'fencedCode'), []);
   });
 
+  test('a fence that is the item own content is a fence', () => {
+    const src = '- ```js\n  x\n  ```\n';
+    const regions = scanRegions(src);
+    assert.equal(regions.length, 1);
+    assert.equal(regions[0]?.kind, 'fencedCode');
+    assert.equal(regions[0]?.info, 'js');
+    assert.equal(regions[0]?.indent, '- ');
+    assert.equal(src.slice(regions[0]!.start, regions[0]!.end), '- ```js\n  x\n  ```');
+  });
+
   test('a closing fence dedented out of the item does not close it', () => {
     const src = '- a\n  ```\n  x\n```\n';
     const regions = scanRegions(src).filter((r) => r.kind === 'fencedCode');

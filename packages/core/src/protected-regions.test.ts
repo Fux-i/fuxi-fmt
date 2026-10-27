@@ -63,6 +63,15 @@ describe('SAFE-01 a fence nested in a list keeps its body', () => {
   });
 });
 
+describe('SAFE-01 a fence that is the item own content', () => {
+  test('the body is left alone and the document is not refused', () => {
+    const src = '- ```c\n  中文abc混排\n  ```\n';
+    const result = format(src);
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.output, src);
+  });
+});
+
 describe('SAFE-03 a code span between two fences', () => {
   test('the span keeps its bytes and the prose around it is spaced', () => {
     const src = '```\na\n\nb\n```\n把`x中文`写好看\n```\nc\n```\n';

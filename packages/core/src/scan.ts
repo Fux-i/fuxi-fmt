@@ -301,6 +301,7 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
     // A blank line does not close a list item, so the stack is only updated for
     // lines that carry content. An item is closed by anything less indented than
     // its content column, which is the same test CommonMark uses for the item.
+    const head = rest.trim().length > 0 ? LIST_HEAD.exec(rest) : null;
     if (rest.trim().length > 0) {
       while (containers.length > 0) {
         const open = containers[containers.length - 1];
@@ -308,27 +309,31 @@ function scanBlocks(source: string, lines: Line[], mask: Uint8Array, regions: Re
         if (open.depth > content.depth || open.column <= content.columns) break;
         containers.pop();
       }
-      const head = LIST_HEAD.exec(rest);
       if (head !== null) {
         containers.push({ depth: content.depth, column: content.columns + (head[0] ?? '').length });
       }
     }
     const container = containers[containers.length - 1];
+    // An item that opens with a fence keeps it: the delimiter starts at the item's
+    // content column, so the marker in front of it is a prefix, not prose.
+    const markerWidth = head === null ? 0 : (head[0] ?? '').length;
+    const fenceRest = rest.slice(markerWidth);
+    const fenceColumns = content.columns + markerWidth;
 
     // A fence may sit up to three columns past the content column of the item it
     // belongs to, so this gate is relative to the container rather than the margin.
     const fenceColumn =
-      content.columns <= 3 ||
-      (container !== undefined && content.columns <= container.column + 3);
+      fenceColumns <= 3 ||
+      (container !== undefined && fenceColumns <= container.column + 3);
 
-    if (fenceColumn && rest.length > 0) {
-      const code = rest.charCodeAt(0);
+    if (fenceColumn && fenceRest.length > 0) {
+      const code = fenceRest.charCodeAt(0);
 
       if (code === BACKTICK || code === TILDE) {
-        const fenceLen = runLength(rest, 0, code);
+        const fenceLen = runLength(fenceRest, 0, code);
         if (fenceLen >= 3) {
-          const info = rest.slice(fenceLen).trim();
-          const indent = line.text.slice(0, content.body);
+          const info = fenceRest.slice(fenceLen).trim();
+          const indent = line.text.slice(0, content.body + markerWidth);
           const found = closerIn(
             lines,
             i + 1,
